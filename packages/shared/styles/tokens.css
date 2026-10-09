@@ -1,0 +1,70 @@
+/**
+ * 设计 token · 底座
+ *
+ * 这里只放【与主题无关】的东西：间距、圆角、字号、动效。
+ * 颜色不放这里 —— 颜色分浅色 / 深色两套，见 theme-light.css / theme-dark.css。
+ *
+ * 用法：写样式时只用 var(--mf-xxx)，不要写死像素和色值。
+ * 这样将来调「卡片圆角从 12 改成 8」只需要改这一个文件。
+ */
+
+:root {
+  /* ---------- 间距 ----------
+     只有 4 的倍数这几档。别临时拍一个 10px / 14px 出来 ——
+     间距一旦不成体系，页面看起来就是「没对齐」，但很难指出是哪不对。 */
+  --mf-space-1: 4px;
+  --mf-space-2: 8px;
+  --mf-space-3: 12px;
+  --mf-space-4: 16px;
+  --mf-space-6: 24px;
+  --mf-space-8: 32px;
+
+  /* ---------- 圆角 ----------
+     ★ Liquid Glass 重构：整体比常规大一到两档。
+     圆角是「软」的主要来源 —— 12px 的卡片放在玻璃材质上会显得很硬。 */
+  --mf-radius-sm: 8px;    /* 标签、小按钮 */
+  --mf-radius-md: 12px;   /* 输入框、按钮 */
+  --mf-radius-lg: 16px;   /* 卡片、面板 */
+  --mf-radius-xl: 22px;   /* 大卡片、弹窗 */
+  --mf-radius-2xl: 28px;  /* 窗口级容器 */
+  --mf-radius-pill: 999px;
+
+  /* ---------- 字号 ---------- */
+  --mf-font-xs: 12px;     /* 辅助说明、表头 */
+  --mf-font-sm: 13px;     /* 正文（默认） */
+  --mf-font-md: 14px;     /* 需要强调的正文、按钮 */
+  --mf-font-lg: 20px;     /* 区块标题 */
+  --mf-font-xl: 28px;     /* 页面标题 */
+
+  --mf-leading: 1.6;
+  --mf-weight-normal: 400;
+  --mf-weight-medium: 500;
+
+  /* ---------- 动效 ----------
+     ★ Liquid Glass 重构：原来统一 150ms ease，对玻璃材质太生硬。
+     玻璃需要更长的过渡 + 轻微回弹，才有「流动感」。
+     spring 曲线末端过冲约 2%，就是苹果那种「弹一下停住」的手感。 */
+  --mf-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mf-ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+  --mf-duration-fast: 160ms;
+  --mf-duration: 280ms;
+  --mf-transition: var(--mf-duration-fast) var(--mf-ease-out); /* 保留旧名，兼容已有写法 */
+
+  /* ---------- 玻璃材质 ----------
+     ★ Liquid Glass 的「配方」。这里只放与主题无关的【强度】参数；
+       着色 / 边框 / 投影这些跟明暗有关的，在 theme-light.css / theme-dark.css 里。
+
+     ⚠️ backdrop-filter 是 GPU 重操作 —— 一屏内的玻璃面板控制在 5~6 个以内，
+        否则滚动会掉帧。实现见 glass.css。 */
+  --mf-glass-blur: 24px;
+  --mf-glass-blur-strong: 40px;
+  --mf-glass-saturate: 180%;
+  --mf-glass-brightness: 106%;
+
+  /* ---------- 阴影 ----------
+     ★ Liquid Glass 重构：从「几乎不用阴影」改为【多层投影】——
+     玻璃的立体感就是靠「外阴影 + inset 顶亮边」撑起来的，光有底色和边框不够。
+     具体值跟明暗相关，在 theme-*.css 里覆盖。 */
+  --mf-shadow-popover: 0 4px 16px rgb(0 0 0 / 8%);
+  --mf-shadow-modal: 0 12px 32px rgb(0 0 0 / 12%);
+}

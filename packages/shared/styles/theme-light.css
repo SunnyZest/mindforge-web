@@ -1,0 +1,120 @@
+/**
+ * 设计 token · 浅色主题（管理端默认）
+ *
+ * ⚠️ 变量名是【语义】的（bg-surface / text-secondary），不是外观的（gray-100 / blue-600）。
+ * 这样深色主题只要换一套值，所有用了变量的地方自动跟着变 ——
+ * 如果按外观命名，深色下「gray-100」就不知道该是深还是浅了。
+ *
+ * ★ Liquid Glass 重构（2026-10-09）：
+ *   ① 品牌色：靛蓝 #4f46e5 → Apple 系统蓝 #007aff
+ *   ② 状态色：换成 Apple 系统色（浅色变体），四组仍保持「主色 / 浅底 / 浅底文字」三件套
+ *   ③ 新增 --mf-glass-*：玻璃材质的着色、边缘、投影
+ *   ④ 新增 --mf-solid-*：无障碍降级（用户关闭透明）时的实心底色，见 glass.css
+ *
+ * 挂载在 :root 上 —— 管理端默认就是浅色，不用额外设属性。
+ */
+
+:root,
+[data-theme='light'] {
+  /* ---------- 底色层级 ----------
+     三个层次：页面底 / 卡片面 / 次级块（表头、代码块）。
+     ⚠️ bg-page 现在只是【兜底】—— 页面真正的底色是 body 上的多层径向渐变
+        （见 apps/admin/src/styles/index.css），那是玻璃要模糊的东西。 */
+  --mf-bg-page: #dde5f4;
+  --mf-bg-surface: #ffffff;
+  --mf-bg-subtle: #f4f6fa;
+  --mf-bg-hover: #e9edf5;
+
+  /* ---------- 文字 ----------
+     Apple 的灰阶：主文字接近纯黑但不纯黑；次级用带透明度的灰 ——
+     这样文字叠在玻璃上会「透」出一点底色，比实色灰自然。 */
+  --mf-text-primary: #1d1d1f;
+  --mf-text-secondary: rgb(60 60 67 / 62%);
+  --mf-text-tertiary: rgb(60 60 67 / 36%);
+  --mf-text-inverse: #ffffff;
+
+  /* ---------- 边框 ---------- */
+  --mf-border: rgb(28 40 68 / 10%);
+  --mf-border-strong: rgb(28 40 68 / 20%);
+
+  /* ---------- 品牌色（Apple 系统蓝）----------
+     一个主色就够 —— 不要「主色 + 辅色 + 强调色」三件套，
+     页面上一旦出现三种彩色，眼睛就不知道先看哪。 */
+  --mf-primary: #007aff;
+  --mf-primary-hover: #0063d1;
+  --mf-primary-subtle: rgb(0 122 255 / 12%); /* 浅底，用于标签、选中态 */
+  --mf-primary-text: #0062cc;                /* 浅底上的文字 */
+
+  /* ---------- 状态色（Apple 系统色 · 浅色变体）----------
+     每组三件：主色（图标/边）· 浅底 · 浅底上的文字。 */
+  --mf-success: #34c759;
+  --mf-success-subtle: rgb(52 199 89 / 14%);
+  --mf-success-text: #1f8f3d;
+
+  --mf-warning: #ff9500;
+  --mf-warning-subtle: rgb(255 149 0 / 14%);
+  --mf-warning-text: #b26a00;
+
+  --mf-danger: #ff3b30;
+  --mf-danger-subtle: rgb(255 59 48 / 12%);
+  --mf-danger-text: #c92a21;
+
+  --mf-info: #30b0c7;
+  --mf-info-subtle: rgb(48 176 199 / 14%);
+  --mf-info-text: #1f7f92;
+
+  /* ---------- 玻璃材质 · 浅色 ----------
+     浅色玻璃是「白雾」：用白做着色，靠模糊把背后的色彩柔化。
+     ★ 着色【不能】降到深色那样的 5% —— 浅色下会变成一坨灰，看着像脏了。
+
+     ★ 这里踩过一个坑：一开始把着色一路往下压（55% → 46% → 34%），
+       结果卡片还是白的。原因不在着色，在于【背景太浅 + brightness 又提亮】——
+       白玻璃叠近白背景，怎么调都是白。
+       所以浅色下正确做法是：背景给足色彩，着色保持在合理区间，别动 brightness。 */
+
+  /* 玻璃层（侧边栏 / 顶栏 / 浮层）—— 最透，让背景色彩明显透出来 */
+  --mf-glass-tint: rgb(255 255 255 / 30%);
+  --mf-glass-tint-strong: rgb(255 255 255 / 62%);
+
+  /* ★ 内容层卡片 —— 比玻璃层更实，保证表格 / 表单的可读性。
+     这是「分层原则」在 token 上的体现：功能层可以很透，内容层不行。
+     合成一个变量就只能二选一 —— 要么侧边栏不够玻璃，要么卡片读不清。 */
+  --mf-glass-card: rgb(255 255 255 / 50%);
+
+  /* ⚠️ 浅色下【必须】关掉提亮：本来底就亮，再 brightness(1.06) 会把
+     背景色彩彻底洗掉，玻璃就成白块了。深色下相反，提亮能增加「通透感」。 */
+  --mf-glass-brightness: 100%;
+  --mf-glass-border: rgb(255 255 255 / 85%);  /* 边缘高光：玻璃的上沿亮边 */
+  --mf-glass-border-soft: rgb(28 40 68 / 8%); /* 内部细分隔线（卡片里的线） */
+  --mf-glass-highlight: rgb(255 255 255 / 95%);
+
+  /* 多层投影：外阴影 ×2 + inset 顶部亮边（模拟光线打在玻璃上沿）。
+     浅色下投影要轻，重了会显脏。 */
+  --mf-glass-shadow:
+    0 28px 56px rgb(31 38 58 / 16%),
+    0 8px 20px rgb(31 38 58 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+  --mf-card-shadow:
+    0 12px 28px rgb(31 38 58 / 9%),
+    inset 0 1px 0 rgb(255 255 255 / 85%);
+
+  /* 镜面光泽：135° 渐变，叠在玻璃表面模拟光线流动。
+     用法见 glass.css 的 .mf-glass--specular。 */
+  --mf-specular: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 85%) 0%,
+    rgb(255 255 255 / 12%) 42%,
+    rgb(255 255 255 / 6%) 62%,
+    rgb(255 255 255 / 60%) 100%
+  );
+
+  /* ---------- 无障碍降级 ----------
+     用户开了「降低透明度」时，玻璃换成实心。这不是可选项 ——
+     对前庭功能障碍 / 低视力用户，半透明背景是【有害】的。 */
+  --mf-solid-tint: #f7f9fc;
+  --mf-solid-tint-strong: #ffffff;
+
+  /* 浮层 / 弹窗的投影直接用玻璃那套 */
+  --mf-shadow-popover: var(--mf-glass-shadow);
+  --mf-shadow-modal: 0 24px 60px rgb(31 38 58 / 22%);
+}

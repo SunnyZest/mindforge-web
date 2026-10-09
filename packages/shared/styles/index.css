@@ -1,0 +1,19 @@
+/**
+ * 共享样式入口 —— 两个端都 import 这个文件。
+ *
+ * 顺序有讲究：
+ *   ① tokens      底座（间距/圆角/字号/玻璃强度）—— 与主题无关
+ *   ② theme-*     两套颜色主题（浅色挂 :root，深色挂 [data-theme='dark']）
+ *   ③ glass       玻璃工具类（.mf-glass）—— 依赖 ① ② 的变量
+ *   ④ element-plus 把上面的变量映射到 EP 的变量上，并给 EP 组件套玻璃
+ *
+ * ⚠️ ④ 必须在 EP 自己的样式之后加载，所以 app 里的引入顺序是：
+ *    import 'element-plus/dist/index.css'   ← 先 EP
+ *    import '@mindforge/shared/styles'      ← 再我们的覆盖
+ */
+
+@import './tokens.css';
+@import './theme-light.css';
+@import './theme-dark.css';
+@import './glass.css';
+@import './element-plus.css';

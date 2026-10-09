@@ -1,0 +1,247 @@
+/**
+ * 把我们的设计 token 映射到 Element Plus 的 CSS 变量上。
+ *
+ * ★ 这一步是「两套主题」能落地的关键：
+ *   不这么做的话，EP 组件（按钮、表格、输入框…）会一直是它默认的那套蓝灰，
+ *   和我们的主题色打架 —— 页面上一半是我定的靛蓝、一半是 EP 的默认蓝。
+ *   逐个组件写覆盖样式既累又容易漏；改变量是一劳永逸的。
+ *
+ * ⚠️ 【为什么选择器写成 `:root:root`】
+ *   项目用 unplugin-vue-components 做 EP 的按需引入，每个组件的样式里都带一份
+ *   `:root { --el-color-primary: #409eff; … }`。那些样式是跟着组件 chunk 走的，
+ *   加载顺序不可控 —— 光写 `:root` 会和它同权重，谁后加载谁赢，结果是「有时候生效有时候不」。
+ *   `:root:root` 是同一个选择器写两遍，权重比单个 `:root` 高，稳定赢。
+ *   （这是社区里解决这个问题的惯用写法，不是笔误。）
+ *
+ * ⚠️ EP 的 `light-3 / light-5 / …` 是「主色混出来的浅色档」，默认按蓝色算好了。
+ *   换了主色就得自己重算 —— 这里用 color-mix 混【当前主题的面色】，
+ *   浅色主题混白、深色主题混深，同一个表达式两边都对。
+ */
+
+:root:root {
+  /* ---------- 品牌色 ---------- */
+  --el-color-primary: var(--mf-primary);
+  --el-color-primary-dark-2: var(--mf-primary-hover);
+  --el-color-primary-light-3: color-mix(in srgb, var(--mf-primary) 70%, var(--mf-bg-surface));
+  --el-color-primary-light-5: color-mix(in srgb, var(--mf-primary) 50%, var(--mf-bg-surface));
+  --el-color-primary-light-7: color-mix(in srgb, var(--mf-primary) 30%, var(--mf-bg-surface));
+  --el-color-primary-light-8: color-mix(in srgb, var(--mf-primary) 20%, var(--mf-bg-surface));
+  --el-color-primary-light-9: var(--mf-primary-subtle);
+
+  /* ---------- 状态色 ---------- */
+  --el-color-success: var(--mf-success);
+  --el-color-success-light-9: var(--mf-success-subtle);
+  --el-color-warning: var(--mf-warning);
+  --el-color-warning-light-9: var(--mf-warning-subtle);
+  --el-color-danger: var(--mf-danger);
+  --el-color-danger-light-9: var(--mf-danger-subtle);
+  --el-color-error: var(--mf-danger);
+  --el-color-error-light-9: var(--mf-danger-subtle);
+  --el-color-info: var(--mf-info);
+  --el-color-info-light-9: var(--mf-info-subtle);
+
+  /* ---------- 底色 ---------- */
+  --el-bg-color: var(--mf-bg-surface);
+  --el-bg-color-page: var(--mf-bg-page);
+  /* ★ 浮层底色换成玻璃着色 —— 下拉、弹窗、气泡都走这个变量。
+        backdrop-filter 没法用变量表达，在下面对应选择器上补。 */
+  --el-bg-color-overlay: var(--mf-glass-tint-strong);
+  --el-fill-color-blank: var(--mf-bg-surface);
+  --el-fill-color-light: var(--mf-bg-subtle);
+  --el-fill-color-lighter: var(--mf-bg-hover);
+
+  /* ---------- 文字 ---------- */
+  --el-text-color-primary: var(--mf-text-primary);
+  --el-text-color-regular: var(--mf-text-secondary);
+  --el-text-color-secondary: var(--mf-text-secondary);
+  --el-text-color-placeholder: var(--mf-text-tertiary);
+  --el-text-color-disabled: var(--mf-text-tertiary);
+
+  /* ---------- 边框 ---------- */
+  --el-border-color: var(--mf-border);
+  --el-border-color-light: var(--mf-border);
+  --el-border-color-lighter: var(--mf-border);
+  --el-border-color-extra-light: var(--mf-border);
+  --el-border-color-dark: var(--mf-border-strong);
+  --el-border-color-darker: var(--mf-border-strong);
+
+  /* ---------- 圆角 ---------- */
+  --el-border-radius-base: var(--mf-radius-md);
+  --el-border-radius-small: var(--mf-radius-sm);
+
+  /* ---------- 字号 ---------- */
+  --el-font-size-base: var(--mf-font-sm);
+  --el-font-size-small: var(--mf-font-xs);
+  --el-font-size-extra-small: var(--mf-font-xs);
+
+  /* ---------- 动效 ---------- */
+  --el-transition-duration: 150ms;
+
+  /* ---------- 阴影：EP 默认一堆投影，压到最小 ---------- */
+  --el-box-shadow: var(--mf-shadow-popover);
+  --el-box-shadow-light: var(--mf-shadow-popover);
+  --el-box-shadow-lighter: var(--mf-shadow-popover);
+
+  /* ---------- 卡片 / 表格：用 EP 自己的变量改，不写选择器覆盖 ----------
+     ★ 这里刻意【不】写 `.el-card { … }` 这种覆盖：
+       同权重的选择器同样有加载顺序问题，而 EP 已经把这些做成了变量，
+       改变量既稳又不用和 EP 的样式表比权重。 */
+  --el-card-border-color: var(--mf-border);
+  --el-card-border-radius: var(--mf-radius-lg);
+
+  --el-table-border-color: var(--mf-glass-border-soft);
+  --el-table-header-bg-color: transparent;
+  --el-table-header-text-color: var(--mf-text-tertiary);
+  --el-table-text-color: var(--mf-text-primary);
+  --el-table-row-hover-bg-color: var(--mf-glass-tint-strong);
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+
+  --el-dropdown-menuItem-hover-fill: var(--mf-glass-tint-strong);
+  --el-dropdown-menuItem-hover-color: var(--mf-primary-text);
+
+  /* ---------- 菜单（侧边栏）----------
+     ★ 底色必须透明，否则会盖住背后侧边栏那层玻璃。 */
+  --el-menu-bg-color: transparent;
+  --el-menu-hover-bg-color: var(--mf-glass-tint-strong);
+  --el-menu-text-color: var(--mf-text-secondary);
+  --el-menu-active-color: #ffffff;
+  --el-menu-border-color: transparent;
+  --el-menu-item-height: 40px;
+
+  /* ---------- 圆角：跟着 Liquid Glass 一起放大 ---------- */
+  --el-border-radius-round: var(--mf-radius-pill);
+  --el-border-radius-large: var(--mf-radius-lg);
+  --el-popover-border-radius: var(--mf-radius-lg);
+  --el-dialog-border-radius: var(--mf-radius-xl);
+}
+
+/* ============================================================
+   Liquid Glass 组件化 —— 把玻璃材质套到 EP 组件上
+   ============================================================
+   ⚠️ 选择器都带 `:root:root` 前缀，理由和上面一样：
+      EP 按需引入的样式跟着组件 chunk 走，加载顺序不可控；
+      单写 `.el-card` 会和它同权重，谁后加载谁赢 —— 表现为「有时候生效有时候不」。
+   ============================================================ */
+
+/* ---------- 卡片：内容层的主要容器 ----------
+   着色用 --mf-glass-card（比玻璃层更实）—— 卡片一屏内可能有 4~6 个，
+   每个都做重玻璃会既卡又「糊」，表格文字也会和背景色打架。 */
+:root:root .el-card {
+  background-color: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
+  box-shadow: var(--mf-card-shadow);
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+}
+
+/* ---------- 浮层：下拉 / 弹窗 / 气泡 / 抽屉 —— 最经典的玻璃场景 ----------
+   这些是「浮在内容之上」的层，也是苹果最强调要用 Liquid Glass 的地方。 */
+:root:root .el-popper,
+:root:root .el-dialog,
+:root:root .el-message-box,
+:root:root .el-drawer,
+:root:root .el-message {
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+}
+
+:root:root .el-popper {
+  border: 1px solid var(--mf-glass-border);
+  box-shadow: var(--mf-glass-shadow);
+}
+
+/* 气泡箭头的描边跟着换，否则会和主体边框颜色对不上 */
+:root:root .el-popper__arrow::before {
+  border-color: var(--mf-glass-border);
+}
+
+/* ---------- 侧边栏菜单项：圆角胶囊 + 选中填充 ---------- */
+:root:root .el-menu-item {
+  height: 40px;
+  margin: 2px var(--mf-space-2);
+  border-radius: var(--mf-radius-md);
+  transition:
+    background-color var(--mf-duration-fast) var(--mf-ease-out),
+    color var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+/* 选中态：填充主色 + 一圈内高光 —— 苹果的选中项就是这个样子。
+   只把文字染蓝的话，在玻璃背景上太弱，根本看不出选中了哪个。 */
+:root:root .el-menu-item.is-active {
+  background-color: var(--mf-primary);
+  color: #ffffff;
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--mf-primary) 32%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 30%);
+}
+
+:root:root .el-menu-item:not(.is-active):hover {
+  background-color: var(--mf-glass-tint-strong);
+  color: var(--mf-text-primary);
+}
+
+/* ---------- 表格：斑马纹改成半透明白，不要实色 ---------- */
+:root:root .el-table .el-table__row--striped td.el-table__cell {
+  background-color: var(--mf-glass-tint);
+}
+
+/* ---------- 输入框：轻微玻璃感 ---------- */
+:root:root .el-input__wrapper {
+  background-color: var(--mf-glass-tint);
+  box-shadow: inset 0 0 0 1px var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-md);
+  transition:
+    box-shadow var(--mf-duration-fast) var(--mf-ease-out),
+    background-color var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+:root:root .el-input__wrapper:hover {
+  box-shadow: inset 0 0 0 1px var(--mf-border-strong);
+}
+
+:root:root .el-input__wrapper.is-focus {
+  background-color: var(--mf-glass-tint-strong);
+  box-shadow:
+    inset 0 0 0 1px var(--mf-primary),
+    0 0 0 3px color-mix(in srgb, var(--mf-primary) 16%, transparent);
+}
+
+/* ---------- 按钮：按下时轻微回弹（苹果的 spring 手感）---------- */
+:root:root .el-button {
+  border-radius: var(--mf-radius-md);
+  transition:
+    transform var(--mf-duration-fast) var(--mf-ease-spring),
+    background-color var(--mf-duration-fast) var(--mf-ease-out),
+    border-color var(--mf-duration-fast) var(--mf-ease-out),
+    box-shadow var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+:root:root .el-button:active {
+  transform: scale(0.97);
+}
+
+:root:root .el-button--primary {
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--mf-primary) 30%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 28%);
+}
+
+/* ---------- 无障碍：关闭透明时，组件级玻璃一起降级 ---------- */
+@media (prefers-reduced-transparency: reduce) {
+  :root:root .el-card,
+  :root:root .el-popper,
+  :root:root .el-dialog,
+  :root:root .el-message-box,
+  :root:root .el-drawer {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root:root .el-card {
+    background-color: var(--mf-solid-tint-strong);
+  }
+}

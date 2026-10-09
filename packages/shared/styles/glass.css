@@ -1,0 +1,120 @@
+/**
+ * 液态玻璃工具类 —— Liquid Glass 材质的实现层。
+ *
+ * 用法：给需要玻璃质感的元素加 class="mf-glass"（更强的是 mf-glass--strong）。
+ * 这是【全局】类，Element Plus 组件的玻璃化在 element-plus.css 里单独做
+ * （那边要处理 EP 自己的变量和选择器权重，放一起会乱）。
+ *
+ * ⚠️ 三个必须知道的坑：
+ *  ① backdrop-filter 遇到父级有 filter / transform / will-change / contain 会【失效】——
+ *     因为那会给父级创建新的 containing block，模糊采样的参照物就变了。
+ *     加动效时如果玻璃突然「不模糊了」，先查这一条。
+ *  ② 它是 GPU 重操作：一屏内的玻璃面板别超过 5~6 个，否则滚动会掉帧。
+ *     侧边栏 + 顶栏 + 卡片 ×4 大概就是上限。
+ *  ③ Safari 要 -webkit- 前缀（老版本 iOS 尤其）。
+ *
+ * ★ 分层原则（别违背）：玻璃只用于【功能层】——侧边栏、顶栏、弹窗、浮动工具栏。
+ *   内容层（表格、正文）保持不透明，否则可读性会崩。
+ */
+
+.mf-glass {
+  position: relative;
+  background-color: var(--mf-glass-tint);
+  border: 1px solid var(--mf-glass-border-soft);
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+}
+
+/* 强玻璃：更不透明的着色 + 更大的模糊。用于弹窗、下拉这些「更靠前」的层。 */
+.mf-glass--strong {
+  background-color: var(--mf-glass-tint-strong);
+  border-color: var(--mf-glass-border);
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+}
+
+/* 贴边的玻璃：侧边栏 / 顶栏 —— 模糊更强，但【不投影】（贴边的东西浮起来反而假）。
+   ★ 为什么单独做一个变体，而不是在组件里手写 backdrop-filter：
+     手写会漏掉下面的降级规则 —— 实测就踩过，
+     prefers-reduced-transparency 生效了卡片、却漏了侧边栏。
+     玻璃配方只能有一份，降级才能跟着走。 */
+.mf-glass--edge {
+  background-color: var(--mf-glass-tint);
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur-strong)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+}
+
+/* 镜面光泽层：叠在玻璃表面，模拟光线流动。
+   ★ 用 ::after 而不是 ::before —— EP 的组件（卡片、弹窗、气泡）常占用 ::before。 */
+.mf-glass--specular::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--mf-specular);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* 投影单独拆出来 —— 不是所有玻璃都要「浮起来」：
+   侧边栏、顶栏是贴在边缘的，给投影反而假。 */
+.mf-glass--floating {
+  box-shadow: var(--mf-glass-shadow);
+}
+
+/* 玻璃的过渡：换主题 / 换状态时颜色要「化」过去，不能硬切 */
+.mf-glass,
+.mf-glass--strong,
+.mf-glass--edge {
+  transition:
+    background-color var(--mf-duration) var(--mf-ease-out),
+    border-color var(--mf-duration) var(--mf-ease-out),
+    box-shadow var(--mf-duration) var(--mf-ease-out);
+}
+
+/* ---------- 无障碍降级 ①：用户主动要求「降低透明度」----------
+   ⚠️ 这不是可选项。对前庭功能障碍 / 低视力用户，半透明背景是【有害】的，
+   会直接导致看不清内容。系统级偏好必须尊重。 */
+@media (prefers-reduced-transparency: reduce) {
+  .mf-glass,
+  .mf-glass--strong,
+  .mf-glass--edge {
+    background-color: var(--mf-solid-tint-strong);
+    border-color: var(--mf-border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .mf-glass--specular::after {
+    display: none;
+  }
+}
+
+/* ---------- 无障碍降级 ②：浏览器根本不支持 backdrop-filter ----------
+   老 Firefox / 老 Safari。不降级的话玻璃会变成「全透明」，文字直接糊在背景上。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mf-glass {
+    background-color: var(--mf-solid-tint);
+  }
+  .mf-glass--strong,
+  .mf-glass--edge {
+    background-color: var(--mf-solid-tint-strong);
+  }
+  .mf-glass--specular::after {
+    display: none;
+  }
+}
+
+/* ---------- 无障碍降级 ③：用户要求「减少动态效果」---------- */
+@media (prefers-reduced-motion: reduce) {
+  .mf-glass,
+  .mf-glass--strong,
+  .mf-glass--edge {
+    transition: none;
+  }
+}

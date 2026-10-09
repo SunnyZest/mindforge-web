@@ -1,0 +1,101 @@
+/**
+ * 设计 token · 深色主题（用户端 / 管理端可切换）
+ *
+ * ⚠️ 变量名和浅色主题【完全一致】—— 只是值不同。这是整套设计系统的关键：
+ * 页面里写的是 var(--mf-text-secondary)，不关心当前是深还是浅。
+ *
+ * ⚠️ 深色下颜色【要调亮】：直接把浅色的 #007aff 搬过来会显得发闷、
+ * 在深底上对比度不够（WCAG 对比度会不达标）。所以主色和状态色都提亮了一档。
+ *
+ * ★ Liquid Glass 重构（2026-10-09）：
+ *   ① 品牌色 / 状态色换成 Apple 系统色（深色变体）
+ *   ② 新增 --mf-glass-*：深色是 Liquid Glass 效果最好的场景 ——
+ *      玻璃着色只有 5%~8%，通透感最强
+ *   ③ 新增 --mf-solid-*：无障碍降级的实心底色
+ *
+ * 用法：在 <html> 上写 data-theme="dark"
+ */
+
+[data-theme='dark'] {
+  /* ---------- 底色层级 ----------
+     ⚠️ 不要用纯黑（#000）—— 纯黑配白字对比过强，看久了眼睛累。
+     用带一点蓝的深灰，接近 Linear / Vercel 的做法。 */
+  --mf-bg-page: #0b0d12;
+  --mf-bg-surface: #14161c;
+  --mf-bg-subtle: #1b1e26;
+  --mf-bg-hover: #22252e;
+
+  /* ---------- 文字 ----------
+     ⚠️ 也不要纯白（#fff）—— 用 94% 的白，柔一点。
+     次级文字带透明度，叠在玻璃上会自然透出底色。 */
+  --mf-text-primary: rgb(255 255 255 / 94%);
+  --mf-text-secondary: rgb(255 255 255 / 58%);
+  --mf-text-tertiary: rgb(255 255 255 / 36%);
+  --mf-text-inverse: #0b0d12;
+
+  /* ---------- 边框 ---------- */
+  --mf-border: rgb(255 255 255 / 10%);
+  --mf-border-strong: rgb(255 255 255 / 20%);
+
+  /* ---------- 品牌色（Apple 系统蓝 · 深色变体）---------- */
+  --mf-primary: #0a84ff;
+  --mf-primary-hover: #3d9dff;
+  --mf-primary-subtle: rgb(10 132 255 / 18%);
+  --mf-primary-text: #6cb6ff;
+
+  /* ---------- 状态色（Apple 系统色 · 深色变体）---------- */
+  --mf-success: #30d158;
+  --mf-success-subtle: rgb(48 209 88 / 16%);
+  --mf-success-text: #6ee787;
+
+  --mf-warning: #ff9f0a;
+  --mf-warning-subtle: rgb(255 159 10 / 16%);
+  --mf-warning-text: #ffc25c;
+
+  --mf-danger: #ff453a;
+  --mf-danger-subtle: rgb(255 69 58 / 16%);
+  --mf-danger-text: #ff8a80;
+
+  --mf-info: #64d2ff;
+  --mf-info-subtle: rgb(100 210 255 / 16%);
+  --mf-info-text: #9ee0ff;
+
+  /* ---------- 玻璃材质 · 深色 ----------
+     ★ 深色是 Liquid Glass 的主场：着色只有 5%~8% 的白。
+     调高会发灰、失去「通透」，这是深色玻璃最容易翻车的地方。 */
+  --mf-glass-tint: rgb(255 255 255 / 5.5%);
+  --mf-glass-tint-strong: rgb(255 255 255 / 8.5%);
+  /* 内容层卡片 —— 和浅色一样单独一档：深色下卡片要能透出背景，
+     但比侧边栏稍实一点，避免表格文字和背景色打架。 */
+  --mf-glass-card: rgb(255 255 255 / 7%);
+  --mf-glass-border: rgb(255 255 255 / 14%);      /* 边缘高光 */
+  --mf-glass-border-soft: rgb(255 255 255 / 7%);  /* 内部细分隔线 */
+  --mf-glass-highlight: rgb(255 255 255 / 42%);
+
+  /* 多层投影：深色下投影要更重才看得出「浮起来」，
+     同时保留 inset 顶亮 / 底暗 —— 这是玻璃「厚度」的来源。 */
+  --mf-glass-shadow:
+    0 32px 64px rgb(0 0 0 / 55%),
+    0 10px 22px rgb(0 0 0 / 35%),
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    inset 0 -1px 0 rgb(0 0 0 / 30%);
+  --mf-card-shadow:
+    0 16px 34px rgb(0 0 0 / 32%),
+    inset 0 1px 0 rgb(255 255 255 / 12%);
+
+  /* 镜面光泽：深色下强度要收着，过了会像塑料 */
+  --mf-specular: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 16%) 0%,
+    rgb(255 255 255 / 0%) 40%,
+    rgb(255 255 255 / 0%) 62%,
+    rgb(255 255 255 / 9%) 100%
+  );
+
+  /* ---------- 无障碍降级 ---------- */
+  --mf-solid-tint: #1a1d25;
+  --mf-solid-tint-strong: #20232c;
+
+  --mf-shadow-popover: var(--mf-glass-shadow);
+  --mf-shadow-modal: 0 24px 60px rgb(0 0 0 / 65%);
+}
