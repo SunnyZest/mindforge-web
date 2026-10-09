@@ -40,7 +40,7 @@ export type AdminPermission =
   | 'admin:ai:manage'
   | 'admin:prompt:manage'
 
-/** 用户端权限码（对齐 sys_permission 里 `app:%`） */
+/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 23 条） */
 export type AppPermission =
   | 'app:knowledge:read'
   | 'app:knowledge:write'
@@ -60,6 +60,9 @@ export type AppPermission =
   | 'app:job:read'
   | 'app:job:write'
   | 'app:job:parse'
+  | 'app:interview:start'
+  | 'app:interview:answer'
+  | 'app:interview:report'
   | 'app:interview:read'
   | 'app:interview:write'
 
