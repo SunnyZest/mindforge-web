@@ -1,0 +1,29 @@
+import type {
+  AiModelCreateDTO,
+  AiModelUpdateDTO,
+  AiModelVO,
+  AiScene,
+} from '@mindforge/shared'
+
+import { http } from './index'
+
+/**
+ * AI 模型配置。
+ *
+ * ⚠️ 接口**永远不会返回明文 apiKey** —— 列表里只有 `apiKeyHint`（如 `****abcd`）
+ * 和 `hasApiKey`。所以「编辑」时表单里的 Key 输入框必须是**空的**，
+ * 提交时也不要把空串发上去（那会把已有的 Key 覆盖掉）。
+ * 正确做法：不填就不传这个字段（`apiKey: undefined`），后端保持原值。
+ */
+export const aiModelApi = {
+  /** `scene` 不传 = 返回全部用途的配置 */
+  list: (scene?: AiScene) =>
+    http.get<AiModelVO[]>('/admin/ai/models', { params: { scene } }),
+
+  create: (dto: AiModelCreateDTO) => http.post<AiModelVO>('/admin/ai/models', dto),
+
+  update: (id: string, dto: AiModelUpdateDTO) =>
+    http.put<AiModelVO>(`/admin/ai/models/${id}`, dto),
+
+  remove: (id: string) => http.delete<void>(`/admin/ai/models/${id}`),
+}

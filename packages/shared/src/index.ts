@@ -17,6 +17,36 @@ export type {
   UserInfoVO,
   UserSummaryVO,
   UserListQuery,
+  // 用户管理（写操作）
+  AdminUserCreateDTO,
+  UserUpdateDTO,
+  UserStatusDTO,
+  AssignRolesDTO,
+  // 角色与权限
+  RoleVO,
+  PermissionVO,
+  RoleCreateDTO,
+  RoleUpdateDTO,
+  AssignPermissionsDTO,
+  // 知识库 / 文档 / 分块
+  AdminKnowledgeBaseVO,
+  AdminKnowledgeBaseQuery,
+  AdminDocumentVO,
+  AdminDocumentQuery,
+  DocumentStatusUpdateDTO,
+  ChunkVO,
+  ParseStatus,
+  ChunkStatus,
+  VectorStatus,
+  // AI 模型
+  AiModelVO,
+  AiModelCreateDTO,
+  AiModelUpdateDTO,
+  AiScene,
+  // 审计日志 / 仪表盘
+  AuditLogVO,
+  AuditLogQuery,
+  DashboardVO,
 } from './types'
 
 // ---------- HTTP 客户端 ----------
