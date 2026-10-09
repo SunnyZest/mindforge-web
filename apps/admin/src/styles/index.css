@@ -1,0 +1,61 @@
+/* 管理端全局样式。
+ *
+ * ⚠️ 设计 token 不在这里引入 —— 它在 main.ts 里以 `@mindforge/shared/styles` 引入，
+ *    顺序是「先 token、后本文件」。放在这里的话，@import 的顺序受构建器影响，
+ *    不如在 TS 里按行写死来得可靠。
+ *
+ * 这个文件只放【页面骨架】这一层：html/body 的基础重置、滚动条、以及
+ * 少量无法用设计 token 表达的东西。
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: var(--mf-font-sm);
+  line-height: var(--mf-leading);
+  color: var(--mf-text-primary);
+  background-color: var(--mf-bg-page);
+
+  /* ★ Liquid Glass 的「背景层」—— 多层柔和径向渐变，相当于 macOS 的桌面壁纸。
+     ⚠️ 没有它，玻璃就【没东西可糊】，backdrop-filter 出来是一层死灰，效果全无。
+
+     ★ 这里踩过一个坑：一开始渐变只铺在四角、中心留白，结果卡片压在中心的
+       「近白区」上 —— 白玻璃叠近白背景 = 还是白，玻璃感全没。
+       所以渐变要【铺满视口】（半径给到 70%+，中心也别留白），
+       玻璃才有东西可透。这是浅色主题能不能成立的关键。 */
+  background-image:
+    radial-gradient(82% 72% at 4% -10%, rgb(96 150 255 / 72%), transparent 74%),
+    radial-gradient(76% 66% at 100% -8%, rgb(168 132 255 / 66%), transparent 72%),
+    radial-gradient(80% 70% at 96% 108%, rgb(255 168 128 / 52%), transparent 74%),
+    radial-gradient(76% 68% at -2% 106%, rgb(96 208 202 / 56%), transparent 72%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* 深色主题的背景层 —— 深色是 Liquid Glass 的主场，可以比浅色放开一点 */
+[data-theme='dark'] body {
+  background-image:
+    radial-gradient(52% 44% at 12% 6%, rgb(40 90 200 / 28%), transparent 62%),
+    radial-gradient(44% 40% at 88% 4%, rgb(120 60 190 / 24%), transparent 60%),
+    radial-gradient(50% 46% at 80% 94%, rgb(190 70 30 / 18%), transparent 62%),
+    radial-gradient(46% 44% at 14% 90%, rgb(10 110 130 / 22%), transparent 60%);
+}
+
+/* 滚动条也跟主题走 —— 不处理的话深色页面里会挂一条亮色滚动条，很扎眼 */
+* {
+  scrollbar-color: var(--mf-border-strong) transparent;
+  scrollbar-width: thin;
+}

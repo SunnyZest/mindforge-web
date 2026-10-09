@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindForge 管理后台</title>
+    <script>
+      // 尽早把主题挂到 <html> 上，避免首屏先闪一下浅色再跳成深色（FOUC）。
+      // ⚠️ 必须内联在 <head>：走打包 / 放到 main.ts 里都太晚 ——
+      //    那时候 CSS 已经按默认主题渲染过一帧了。
+      // 只认 light / dark 两个合法值，其它（脏数据、被清过）一律走默认浅色。
+      try {
+        var t = localStorage.getItem('mf_admin_theme')
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {
+        /* 隐私模式下 localStorage 可能直接抛错，忽略即可 */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
