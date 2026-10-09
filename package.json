@@ -1,0 +1,15 @@
+{
+  "name": "mindforge-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:admin": "pnpm --filter @mindforge/admin dev",
+    "build:admin": "pnpm --filter @mindforge/admin build",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

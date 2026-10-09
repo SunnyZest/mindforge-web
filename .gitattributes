@@ -1,0 +1,12 @@
+# 仓库里统一用 LF。
+# Windows 上如果不显式声明，git 的 autocrlf 会把文件存成 CRLF，
+# 多人协作（或换到 Mac/Linux）时会出现「整个文件都改了」的假 diff。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
