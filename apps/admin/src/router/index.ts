@@ -55,6 +55,12 @@ const router = createRouter({
           meta: { title: '用户管理', icon: 'User', order: 2, permission: 'admin:user:list' },
         },
         {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('@/views/RoleListView.vue'),
+          meta: { title: '角色权限', icon: 'Key', order: 3, permission: 'admin:role:list' },
+        },
+        {
           // 开发用的设计规范页 —— 不设 permission（登录即可看）
           path: 'style-guide',
           name: 'style-guide',
