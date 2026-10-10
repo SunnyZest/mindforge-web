@@ -190,15 +190,17 @@ onMounted(() => {
       </el-button>
     </div>
 
-    <!-- ⚠️ 列宽之和要控制在内容区宽度内（1440 视口下约 1100px）——
-         超了会出现横向滚动，而「操作」是 fixed 列，会盖住前一列的内容。
-         当前合计 1080px。改列宽时记得重新加一遍总数。 -->
+    <!-- ⚠️ 列宽要按【最窄的常见视口】算，不是按 1440 算：
+         1366×768 的笔记本浏览器最大化后，内容区只有约 1040px。
+         所以这里把「创建时间」去掉了（用户列表里它最不重要，
+         要看具体时间可以进详情）—— 换来操作列能放下 4 个按钮。
+         当前合计 960px，1280 视口也能放下。改列宽时重新加一遍总数。 -->
     <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="username" label="用户名" min-width="110" />
-      <el-table-column prop="nickname" label="昵称" min-width="90">
+      <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="nickname" label="昵称" min-width="100" show-overflow-tooltip>
         <template #default="{ row }">{{ row.nickname || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="email" label="邮箱" min-width="165">
+      <el-table-column prop="email" label="邮箱" min-width="170" show-overflow-tooltip>
         <template #default="{ row }">{{ row.email || '-' }}</template>
       </el-table-column>
       <el-table-column label="角色" min-width="140">
@@ -216,14 +218,13 @@ onMounted(() => {
           </StatusTag>
         </template>
       </el-table-column>
-      <el-table-column label="最后登录" width="145">
+      <el-table-column label="最后登录" width="150">
         <template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template>
       </el-table-column>
-      <el-table-column label="创建时间" width="145">
-        <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
-      </el-table-column>
 
-      <el-table-column label="操作" width="205" fixed="right">
+      <!-- 操作列宽度按「4 个 link 按钮 + 间距 + 单元格内边距」实测给的，
+           不是拍脑袋 —— 205px 会刚好把最后一个按钮切掉。 -->
+      <el-table-column label="操作" width="230" fixed="right">
         <template #default="{ row }">
           <span class="actions">
             <el-button
