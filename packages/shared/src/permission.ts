@@ -78,11 +78,17 @@ export function hasPermission(granted: readonly string[], required: Permission):
 }
 
 /** 任一命中即可 —— 用于「这几个权限有一个就能看」的菜单/按钮 */
-export function hasAnyPermission(granted: readonly string[], required: readonly Permission[]): boolean {
+export function hasAnyPermission(
+  granted: readonly string[],
+  required: readonly Permission[],
+): boolean {
   return required.some((p) => granted.includes(p))
 }
 
 /** 全部命中才可 —— 用于「必须同时具备」的场景，比较少用 */
-export function hasAllPermissions(granted: readonly string[], required: readonly Permission[]): boolean {
+export function hasAllPermissions(
+  granted: readonly string[],
+  required: readonly Permission[],
+): boolean {
   return required.every((p) => granted.includes(p))
 }

@@ -22,19 +22,19 @@
   /* ---------- 圆角 ----------
      ★ Liquid Glass 重构：整体比常规大一到两档。
      圆角是「软」的主要来源 —— 12px 的卡片放在玻璃材质上会显得很硬。 */
-  --mf-radius-sm: 8px;    /* 标签、小按钮 */
-  --mf-radius-md: 12px;   /* 输入框、按钮 */
-  --mf-radius-lg: 16px;   /* 卡片、面板 */
-  --mf-radius-xl: 22px;   /* 大卡片、弹窗 */
-  --mf-radius-2xl: 28px;  /* 窗口级容器 */
+  --mf-radius-sm: 8px; /* 标签、小按钮 */
+  --mf-radius-md: 12px; /* 输入框、按钮 */
+  --mf-radius-lg: 16px; /* 卡片、面板 */
+  --mf-radius-xl: 22px; /* 大卡片、弹窗 */
+  --mf-radius-2xl: 28px; /* 窗口级容器 */
   --mf-radius-pill: 999px;
 
   /* ---------- 字号 ---------- */
-  --mf-font-xs: 12px;     /* 辅助说明、表头 */
-  --mf-font-sm: 13px;     /* 正文（默认） */
-  --mf-font-md: 14px;     /* 需要强调的正文、按钮 */
-  --mf-font-lg: 20px;     /* 区块标题 */
-  --mf-font-xl: 28px;     /* 页面标题 */
+  --mf-font-xs: 12px; /* 辅助说明、表头 */
+  --mf-font-sm: 13px; /* 正文（默认） */
+  --mf-font-md: 14px; /* 需要强调的正文、按钮 */
+  --mf-font-lg: 20px; /* 区块标题 */
+  --mf-font-xl: 28px; /* 页面标题 */
 
   --mf-leading: 1.6;
   --mf-weight-normal: 400;

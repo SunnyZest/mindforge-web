@@ -34,9 +34,7 @@ const userName = computed(() => props.user?.nickname || props.user?.username || 
 watch(visible, (open) => {
   if (!open) return
   const codes = props.user?.roles ?? []
-  selected.value = props.roles
-    .filter((r) => codes.includes(r.code))
-    .map((r) => Number(r.id))
+  selected.value = props.roles.filter((r) => codes.includes(r.code)).map((r) => Number(r.id))
   originalCount.value = selected.value.length
 })
 
@@ -73,8 +71,16 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="分配角色" width="440px" :close-on-click-modal="false" append-to-body>
-    <p class="who">给 <b>{{ userName }}</b> 分配角色：</p>
+  <el-dialog
+    v-model="visible"
+    title="分配角色"
+    width="440px"
+    :close-on-click-modal="false"
+    append-to-body
+  >
+    <p class="who">
+      给 <b>{{ userName }}</b> 分配角色：
+    </p>
 
     <el-checkbox-group v-model="selected" class="role-list">
       <!-- ⚠️ 外层用 div 不是 label：el-checkbox 自己会渲染一个 <label>，

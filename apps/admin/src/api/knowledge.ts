@@ -1,8 +1,4 @@
-import type {
-  AdminKnowledgeBaseQuery,
-  AdminKnowledgeBaseVO,
-  PageResult,
-} from '@mindforge/shared'
+import type { AdminKnowledgeBaseQuery, AdminKnowledgeBaseVO, PageResult } from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -16,8 +12,7 @@ export const knowledgeApi = {
   page: (query: AdminKnowledgeBaseQuery) =>
     http.get<PageResult<AdminKnowledgeBaseVO>>('/admin/knowledge-bases', { params: query }),
 
-  detail: (id: string) =>
-    http.get<AdminKnowledgeBaseVO>(`/admin/knowledge-bases/${id}`),
+  detail: (id: string) => http.get<AdminKnowledgeBaseVO>(`/admin/knowledge-bases/${id}`),
 
   /**
    * 删除知识库。

@@ -142,7 +142,12 @@ async function submit(): Promise<void> {
       </el-form-item>
 
       <el-form-item v-if="!isEdit" label="角色">
-        <el-select v-model="form.roleIds" multiple placeholder="不选则只给默认角色 USER" style="width: 100%">
+        <el-select
+          v-model="form.roleIds"
+          multiple
+          placeholder="不选则只给默认角色 USER"
+          style="width: 100%"
+        >
           <el-option
             v-for="r in roles"
             :key="r.id"
@@ -153,9 +158,7 @@ async function submit(): Promise<void> {
         </el-select>
       </el-form-item>
 
-      <p v-if="isEdit" class="tip">
-        要改这个用户的角色，请用列表里的「分配角色」。
-      </p>
+      <p v-if="isEdit" class="tip">要改这个用户的角色，请用列表里的「分配角色」。</p>
     </el-form>
 
     <template #footer>

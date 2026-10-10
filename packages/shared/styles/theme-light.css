@@ -43,7 +43,7 @@
   --mf-primary: #007aff;
   --mf-primary-hover: #0063d1;
   --mf-primary-subtle: rgb(0 122 255 / 12%); /* 浅底，用于标签、选中态 */
-  --mf-primary-text: #0062cc;                /* 浅底上的文字 */
+  --mf-primary-text: #0062cc; /* 浅底上的文字 */
 
   /* ---------- 状态色（Apple 系统色 · 浅色变体）----------
      每组三件：主色（图标/边）· 浅底 · 浅底上的文字。 */
@@ -84,19 +84,16 @@
   /* ⚠️ 浅色下【必须】关掉提亮：本来底就亮，再 brightness(1.06) 会把
      背景色彩彻底洗掉，玻璃就成白块了。深色下相反，提亮能增加「通透感」。 */
   --mf-glass-brightness: 100%;
-  --mf-glass-border: rgb(255 255 255 / 85%);  /* 边缘高光：玻璃的上沿亮边 */
+  --mf-glass-border: rgb(255 255 255 / 85%); /* 边缘高光：玻璃的上沿亮边 */
   --mf-glass-border-soft: rgb(28 40 68 / 8%); /* 内部细分隔线（卡片里的线） */
   --mf-glass-highlight: rgb(255 255 255 / 95%);
 
   /* 多层投影：外阴影 ×2 + inset 顶部亮边（模拟光线打在玻璃上沿）。
      浅色下投影要轻，重了会显脏。 */
   --mf-glass-shadow:
-    0 28px 56px rgb(31 38 58 / 16%),
-    0 8px 20px rgb(31 38 58 / 8%),
+    0 28px 56px rgb(31 38 58 / 16%), 0 8px 20px rgb(31 38 58 / 8%),
     inset 0 1px 0 rgb(255 255 255 / 90%);
-  --mf-card-shadow:
-    0 12px 28px rgb(31 38 58 / 9%),
-    inset 0 1px 0 rgb(255 255 255 / 85%);
+  --mf-card-shadow: 0 12px 28px rgb(31 38 58 / 9%), inset 0 1px 0 rgb(255 255 255 / 85%);
 
   /* 镜面光泽：135° 渐变，叠在玻璃表面模拟光线流动。
      用法见 glass.css 的 .mf-glass--specular。 */

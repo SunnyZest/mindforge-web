@@ -44,9 +44,7 @@ export default defineConfig({
     alias: [
       {
         find: /^@mindforge\/shared$/,
-        replacement: fileURLToPath(
-          new URL('../../packages/shared/src/index.ts', import.meta.url),
-        ),
+        replacement: fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
       },
       {
         // 样式单独指到 CSS 文件 —— 不依赖 package.json 的 exports 映射，

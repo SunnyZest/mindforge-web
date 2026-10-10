@@ -95,14 +95,10 @@ onMounted(load)
   <el-card shadow="never">
     <div class="filters">
       <span class="filters__hint">
-        角色决定用户能做什么。改完权限后要等用户<b>下次登录</b>才生效 ——
-        权限是登录时随 token 一起下发的，不会实时推送。
+        角色决定用户能做什么。改完权限后要等用户<b>下次登录</b>才生效 —— 权限是登录时随 token
+        一起下发的，不会实时推送。
       </span>
-      <el-button
-        v-if="auth.can('admin:role:create')"
-        type="primary"
-        @click="onCreate"
-      >
+      <el-button v-if="auth.can('admin:role:create')" type="primary" @click="onCreate">
         新增角色
       </el-button>
     </div>

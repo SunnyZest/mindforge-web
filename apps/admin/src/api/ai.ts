@@ -1,9 +1,4 @@
-import type {
-  AiModelCreateDTO,
-  AiModelUpdateDTO,
-  AiModelVO,
-  AiScene,
-} from '@mindforge/shared'
+import type { AiModelCreateDTO, AiModelUpdateDTO, AiModelVO, AiScene } from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -17,13 +12,11 @@ import { http } from './index'
  */
 export const aiModelApi = {
   /** `scene` 不传 = 返回全部用途的配置 */
-  list: (scene?: AiScene) =>
-    http.get<AiModelVO[]>('/admin/ai/models', { params: { scene } }),
+  list: (scene?: AiScene) => http.get<AiModelVO[]>('/admin/ai/models', { params: { scene } }),
 
   create: (dto: AiModelCreateDTO) => http.post<AiModelVO>('/admin/ai/models', dto),
 
-  update: (id: string, dto: AiModelUpdateDTO) =>
-    http.put<AiModelVO>(`/admin/ai/models/${id}`, dto),
+  update: (id: string, dto: AiModelUpdateDTO) => http.put<AiModelVO>(`/admin/ai/models/${id}`, dto),
 
   remove: (id: string) => http.delete<void>(`/admin/ai/models/${id}`),
 }

@@ -36,8 +36,7 @@ export const roleApi = {
    *   已选 = roleApi.listPermissions(id)
    * 然后按 id 求交集 —— 别指望这个接口返回带 `checked` 标记的全集。
    */
-  listPermissions: (id: string) =>
-    http.get<PermissionVO[]>(`/admin/roles/${id}/permissions`),
+  listPermissions: (id: string) => http.get<PermissionVO[]>(`/admin/roles/${id}/permissions`),
 
   /** 分配权限。⚠️ 传空数组 = 清空该角色所有权限（不是「不改」） */
   assignPermissions: (id: string, dto: AssignPermissionsDTO) =>

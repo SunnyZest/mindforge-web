@@ -37,8 +37,7 @@ export const userApi = {
    * 分配角色。
    * ⚠️ `roleIds` 传空数组 = 清空该用户所有角色（不是「不改」）。
    */
-  assignRoles: (id: string, dto: AssignRolesDTO) =>
-    http.put<void>(`/admin/users/${id}/roles`, dto),
+  assignRoles: (id: string, dto: AssignRolesDTO) => http.put<void>(`/admin/users/${id}/roles`, dto),
 
   remove: (id: string) => http.delete<void>(`/admin/users/${id}`),
 }
