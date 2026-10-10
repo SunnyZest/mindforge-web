@@ -2,6 +2,9 @@
 
 MindForge AI 的前端，**一仓两端**（pnpm workspace）：用户端 + 管理端共用一个 Java 后端。
 
+> 📋 **开发进度、代码规范、踩过的坑** 都记在 [PROJECT.md](./PROJECT.md) ——
+> 动手前先看一眼那份，能少走不少弯路。
+
 ## 目录
 
 ```
@@ -28,12 +31,15 @@ pnpm dev:admin               # 管理端 → http://localhost:5174/admin/
 > ⚠️ **如果提示 `pnpm: command not found`**
 >
 > pnpm 是通过 Node 自带的 corepack 提供的，需要在你的终端里启用一次：
+>
 > ```bash
 > corepack enable pnpm
 > ```
+>
 > 这一步要往 Node 的安装目录（如 `D:\nodejs`）写文件，**可能要管理员权限的终端**。
 >
 > 不想动权限的话，直接用 `corepack pnpm` 代替 `pnpm` 也行：
+>
 > ```bash
 > corepack pnpm install
 > corepack pnpm dev:admin
@@ -41,14 +47,14 @@ pnpm dev:admin               # 管理端 → http://localhost:5174/admin/
 
 ## 命令对照（npm → pnpm）
 
-| 场景 | npm | pnpm |
-|---|---|---|
-| 装全部依赖 | `npm install` | `pnpm install` |
-| 加依赖 | `npm install axios` | `pnpm add axios` |
-| 加开发依赖 | `npm install -D vite` | `pnpm add -D vite` |
-| 删依赖 | `npm uninstall axios` | `pnpm remove axios` |
-| 跑脚本 | `npm run dev` | `pnpm dev` |
-| 只跑某个子包 | `npm run dev -w apps/admin` | `pnpm --filter admin dev` |
+| 场景             | npm                         | pnpm                            |
+| ---------------- | --------------------------- | ------------------------------- |
+| 装全部依赖       | `npm install`               | `pnpm install`                  |
+| 加依赖           | `npm install axios`         | `pnpm add axios`                |
+| 加开发依赖       | `npm install -D vite`       | `pnpm add -D vite`              |
+| 删依赖           | `npm uninstall axios`       | `pnpm remove axios`             |
+| 跑脚本           | `npm run dev`               | `pnpm dev`                      |
+| 只跑某个子包     | `npm run dev -w apps/admin` | `pnpm --filter admin dev`       |
 | 给某个子包加依赖 | `npm i axios -w apps/admin` | `pnpm --filter admin add axios` |
 
 ## 为什么要单仓
