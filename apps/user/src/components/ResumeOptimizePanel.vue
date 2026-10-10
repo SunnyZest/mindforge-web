@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MagicStick, CopyDocument, Warning } from '@element-plus/icons-vue'
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import {
   BizError,
@@ -10,6 +10,7 @@ import {
 } from '@mindforge/shared'
 
 import { resumeApi } from '@/api/resume'
+import { useSlowTask } from '@/composables/useSlowTask'
 
 const props = defineProps<{
   resumeId: string
@@ -17,12 +18,14 @@ const props = defineProps<{
   disabled: boolean
 }>()
 
-const running = ref(false)
 const result = ref<ResumeOptimizeVO | null>(null)
-/** 已经等了多久 —— 这个接口要 100 秒以上，不给个计时器用户会以为卡死了 */
-const elapsed = ref(0)
 
-let timer: ReturnType<typeof setInterval> | null = null
+/**
+ * 慢接口的「运行中 + 秒表」。
+ * ⚠️ 这个接口要 100 秒以上，不给计时器用户会以为卡死了 ——
+ *    逻辑抽在 composables/useSlowTask.ts（面试间那边也用同一份）。
+ */
+const { running, elapsed, run: runTask } = useSlowTask()
 
 const TARGETS: { value: OptimizeTarget | ''; label: string }[] = [
   { value: '', label: '整体' },
@@ -61,30 +64,18 @@ function fail(e: unknown, fallback: string): void {
   ElMessage.error(e instanceof BizError ? e.message : fallback)
 }
 
-function stopTimer(): void {
-  if (timer !== null) {
-    clearInterval(timer)
-    timer = null
-  }
-}
-
 async function run(): Promise<void> {
-  running.value = true
-  elapsed.value = 0
-  timer = setInterval(() => (elapsed.value += 1), 1000)
-
-  try {
-    result.value = await resumeApi.optimize(props.resumeId, {
-      target: target.value || undefined,
-    })
-    if (result.value.truncated) {
-      ElMessage.warning('简历较长，这次只分析了前面一段')
-    }
-  } catch (e) {
+  const res = await runTask(() =>
+    resumeApi.optimize(props.resumeId, { target: target.value || undefined }),
+  ).catch((e) => {
     fail(e, 'AI 优化失败，请稍后重试')
-  } finally {
-    stopTimer()
-    running.value = false
+    return undefined
+  })
+  if (!res) return
+
+  result.value = res
+  if (res.truncated) {
+    ElMessage.warning('简历较长，这次只分析了前面一段')
   }
 }
 
@@ -99,9 +90,6 @@ async function copy(text: string | null): Promise<void> {
     ElMessage.warning('复制失败，请手动选中文本')
   }
 }
-
-// ⚠️ 组件卸载要停掉计时器，否则它会一直跑（用户切走页面还在跳秒）
-onUnmounted(stopTimer)
 </script>
 
 <template>

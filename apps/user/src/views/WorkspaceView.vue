@@ -53,7 +53,6 @@ const ENTRIES: Entry[] = [
     icon: Microphone,
     to: '/interviews',
     permission: 'app:interview:read',
-    comingSoon: true,
   },
   {
     title: '知识库',

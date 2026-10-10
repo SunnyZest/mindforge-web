@@ -77,6 +77,20 @@ export type {
   JobUpdateDTO,
   StructuredJob,
   JobSkill,
+  // 用户端：模拟面试
+  InterviewType,
+  InterviewDifficulty,
+  InterviewStatus,
+  QuestionType,
+  InterviewVO,
+  InterviewQuery,
+  InterviewDetailVO,
+  InterviewQuestionVO,
+  InterviewAnalysis,
+  InterviewCreateDTO,
+  InterviewAnswerDTO,
+  InterviewAnswerResultVO,
+  InterviewReportVO,
 } from './types'
 
 // ---------- HTTP 客户端 ----------

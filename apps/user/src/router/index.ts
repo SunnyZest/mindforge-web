@@ -84,14 +84,20 @@ const router = createRouter({
         {
           path: 'interviews',
           name: 'interviews',
-          component: () => import('@/views/ComingSoonView.vue'),
+          component: () => import('@/views/InterviewListView.vue'),
           meta: {
             title: '模拟面试',
             icon: 'Microphone',
             order: 4,
             permission: 'app:interview:read',
-            comingSoon: true,
           },
+        },
+        {
+          // 面试间（五步流程 + 报告）。不进菜单。
+          path: 'interviews/:id',
+          name: 'interview-room',
+          component: () => import('@/views/InterviewRoomView.vue'),
+          meta: { permission: 'app:interview:read' },
         },
         {
           path: 'knowledge',

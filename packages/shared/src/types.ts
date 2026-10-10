@@ -695,3 +695,159 @@ export interface JobUpdateDTO {
  *    留这个别名是为了调用方能写 JobQuery，比裸用 PageQuery 语义清楚。
  */
 export type JobQuery = PageQuery
+
+// ============================================================================
+//  用户端 —— 模拟面试
+//  对着 Java 的 pojo/vo/Interview*.java、pojo/dto/Interview*.java
+//  和 Python 的 app/services/interview.py 核过。
+//
+//  ★ 流程是【五步】，别把「创建」和「出题」合成一步：
+//    创建（快）→ 出题（慢）→ 开始作答（快）→ 逐题提交（慢）→ 结束出报告（慢）
+//    后端刻意拆开：创建失败（参数错）和出题失败（AI 超时）是两类问题，
+//    合成一个接口前端说不清该提示什么，而且出题失败后没法重试。
+// ============================================================================
+
+/** 面试类型（创建时选） */
+export type InterviewType = 'TECHNICAL' | 'BEHAVIORAL' | 'MIXED'
+
+/** 难度 */
+export type InterviewDifficulty = 'EASY' | 'MEDIUM' | 'HARD'
+
+/** 状态机：CREATED → IN_PROGRESS → FINISHED */
+export type InterviewStatus = 'CREATED' | 'IN_PROGRESS' | 'FINISHED'
+
+/** 单题的类型（由 AI 出题时决定，和面试类型不是一回事） */
+export type QuestionType = 'TECHNICAL' | 'BEHAVIORAL' | 'SITUATIONAL'
+
+/** 单题的 AI 分析（Java 的 `InterviewAnalysisVO`） */
+export interface InterviewAnalysis {
+  score: number | null
+  technical: {
+    score: number | null
+    strengths: string[]
+    weaknesses: string[]
+  } | null
+  communication: {
+    clarity: number | null
+    issues: string[]
+  } | null
+  /** 你答漏了的点 —— 这是逐题反馈里最有用的部分 */
+  missingPoints: string[]
+  comment: string | null
+  /** 追问（如果 AI 觉得这题还能再挖） */
+  followUp: string | null
+}
+
+/** 单题（Java 的 `InterviewQuestionVO`） */
+export interface InterviewQuestionVO {
+  id: string
+  /** ⚠️ 后端【重排过】的编号，从 1 开始连续 —— 可以放心按它排序和找下一题 */
+  questionNo: number
+  questionType: QuestionType | null
+  question: string
+  difficulty: InterviewDifficulty | null
+  answered: boolean
+  userAnswer: string | null
+  score: number | null
+  aiAnalysis: InterviewAnalysis | null
+  answeredAt: string | null
+  /** 参考答案的要点 —— 作答前别展示（等于给答案） */
+  expectedPoints: string[]
+}
+
+/** 面试列表行（Java 的 `InterviewVO`） */
+export interface InterviewVO {
+  id: string
+  title: string
+  interviewType: InterviewType
+  difficulty: InterviewDifficulty
+  status: InterviewStatus
+  questionCount: number | null
+  answeredCount: number | null
+  averageScore: number | null
+  resumeId: string | null
+  jobId: string | null
+  startedAt: string | null
+  finishedAt: string | null
+  createdAt: string | null
+}
+
+/** 面试详情（Java 的 `InterviewDetailVO`）—— 比列表多 questions */
+export interface InterviewDetailVO {
+  id: string
+  title: string
+  interviewType: InterviewType
+  difficulty: InterviewDifficulty
+  status: InterviewStatus
+  questionCount: number | null
+  answeredCount: number | null
+  resumeId: string | null
+  jobId: string | null
+  startedAt: string | null
+  finishedAt: string | null
+  createdAt: string | null
+  questions: InterviewQuestionVO[]
+}
+
+/** 创建面试（Java 的 `InterviewCreateDTO`）—— resumeId / jobId 都可空 */
+export interface InterviewCreateDTO {
+  /** 可空 —— 支持「不基于简历的通用面试」 */
+  resumeId?: string
+  jobId?: string
+  /** 可空，不传按岗位/简历名自动生成；最长 255 */
+  title?: string
+  /** 默认 TECHNICAL */
+  interviewType?: InterviewType
+  /** 默认 MEDIUM */
+  difficulty?: InterviewDifficulty
+  /** 1~20，默认 5 */
+  questionCount?: number
+}
+
+/** 提交单题回答（Java 的 `InterviewAnswerDTO`） */
+export interface InterviewAnswerDTO {
+  /** 必填 */
+  questionId: string
+  answer?: string
+}
+
+/** 提交回答后的返回（Java 的 `InterviewAnswerResultVO`）—— 自带下一题，省一次请求 */
+export interface InterviewAnswerResultVO {
+  questionId: string
+  questionNo: number
+  score: number | null
+  analysis: InterviewAnalysis | null
+  /** 下一题；已经是最后一题时为 null */
+  nextQuestion: {
+    id: string
+    questionNo: number
+    question: string
+    questionType: QuestionType | null
+    difficulty: InterviewDifficulty | null
+  } | null
+  answeredCount: number
+  totalCount: number
+  /** 全答完了 —— 这时候才该把「结束面试」的按钮亮出来 */
+  allAnswered: boolean
+}
+
+/** 面试报告（Java 的 `InterviewReportVO`） */
+export interface InterviewReportVO {
+  id: string
+  interviewId: string
+  overallScore: number | null
+  technicalScore: number | null
+  communicationScore: number | null
+  problemSolvingScore: number | null
+  strengths: string[]
+  weaknesses: string[]
+  suggestions: string[]
+  /** 长文本总评 */
+  reportText: string | null
+  createdAt: string | null
+}
+
+/** 面试列表查询 */
+export interface InterviewQuery extends PageQuery {
+  status?: InterviewStatus
+}
