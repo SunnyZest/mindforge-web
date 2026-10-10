@@ -26,6 +26,9 @@ const theme = useThemeStore()
  * 图标按名字取。
  * 只 import 用到的那几个 —— `import * as Icons` 会把几百个图标全拉进来，
  * 而 `import *` 基本没法 tree-shake。
+ *
+ * ⚠️ 加了页面之后**记得来这里补图标** —— 路由里 `icon: 'Xxx'` 写了但这里没有，
+ *    表现是「菜单项前面空着」，不会报错。详见下面的 iconOf()。
  */
 const ICONS: Record<string, Component> = {
   HomeFilled,
@@ -35,6 +38,28 @@ const ICONS: Record<string, Component> = {
   Collection,
   ChatDotRound,
   User,
+}
+
+/**
+ * 从路由 meta 取图标组件。
+ *
+ * ⚠️ 这个包装不是多余的：`ICONS[name]` 取不到时是 `undefined`，
+ *    模板里 `v-if="m.icon"` 直接跳过 —— **图标静默消失，没有任何报错**。
+ *    没人会想到「菜单前面空一格」是因为名字拼错了。
+ *    所以开发环境显式报一条 error，一眼就能看到。
+ *    （管理端的 AdminLayout 里有同一份，那边也踩过：`Key` 漏了没加。）
+ */
+function iconOf(name: string | undefined): Component | undefined {
+  if (!name) return undefined
+
+  const icon = ICONS[name]
+  if (!icon && import.meta.env.DEV) {
+    console.error(
+      `[UserLayout] 菜单图标 "${name}" 不在 ICONS 映射表里，图标不会显示。` +
+        ' 请到 @element-plus/icons-vue 里找同名图标并加进 ICONS。',
+    )
+  }
+  return icon
 }
 
 /**
@@ -53,7 +78,7 @@ const menus = computed(() =>
       name: String(r.name),
       path: r.path,
       title: r.meta.title as string,
-      icon: r.meta.icon ? ICONS[r.meta.icon] : undefined,
+      icon: iconOf(r.meta.icon),
       comingSoon: Boolean(r.meta.comingSoon),
     })),
 )
