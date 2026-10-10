@@ -85,13 +85,16 @@ packages/shared   两端共用：API 客户端 / 类型 / 权限 / 设计 token
 已完成：工程骨架（base `/`、端口 5173）、深浅色自由切换、登录 / 注册 /
 工作台 / 个人资料 / 403 / 404、用户端 API 层（认证 + 资料）。
 
-已完成：**我的简历**（上传 / 解析 / 左原文·右结构化对照 / AI 优化建议）
+已完成：
+
+- **我的简历** —— 上传 / 解析 / 左原文·右结构化对照 / AI 优化建议
+- **目标职位** —— 录入 JD / 解析 / 对照 / 技能按「硬性要求·加分项」分组
 
 还没做的是剩下的业务页面（现在是「建设中」占位页，权限码已挂好）：
 
 ```
-目标职位 app:job:read         模拟面试 app:interview:read
-知识库   app:knowledge:read   AI 问答  app:rag:search
+模拟面试 app:interview:read   知识库 app:knowledge:read
+AI 问答  app:rag:search
 ```
 
 后端 55 个用户端端点都已就绪。四个想特别做好的点：
