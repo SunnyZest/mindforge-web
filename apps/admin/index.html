@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MindForge 管理后台</title>
+
+    <!-- 用 SVG 而不是 PNG：矢量在任何缩放下都清晰，而且体积只有几百字节、
+         能直接进版本库看 diff。现代浏览器都支持。 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- 移动端浏览器地址栏的配色，跟品牌蓝一致 -->
+    <meta name="theme-color" content="#0071e3" />
+
     <script>
       // 尽早把主题挂到 <html> 上，避免首屏先闪一下浅色再跳成深色（FOUC）。
       // ⚠️ 必须内联在 <head>：走打包 / 放到 main.ts 里都太晚 ——
