@@ -1044,3 +1044,133 @@ export interface ChatStreamErrorEvent {
   message: string
   traceId: string | null
 }
+
+// ============================================================================
+//  管理端 —— Prompt 管理 / AI 用量
+//  对着 Java 的 pojo/vo/Prompt*.java、Usage*.java、pojo/dto/Prompt*.java 核过。
+// ============================================================================
+
+/**
+ * 提示词版本状态。
+ * ⚠️ **是大写** —— 后端 `AdminPromptServiceImpl` 里定义的就是 DRAFT / PUBLISHED / ARCHIVED。
+ *    别按小写比较，否则「生效中」的高亮和「生效中不能删」都会失效（实测踩过）。
+ */
+export type PromptStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+
+/**
+ * 提示词版本（Java 的 `PromptVO`）。
+ *
+ * ★ 有版本管理：同一个 (scene, name) 每次新建都是**加一个版本**，不是新建变体。
+ *   想加变体要换 `name`。
+ */
+export interface PromptVO {
+  id: string
+  /**
+   * 场景，如 RAG_CHAT / RESUME_PARSE。
+   * ⚠️ **后端会统一转成大写**（`scene.trim().toUpperCase()`），
+   *    对齐 Python 侧的提示词文件名。所以这里拿到的永远是大写。
+   */
+  scene: string
+  /** 变体名，同一个 scene 下可以有多套说法 */
+  name: string
+  version: number
+  content: string
+  /** 只有 published 的那个版本会被真正使用 */
+  status: PromptStatus
+  isDefault: boolean
+  /** 是否让用户端能选它 */
+  userSelectable: boolean
+  /** 给用户看的选项名 */
+  label: string | null
+  description: string | null
+  createdBy: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 按变体分组（Java 的 `PromptGroupVO`）—— 列表就是这个结构 */
+export interface PromptGroupVO {
+  scene: string
+  name: string
+  label: string | null
+  userSelectable: boolean
+  isDefault: boolean
+  /** 当前已发布版本的 id */
+  publishedId: string | null
+  /** 最新版本号（不一定等于已发布的那个） */
+  latestVersion: number | null
+  /** 版本历史，版本号倒序 */
+  versions: PromptVO[]
+}
+
+/** 新建版本（Java 的 `PromptCreateDTO`）—— 同 (scene, name) 再加就是加版本 */
+export interface PromptCreateDTO {
+  /** 必填，最长 32。⚠️ 后端会转成大写，填小写也存成大写 */
+  scene: string
+  /** 必填，最长 64 */
+  name: string
+  /** 必填 —— 提示词正文 */
+  content: string
+  userSelectable?: boolean
+  /** 最长 64 */
+  label?: string
+  isDefault?: boolean
+  /** 最长 255 */
+  description?: string
+}
+
+/**
+ * 修改版本（Java 的 `PromptUpdateDTO`）。
+ * ⚠️ **改不了 scene / name** —— 那相当于换一个变体了，得新建。
+ */
+export interface PromptUpdateDTO {
+  content?: string
+  userSelectable?: boolean
+  label?: string
+  isDefault?: boolean
+  description?: string
+}
+
+/** 用量总览（Java 的 `UsageSummaryVO`） */
+export interface UsageSummaryVO {
+  requests: number
+  successCount: number
+  failedCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  avgDurationMs: number | null
+}
+
+/** 按天用量（Java 的 `UsageDailyVO`）—— 只返回有记录的天 */
+export interface UsageDailyVO {
+  /** ISO 日期字符串 yyyy-MM-dd */
+  date: string
+  requests: number
+  successCount: number
+  failedCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+/** 按「场景 + 模型」用量（Java 的 `UsageByModelVO`） */
+export interface UsageByModelVO {
+  scene: string
+  provider: string | null
+  modelName: string | null
+  requests: number
+  successCount: number
+  failedCount: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  avgDurationMs: number | null
+}
+
+/** 用量查询 —— 三个接口共用同一套日期参数 */
+export interface UsageQuery {
+  /** ISO 日期 yyyy-MM-dd */
+  from?: string
+  to?: string
+}

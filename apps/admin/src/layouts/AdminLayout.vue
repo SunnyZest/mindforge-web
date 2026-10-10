@@ -5,11 +5,13 @@ import {
   Collection,
   Cpu,
   Document,
+  EditPen,
   Key,
   Moon,
   Odometer,
   Sunny,
   Tickets,
+  TrendCharts,
   User,
 } from '@element-plus/icons-vue'
 import { computed, type Component } from 'vue'
@@ -41,6 +43,8 @@ const ICONS: Record<string, Component> = {
   Document,
   Cpu,
   Tickets,
+  EditPen,
+  TrendCharts,
 }
 
 /**

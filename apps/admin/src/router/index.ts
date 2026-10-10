@@ -90,6 +90,23 @@ const router = createRouter({
           meta: { title: '审计日志', icon: 'Tickets', order: 7, permission: 'admin:audit:list' },
         },
         {
+          path: 'prompts',
+          name: 'prompts',
+          component: () => import('@/views/PromptListView.vue'),
+          meta: {
+            title: 'Prompt 管理',
+            icon: 'EditPen',
+            order: 8,
+            permission: 'admin:prompt:manage',
+          },
+        },
+        {
+          path: 'usage',
+          name: 'usage',
+          component: () => import('@/views/UsageView.vue'),
+          meta: { title: 'AI 用量', icon: 'TrendCharts', order: 9, permission: 'admin:usage:read' },
+        },
+        {
           // 开发用的设计规范页 —— 不设 permission（登录即可看）
           path: 'style-guide',
           name: 'style-guide',

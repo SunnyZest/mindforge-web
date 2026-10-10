@@ -113,6 +113,16 @@ export type {
   ChatStreamDeltaEvent,
   ChatStreamDoneEvent,
   ChatStreamErrorEvent,
+  // 管理端：Prompt 管理 / AI 用量
+  PromptStatus,
+  PromptVO,
+  PromptGroupVO,
+  PromptCreateDTO,
+  PromptUpdateDTO,
+  UsageSummaryVO,
+  UsageDailyVO,
+  UsageByModelVO,
+  UsageQuery,
 } from './types'
 
 // ---------- HTTP 客户端 ----------
