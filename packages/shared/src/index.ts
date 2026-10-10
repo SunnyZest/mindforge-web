@@ -52,6 +52,23 @@ export type {
   AuditLogVO,
   AuditLogQuery,
   DashboardVO,
+  // 用户端：简历
+  ResumeParseStatus,
+  SkillType,
+  ProficiencyLevel,
+  OptimizeTarget,
+  ResumeVO,
+  ResumeQuery,
+  ResumeDetailVO,
+  ResumeParsedVO,
+  StructuredResume,
+  ResumeSkill,
+  ResumeEducation,
+  ResumeWorkExperience,
+  ResumeProject,
+  ResumeOptimizeDTO,
+  ResumeOptimizeVO,
+  ResumeOptimizeItem,
 } from './types'
 
 // ---------- HTTP 客户端 ----------

@@ -39,7 +39,6 @@ const ENTRIES: Entry[] = [
     icon: Document,
     to: '/resumes',
     permission: 'app:resume:read',
-    comingSoon: true,
   },
   {
     title: '目标职位',

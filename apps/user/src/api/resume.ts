@@ -1,0 +1,83 @@
+import type {
+  PageResult,
+  ResumeDetailVO,
+  ResumeOptimizeDTO,
+  ResumeOptimizeVO,
+  ResumeParsedVO,
+  ResumeQuery,
+  ResumeVO,
+} from '@mindforge/shared'
+
+import { http } from './index'
+
+/**
+ * 用户端简历。
+ *
+ * ⚠️ 上传是 **multipart/form-data**（`@RequestPart("file")`），
+ *    但后端的 OpenAPI 注解写的是 application/json —— 注解是错的，
+ *    以 Java 源码 `ResumeController.upload()` 为准。
+ *    `name` / `targetPosition` 是 `@RequestParam`，走 query string。
+ */
+export const resumeApi = {
+  page: (query: ResumeQuery) => http.get<PageResult<ResumeVO>>('/app/resumes', { params: query }),
+
+  detail: (id: string) => http.get<ResumeDetailVO>(`/app/resumes/${id}`),
+
+  /**
+   * 解析结果。
+   *
+   * ★ 轮询解析进度用这个而不是 detail —— 响应体小得多，适合高频调用
+   *   （后端在 `ResumeParsedVO` 的注释里也这么建议）。
+   */
+  parsed: (id: string) => http.get<ResumeParsedVO>(`/app/resumes/${id}/parsed`),
+
+  /**
+   * 上传。
+   *
+   * 允许的扩展名：pdf / docx / txt / md / markdown / html / htm
+   * （Java `UploadConstants.RESUME_EXT`）。前端先挡一道，给个明确的提示，
+   * 别等后端返回 FILE_TYPE_UNSUPPORTED。
+   *
+   * ⚠️ 上传只把文件存下来，**不会自动解析** —— 解析要单独调 `parse()`。
+   *    后端是刻意拆开的：解析是几十秒的慢接口，塞进上传会让「上传」变得不可预期。
+   */
+  upload: (file: File, extra: { name?: string; targetPosition?: string } = {}) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.post<ResumeVO>('/app/resumes', form, {
+      // 空串要转 undefined，否则会拼出 `?name=` 这种空参数
+      params: {
+        name: extra.name?.trim() || undefined,
+        targetPosition: extra.targetPosition?.trim() || undefined,
+      },
+    })
+  },
+
+  /**
+   * 触发解析。
+   *
+   * ★ 这是个**慢接口**（几十秒），但它是异步的：调完立刻返回，
+   *   实际进度去看 `parseStatus`（PENDING → PARSING → SUCCESS / FAILED）。
+   *   所以超时不用放宽，调完开始轮询就行。
+   */
+  parse: (id: string) => http.post<void>(`/app/resumes/${id}/parse`),
+
+  remove: (id: string) => http.delete<void>(`/app/resumes/${id}`),
+
+  /**
+   * AI 优化建议。
+   *
+   * ⚠️⚠️ **同步慢接口，实测 100~120 秒**（后端优化过一轮：建议条数上限
+   *      从 8 收到 5、字段加了字数上限，才从 203/360 秒降下来）。
+   *      默认 30 秒超时必然失败，所以这里显式放宽到 5 分钟。
+   *
+   * ⚠️ 前置条件：简历必须**已解析过**，否则返回 40001。
+   *    页面上应该在 `structuredJson` 为空时把按钮置灰并说明原因。
+   *
+   * ⚠️ 这个接口**不落库、不改简历** —— 只返回建议，可以反复调，没有副作用。
+   */
+  optimize: (id: string, dto: ResumeOptimizeDTO = {}) =>
+    http.post<ResumeOptimizeVO>(`/app/resumes/${id}/optimize`, dto, {
+      timeout: 5 * 60 * 1000,
+    }),
+}

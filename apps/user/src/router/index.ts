@@ -58,14 +58,15 @@ const router = createRouter({
         {
           path: 'resumes',
           name: 'resumes',
-          component: () => import('@/views/ComingSoonView.vue'),
-          meta: {
-            title: '我的简历',
-            icon: 'Document',
-            order: 2,
-            permission: 'app:resume:read',
-            comingSoon: true,
-          },
+          component: () => import('@/views/ResumeListView.vue'),
+          meta: { title: '我的简历', icon: 'Document', order: 2, permission: 'app:resume:read' },
+        },
+        {
+          // 详情不进菜单（没有 title），只能从列表点进来
+          path: 'resumes/:id',
+          name: 'resume-detail',
+          component: () => import('@/views/ResumeDetailView.vue'),
+          meta: { permission: 'app:resume:read' },
         },
         {
           path: 'jobs',

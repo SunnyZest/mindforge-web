@@ -411,3 +411,172 @@ export interface DashboardVO {
   aiRequestCount: number
   tokenUsage: number
 }
+
+// ============================================================================
+//  用户端 —— 简历
+//  字段名和枚举取值都是对着后端 VO / Python 服务实际产出核过的，不是猜的：
+//    · VO    见 Java 的 pojo/vo/ResumeVO、ResumeDetailVO、ResumeParsedVO、ResumeOptimizeVO
+//    · 结构化 见 Python 的 app/services/resume.py 的 _normalize()
+//    · 枚举   见同文件的 _SKILL_TYPES / _PROFICIENCY / _ANALYZE_TARGETS
+// ============================================================================
+
+/** 解析状态机：PENDING → PARSING → SUCCESS / FAILED */
+export type ResumeParseStatus = 'PENDING' | 'PARSING' | 'SUCCESS' | 'FAILED'
+
+/** 技能类型（Python `_SKILL_TYPES`，白名单外的值会被后端置空） */
+export type SkillType = 'LANGUAGE' | 'FRAMEWORK' | 'TOOL' | 'SOFT'
+
+/** 熟练度（Python `_PROFICIENCY`，同上） */
+export type ProficiencyLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
+
+/** 优化建议针对的部分（Python `_ANALYZE_TARGETS`） */
+export type OptimizeTarget =
+  'SUMMARY' | 'WORK_EXPERIENCE' | 'PROJECT_EXPERIENCE' | 'SKILLS' | 'EDUCATION' | 'OVERALL'
+
+/** 简历列表行（Java 的 `ResumeVO`） */
+export interface ResumeVO {
+  id: string
+  name: string
+  targetPosition: string | null
+  parseStatus: ResumeParseStatus
+  fileName: string | null
+  fileSize: number | null
+  status: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+// ---------- 结构化简历 ----------
+// ⚠️ 每个字段都可能为 null —— Python 侧的 clean_str() 拿不到就置空，
+//    而不是留空串。展示时一律按「可能没有」处理，别直接 .length。
+
+export interface ResumeSkill {
+  name: string
+  type: SkillType | null
+  proficiency: ProficiencyLevel | null
+  years: number | null
+}
+
+export interface ResumeEducation {
+  school: string
+  major: string | null
+  degree: string | null
+  /** 年份是整数（Python clean_int(1900~2100)），不是字符串 */
+  startYear: number | null
+  endYear: number | null
+}
+
+export interface ResumeWorkExperience {
+  company: string
+  position: string | null
+  startDate: string | null
+  endDate: string | null
+  description: string | null
+}
+
+export interface ResumeProject {
+  name: string
+  role: string | null
+  description: string | null
+  techStack: string[]
+}
+
+/** 结构化简历内容（`resume.structured_json` 列的 JSON，未解析时为 null） */
+export interface StructuredResume {
+  name: string | null
+  phone: string | null
+  email: string | null
+  location: string | null
+  targetPosition: string | null
+  summary: string | null
+  selfEvaluation: string | null
+  yearsOfExperience: number | null
+  education: ResumeEducation[]
+  workExperience: ResumeWorkExperience[]
+  projects: ResumeProject[]
+  skills: ResumeSkill[]
+  /** 证书/奖项，字符串数组 */
+  certificates: string[]
+}
+
+/** 简历详情（Java 的 `ResumeDetailVO`）—— 比列表多 rawContent 和 structuredJson */
+export interface ResumeDetailVO {
+  id: string
+  name: string
+  targetPosition: string | null
+  /** 关联的文件 id（下载用） */
+  fileId: string | null
+  fileName: string | null
+  fileSize: number | null
+  summary: string | null
+  /** 简历原文 —— 「左原文 / 右结构化」对照的左半边就靠它 */
+  rawContent: string | null
+  structuredJson: StructuredResume | null
+  parseStatus: ResumeParseStatus
+  errorMessage: string | null
+  status: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 解析结果（Java 的 `ResumeParsedVO`）—— 轮询解析进度用这个，响应体比详情小 */
+export interface ResumeParsedVO {
+  resumeId: string
+  parseStatus: ResumeParseStatus
+  summary: string | null
+  structuredJson: StructuredResume | null
+  errorMessage: string | null
+  updatedAt: string | null
+}
+
+// ---------- AI 优化 ----------
+
+/** 优化请求（Java 的 `ResumeOptimizeDTO`）—— 两个字段都可空 */
+export interface ResumeOptimizeDTO {
+  /** 目标岗位 id。不传 = 按通用标准评 */
+  jobId?: string
+  /** 重点分析的部分。不传 = 整体 */
+  target?: OptimizeTarget
+}
+
+/** 单条优化建议 */
+export interface ResumeOptimizeItem {
+  target: OptimizeTarget | null
+  /** 简历里的原句 */
+  original: string | null
+  issue: string | null
+  /** 怎么改 —— 任何情况下都有 */
+  suggestion: string | null
+  /** ★ needsFact = true 时【一定】是 null */
+  rewritten: string | null
+  /**
+   * ★★ 决定这条该怎么展示：
+   *   false → 「改写建议」，rewritten 可以直接用
+   *   true  → 「待补事实」，没有 rewritten，只有 missingFact 说缺什么
+   * 两类绝不能混着展示 —— 见 ResumeOptimizeVO 里的说明。
+   */
+  needsFact: boolean
+  /** 缺什么事实；needsFact = false 时为 null */
+  missingFact: string | null
+}
+
+/** AI 优化建议（Java 的 `ResumeOptimizeVO`）—— ⚠️ 只返回建议，不改简历 */
+export interface ResumeOptimizeVO {
+  resumeId: string
+  /** 0~100，仅作参考 —— 真正该看的是 items */
+  overallScore: number | null
+  summary: string | null
+  /** 简历里已经写得好的地方 */
+  highlights: string[]
+  /** ⚠️ 后端硬上限 5 条，别按 8 条设计布局 */
+  items: ResumeOptimizeItem[]
+  /** 需要用户补事实的条数，页头直接显示这个，别让用户自己数 */
+  needsFactCount: number | null
+  /** 简历太长时只分析了前面一段 */
+  truncated: boolean | null
+}
+
+/** 简历列表查询 */
+export interface ResumeQuery extends PageQuery {
+  parseStatus?: ResumeParseStatus
+}
