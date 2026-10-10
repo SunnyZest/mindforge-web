@@ -10,8 +10,8 @@ MindForge AI 的前端，**一仓两端**（pnpm workspace）：用户端 + 管�
 ```
 mindforge-web/
 ├── apps/
-│   ├── admin/          管理端（:5174）—— 当前只有这个
-│   └── user/           用户端（还没建）
+│   ├── admin/          管理端（:5174）
+│   └── user/           用户端（:5173）
 └── packages/
     └── shared/         两个端共用：API 客户端 / 类型 / token 刷新 / 权限判断
 ```
@@ -22,11 +22,15 @@ mindforge-web/
 pnpm install                 # 根目录跑一次，两个包一起装
 
 # 需要先起后端：MySQL + Redis + Java（:8080）
+pnpm dev:user                # 用户端 → http://localhost:5173/
 pnpm dev:admin               # 管理端 → http://localhost:5174/admin/
 ```
 
-开发时前端跑在 5174，`/api` 由 Vite 代理到 `http://localhost:8080`（见 `apps/admin/vite.config.ts`）。
+两个端各自的 `/api` 都由 Vite 代理到 `http://localhost:8080`（见各自的 `vite.config.ts`）。
 **不需要配跨域**。
+
+⚠️ 两个端**同源部署**时 localStorage 是共享的 —— 所以 token 的 key 前缀必须区分
+（`mf_admin_` / `mf_user_`），否则在管理端登录会把用户端的登录态覆盖掉。
 
 > ⚠️ **如果提示 `pnpm: command not found`**
 >

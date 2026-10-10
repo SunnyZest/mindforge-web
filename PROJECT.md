@@ -14,8 +14,8 @@
 MindForge AI（AI 求职平台）的前端，**pnpm workspace 一仓两端**：
 
 ```
-apps/admin        管理端 —— 已完成主体
-apps/user         用户端 —— 还没建
+apps/admin        管理端 —— 已完成主体（7 个业务页面）
+apps/user         用户端 —— 骨架已建（登录 / 注册 / 工作台 / 个人资料）
 packages/shared   两端共用：API 客户端 / 类型 / 权限 / 设计 token
 ```
 
@@ -80,17 +80,28 @@ packages/shared   两端共用：API 客户端 / 类型 / 权限 / 设计 token
 | 知识库 / 文档详情                    | 接口有，但**实测返回的字段和列表项完全一样**，接了没意义    |
 | Dashboard 增强                       | 需要后端加统计接口                                          |
 
-**用户端 `apps/user`：还没建。** 这是接下来最大的一块：
+**用户端 `apps/user`：骨架已建，业务页面待做。**
 
-1. 深色主题已备好 —— `index.html` 上写 `data-theme="dark"` 即可
-2. 主流程：工作台 / 简历上传与详情 / 匹配报告 / 面试对话
-3. 后端已交付**用户端新接口规格**（简历 AI 优化 + AI 面试 10 个端点），
-   字段细节见 `.workbuddy-ai/memory/MEMORY.md` 的「后端新增接口」一节
-4. 四个想特别做好的点：
-   - 简历详情做成【左原文 / 右结构化】的对照 —— 这是产品最有说服力的地方
-   - 匹配报告用【五类结论】而不是百分比
-   - RAG 问答把【引用溯源】标在正文里（后端已有 chunk → document 的溯源链）
-   - ⚠️ 简历优化的 `needsFact` 两类建议**绝不能混着展示**
+已完成：工程骨架（base `/`、端口 5173）、深浅色自由切换、登录 / 注册 /
+工作台 / 个人资料 / 403 / 404、用户端 API 层（认证 + 资料）。
+
+还没做的是**业务页面**（现在都是「建设中」占位页，权限码已挂好）：
+
+```
+我的简历 app:resume:read      目标职位 app:job:read
+模拟面试 app:interview:read   知识库   app:knowledge:read
+AI 问答  app:rag:search
+```
+
+后端 55 个用户端端点都已就绪。四个想特别做好的点：
+
+- 简历详情做成【左原文 / 右结构化】的对照 —— 这是产品最有说服力的地方
+- 匹配报告用【五类结论】而不是百分比
+- RAG 问答把【引用溯源】标在正文里（后端已有 chunk → document 的溯源链）
+- ⚠️ 简历优化的 `needsFact` 两类建议**绝不能混着展示** ——
+  会让用户以为 AI 替他编好了经历，面试里一追问就露馅，**比不改还糟**
+
+字段细节见 `.workbuddy-ai/memory/MEMORY.md` 的「后端新增接口」一节。
 
 **其它**：上线时的 nginx 配置（按 `/admin/` 分流 + 管理端可加 IP 白名单）；
 可选接 OpenAPI 代码生成，把手抄的类型换成生成。
@@ -183,8 +194,8 @@ apps/admin/src/
 ```
 packages/shared/styles/
 ├── tokens.css        底座：间距 / 圆角 / 字号 / 动效 / 玻璃强度
-├── theme-light.css   浅色 —— 管理端，挂 :root
-├── theme-dark.css    深色 —— 用户端，挂 [data-theme='dark']
+├── theme-light.css   浅色，挂 :root 和 [data-theme='light']
+├── theme-dark.css    深色，挂 [data-theme='dark']
 ├── glass.css         ★ 液态玻璃工具类 + 三档无障碍降级
 ├── element-plus.css  把 token 映射到 EP 的 CSS 变量，并给 EP 组件套玻璃
 └── index.css         汇总入口
@@ -332,7 +343,7 @@ refreshToken  带【轮换 + 重放检测】—— 一个用过一次就失效
 
 ### 权限码
 
-47 条（用户端 23 + 管理端 24），清单在 `packages/shared/src/permission.ts` 的联合类型里。
+48 条（用户端 24 + 管理端 24），清单在 `packages/shared/src/permission.ts` 的联合类型里。
 **前端拿它决定菜单和按钮显不显示 —— 那只是 UX，后端每个接口都有 `@PreAuthorize`，
 那才是真防线。**
 
