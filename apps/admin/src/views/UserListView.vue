@@ -1,15 +1,30 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 
-import type { UserSummaryVO } from '@mindforge/shared'
+import type { RoleVO, UserSummaryVO } from '@mindforge/shared'
+import { BizError } from '@mindforge/shared'
 
+import { roleApi } from '@/api/role'
 import { userApi } from '@/api/user'
 import StatusTag from '@/components/StatusTag.vue'
+import UserFormDialog from '@/components/UserFormDialog.vue'
+import UserRoleDialog from '@/components/UserRoleDialog.vue'
+import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
+
+const auth = useAuthStore()
 
 const loading = ref(false)
 const rows = ref<UserSummaryVO[]>([])
 const total = ref(0)
+
+/**
+ * 角色列表。三个地方都要用：
+ *   ① 新增用户时的角色下拉
+ *   ② 分配角色弹窗的候选
+ *   ③ 把用户身上的**角色 code** 映射回 **id**（分配角色接口要 id）
+ */
+const roles = ref<RoleVO[]>([])
 
 /**
  * 查询条件。
@@ -23,6 +38,28 @@ const query = reactive({
   keyword: '',
   status: undefined as number | undefined,
 })
+
+// ---------- 弹窗 ----------
+const formVisible = ref(false)
+/** null = 新增，有值 = 编辑 */
+const formUser = ref<UserSummaryVO | null>(null)
+
+const roleVisible = ref(false)
+const roleUser = ref<UserSummaryVO | null>(null)
+
+function fail(e: unknown, fallback: string): void {
+  ElMessage.error(e instanceof BizError ? e.message : fallback)
+}
+
+/**
+ * el-table 插槽里的 `row` 类型是 `DefaultRow`（Element Plus 的泛型占位符），
+ * 直接传给 `onEdit(row: UserSummaryVO)` 会类型不匹配。
+ *
+ * 统一在这里转一次，模板里就不用到处写断言 —— 断言散在模板里更容易失控。
+ */
+function asUser(row: unknown): UserSummaryVO {
+  return row as UserSummaryVO
+}
 
 async function load(): Promise<void> {
   loading.value = true
@@ -38,9 +75,18 @@ async function load(): Promise<void> {
     rows.value = data.records
     total.value = data.total
   } catch (e) {
-    ElMessage.error(e instanceof Error ? e.message : '加载失败')
+    fail(e, '加载失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function loadRoles(): Promise<void> {
+  try {
+    roles.value = await roleApi.list()
+  } catch {
+    // 拿不到角色列表不影响「看用户」，只影响新增和分配角色。
+    // 这里刻意不弹错 —— 页面一进来就报错会让人以为是列表坏了。
   }
 }
 
@@ -56,7 +102,64 @@ function onReset(): void {
   onSearch()
 }
 
-onMounted(load)
+function onCreate(): void {
+  formUser.value = null
+  formVisible.value = true
+}
+
+function onEdit(row: UserSummaryVO): void {
+  formUser.value = row
+  formVisible.value = true
+}
+
+function onAssignRole(row: UserSummaryVO): void {
+  roleUser.value = row
+  roleVisible.value = true
+}
+
+async function onToggleStatus(row: UserSummaryVO): Promise<void> {
+  const next = row.status === 1 ? 0 : 1
+  const label = next === 1 ? '启用' : '禁用'
+
+  // ⚠️ 用户点「取消」时 confirm 会 reject —— 用 catch 吞掉，
+  //    否则会被后面的 catch 当成接口失败，弹一个莫名其妙的错误
+  const ok = await ElMessageBox.confirm(`确定要${label}用户「${row.username}」吗？`, '确认操作', {
+    type: 'warning',
+  }).catch(() => false)
+  if (!ok) return
+
+  try {
+    await userApi.updateStatus(row.id, { status: next })
+    ElMessage.success(`已${label}`)
+    await load()
+  } catch (e) {
+    fail(e, `${label}失败`)
+  }
+}
+
+async function onDelete(row: UserSummaryVO): Promise<void> {
+  const ok = await ElMessageBox.confirm(
+    `删除后不可恢复，确定删除用户「${row.username}」吗？`,
+    '删除确认',
+    { type: 'warning', confirmButtonText: '删除' },
+  ).catch(() => false)
+  if (!ok) return
+
+  try {
+    await userApi.remove(row.id)
+    ElMessage.success('已删除')
+    // 删掉当前页最后一条时要往前退一页，否则会停在一张空页上
+    if (rows.value.length === 1 && query.page > 1) query.page -= 1
+    await load()
+  } catch (e) {
+    fail(e, '删除失败')
+  }
+}
+
+onMounted(() => {
+  void load()
+  void loadRoles()
+})
 </script>
 
 <template>
@@ -76,17 +179,29 @@ onMounted(load)
       </el-select>
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
+
+      <el-button
+        v-if="auth.can('admin:user:create')"
+        type="primary"
+        class="filters__add"
+        @click="onCreate"
+      >
+        新增用户
+      </el-button>
     </div>
 
+    <!-- ⚠️ 列宽之和要控制在内容区宽度内（1440 视口下约 1100px）——
+         超了会出现横向滚动，而「操作」是 fixed 列，会盖住前一列的内容。
+         当前合计 1080px。改列宽时记得重新加一遍总数。 -->
     <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="username" label="用户名" min-width="140" />
-      <el-table-column prop="nickname" label="昵称" min-width="120">
+      <el-table-column prop="username" label="用户名" min-width="110" />
+      <el-table-column prop="nickname" label="昵称" min-width="90">
         <template #default="{ row }">{{ row.nickname || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="email" label="邮箱" min-width="180">
+      <el-table-column prop="email" label="邮箱" min-width="165">
         <template #default="{ row }">{{ row.email || '-' }}</template>
       </el-table-column>
-      <el-table-column label="角色" min-width="190">
+      <el-table-column label="角色" min-width="140">
         <template #default="{ row }">
           <span class="roles">
             <StatusTag v-for="r in row.roles" :key="r" tone="info">{{ r }}</StatusTag>
@@ -94,19 +209,59 @@ onMounted(load)
           </span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="90" align="center">
+      <el-table-column label="状态" width="80" align="center">
         <template #default="{ row }">
           <StatusTag :tone="row.status === 1 ? 'success' : 'danger'">
             {{ row.status === 1 ? '启用' : '禁用' }}
           </StatusTag>
         </template>
       </el-table-column>
-      <el-table-column label="最后登录" width="170">
+      <el-table-column label="最后登录" width="145">
         <template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template>
       </el-table-column>
-      <el-table-column label="创建时间" width="170">
+      <el-table-column label="创建时间" width="145">
         <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
       </el-table-column>
+
+      <el-table-column label="操作" width="205" fixed="right">
+        <template #default="{ row }">
+          <span class="actions">
+            <el-button
+              v-if="auth.can('admin:user:update')"
+              link
+              type="primary"
+              @click="onEdit(asUser(row))"
+            >
+              编辑
+            </el-button>
+            <el-button
+              v-if="auth.can('admin:user:assign-role')"
+              link
+              type="primary"
+              @click="onAssignRole(asUser(row))"
+            >
+              角色
+            </el-button>
+            <el-button
+              v-if="auth.can('admin:user:disable')"
+              link
+              :type="row.status === 1 ? 'warning' : 'success'"
+              @click="onToggleStatus(asUser(row))"
+            >
+              {{ row.status === 1 ? '禁用' : '启用' }}
+            </el-button>
+            <el-button
+              v-if="auth.can('admin:user:delete')"
+              link
+              type="danger"
+              @click="onDelete(asUser(row))"
+            >
+              删除
+            </el-button>
+          </span>
+        </template>
+      </el-table-column>
+
       <template #empty>没有匹配的用户</template>
     </el-table>
 
@@ -119,6 +274,9 @@ onMounted(load)
       class="pagination"
       @change="load"
     />
+
+    <UserFormDialog v-model="formVisible" :user="formUser" :roles="roles" @saved="load" />
+    <UserRoleDialog v-model="roleVisible" :user="roleUser" :roles="roles" @saved="load" />
   </el-card>
 </template>
 
@@ -137,10 +295,22 @@ onMounted(load)
   width: 140px;
 }
 
+/* 「新增」推到最右 —— 它和左边的筛选不是一组操作，挨着放容易误点 */
+.filters__add {
+  margin-left: auto;
+}
+
 .roles {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--mf-space-1);
+}
+
+/* 操作列按钮多，收紧间距 —— 换行会把行高撑起来，表格会显得很散 */
+.actions {
+  display: inline-flex;
+  gap: var(--mf-space-2);
+  white-space: nowrap;
 }
 
 .pagination {
