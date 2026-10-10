@@ -284,7 +284,7 @@ onMounted(load)
       :page-sizes="[20, 50, 100]"
       layout="total, sizes, prev, pager, next"
       class="pagination"
-      @change="load"
+      @change="() => load()"
     />
   </el-card>
 </template>

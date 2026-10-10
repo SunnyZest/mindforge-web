@@ -107,7 +107,7 @@ watch(visible, (open) => {
       :page-sizes="[10, 20, 50]"
       layout="total, sizes, prev, pager, next"
       class="pagination"
-      @change="load"
+      @change="() => load()"
     />
   </el-dialog>
 </template>

@@ -58,9 +58,18 @@ const menus = computed(() =>
     })),
 )
 
-async function onLogout(): Promise<void> {
-  await auth.logout()
-  await router.replace({ name: 'login' })
+/**
+ * 右上角用户下拉的命令分发。
+ *
+ * ⚠️ 别把 `@command` 直接绑到 `onLogout` 上 —— 那样会**忽略传进来的命令**，
+ *    将来往菜单里加一项（比如「修改密码」），点它也会把人踢下线。
+ *    这里显式分发：加菜单项时记得也加一个分支。
+ */
+async function onCommand(command: string): Promise<void> {
+  if (command === 'logout') {
+    await auth.logout()
+    await router.replace({ name: 'login' })
+  }
 }
 </script>
 
@@ -99,7 +108,7 @@ async function onLogout(): Promise<void> {
             <el-icon><Moon v-if="!theme.isDark" /><Sunny v-else /></el-icon>
           </button>
 
-          <el-dropdown @command="onLogout">
+          <el-dropdown @command="onCommand">
             <span class="layout__user">
               {{ auth.user?.nickname || auth.user?.username || '未登录' }}
               <el-icon><ArrowDown /></el-icon>

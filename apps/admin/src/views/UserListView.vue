@@ -307,7 +307,7 @@ onMounted(() => {
       :page-sizes="[10, 20, 50]"
       layout="total, sizes, prev, pager, next"
       class="pagination"
-      @change="load"
+      @change="() => load()"
     />
 
     <UserFormDialog v-model="formVisible" :user="formUser" :roles="roles" @saved="load" />
