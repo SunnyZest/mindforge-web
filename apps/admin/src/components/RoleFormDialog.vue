@@ -64,6 +64,20 @@ async function submit(): Promise<void> {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  /**
+   * ⚠️ 「把角色从启用改成禁用」是破坏性操作 ——
+   * 绑定这个角色的用户会立刻失去它的全部权限。
+   * 确认放在 saving 之前：用户点取消时不该闪一下「保存中」。
+   */
+  if (props.role && props.role.status === 1 && form.status === 0) {
+    const ok = await ElMessageBox.confirm(
+      `禁用「${props.role.name}」后，绑定该角色的用户会立刻失去它的全部权限，确定吗？`,
+      '确认禁用角色',
+      { type: 'warning', confirmButtonText: '禁用' },
+    ).catch(() => false)
+    if (!ok) return
+  }
+
   saving.value = true
   try {
     if (props.role) {

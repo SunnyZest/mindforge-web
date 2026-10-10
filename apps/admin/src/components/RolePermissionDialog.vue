@@ -22,6 +22,8 @@ const saving = ref(false)
 const allPerms = ref<PermissionVO[]>([])
 /** 当前勾选的权限 id */
 const selected = ref<number[]>([])
+/** 打开时的已选数量 —— 用来判断这次保存是不是「清空」 */
+const originalCount = ref(0)
 
 /**
  * 模块显示名。
@@ -160,6 +162,7 @@ watch(visible, async (open) => {
     //    全集在上面的 allPerms 里，这里只拿「哪些该勾上」。
     const assigned = await roleApi.listPermissions(props.role.id)
     selected.value = assigned.map((p) => Number(p.id))
+    originalCount.value = selected.value.length
   } catch (e) {
     ElMessage.error(e instanceof BizError ? e.message : '权限加载失败')
   } finally {
@@ -170,9 +173,23 @@ watch(visible, async (open) => {
 async function submit(): Promise<void> {
   if (!props.role) return
 
+  /**
+   * ⚠️ 空数组的语义是【清空】不是【不改】（后端约定），所以从「有」变成「0 项」
+   * 是个破坏性操作 —— 该角色的用户会立刻失去这些权限。
+   * 只在真的从有到无时拦一下；本来就 0 项的不用拦。
+   */
+  if (originalCount.value > 0 && selected.value.length === 0) {
+    const ok = await ElMessageBox.confirm(
+      `这会把「${props.role.name}」原有的 ${originalCount.value} 项权限全部清空，` +
+        `绑定该角色的用户会立刻失去这些权限。确定吗？`,
+      '确认清空权限',
+      { type: 'warning', confirmButtonText: '全部清空' },
+    ).catch(() => false)
+    if (!ok) return
+  }
+
   saving.value = true
   try {
-    // ⚠️ 传空数组 = 清空该角色所有权限（不是「不改」）
     await roleApi.assignPermissions(props.role.id, { permissionIds: selected.value })
     ElMessage.success('权限已更新')
     visible.value = false

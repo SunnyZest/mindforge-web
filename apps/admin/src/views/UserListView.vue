@@ -121,12 +121,23 @@ async function onToggleStatus(row: UserSummaryVO): Promise<void> {
   const next = row.status === 1 ? 0 : 1
   const label = next === 1 ? '启用' : '禁用'
 
-  // ⚠️ 用户点「取消」时 confirm 会 reject —— 用 catch 吞掉，
-  //    否则会被后面的 catch 当成接口失败，弹一个莫名其妙的错误
-  const ok = await ElMessageBox.confirm(`确定要${label}用户「${row.username}」吗？`, '确认操作', {
-    type: 'warning',
-  }).catch(() => false)
-  if (!ok) return
+  /**
+   * ⚠️ 只有【禁用】需要二次确认。
+   *
+   * 判断标准是「这个操作能不能自己撤销、有没有破坏性」：
+   *   · 禁用 —— 用户立刻登不进来，是破坏性的 → 确认
+   *   · 启用 —— 恢复性操作，误点了也无害 → 不确认
+   * 一视同仁地都弹确认，只会让人形成「闭眼点确定」的习惯，
+   * 那样真危险的确认也就失效了。
+   */
+  if (next === 0) {
+    const ok = await ElMessageBox.confirm(
+      `禁用后「${row.username}」将无法登录系统，确定吗？`,
+      '确认禁用',
+      { type: 'warning', confirmButtonText: '禁用' },
+    ).catch(() => false)
+    if (!ok) return
+  }
 
   try {
     await userApi.updateStatus(row.id, { status: next })

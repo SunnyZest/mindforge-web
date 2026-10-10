@@ -16,6 +16,8 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: [] }>()
 
 const selected = ref<number[]>([])
+/** 打开时的角色数量 —— 用来判断这次保存是不是「清空」 */
+const originalCount = ref(0)
 const saving = ref(false)
 
 const userName = computed(() => props.user?.nickname || props.user?.username || '')
@@ -35,14 +37,29 @@ watch(visible, (open) => {
   selected.value = props.roles
     .filter((r) => codes.includes(r.code))
     .map((r) => Number(r.id))
+  originalCount.value = selected.value.length
 })
 
 async function submit(): Promise<void> {
   if (!props.user) return
 
+  /**
+   * ⚠️ `roleIds: []` 的语义是【清空】不是【不改】（后端约定），
+   * 所以从「有角色」变成「0 个角色」是破坏性操作。
+   * 只在真的从有到无时拦一下。
+   */
+  if (originalCount.value > 0 && selected.value.length === 0) {
+    const ok = await ElMessageBox.confirm(
+      `这会把「${userName.value}」原有的 ${originalCount.value} 个角色全部清空，` +
+        `该用户会失去这些角色带来的权限。确定吗？`,
+      '确认清空角色',
+      { type: 'warning', confirmButtonText: '全部清空' },
+    ).catch(() => false)
+    if (!ok) return
+  }
+
   saving.value = true
   try {
-    // ⚠️ 传空数组 = 【清空】该用户所有角色 —— 不是「不改」。所以这里要提示用户
     await userApi.assignRoles(props.user.id, { roleIds: selected.value })
     ElMessage.success(selected.value.length ? '已更新角色' : '已清空该用户的全部角色')
     visible.value = false
