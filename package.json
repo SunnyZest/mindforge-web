@@ -10,6 +10,18 @@
   "scripts": {
     "dev:admin": "pnpm --filter @mindforge/admin dev",
     "build:admin": "pnpm --filter @mindforge/admin build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@vue/eslint-config-prettier": "10.2.0",
+    "@vue/eslint-config-typescript": "14.9.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-vue": "10.11.1",
+    "prettier": "3.9.9",
+    "vue-eslint-parser": "10.4.1"
   }
 }

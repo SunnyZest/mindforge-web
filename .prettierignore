@@ -1,0 +1,16 @@
+# 构建产物
+dist
+node_modules
+
+# 自动生成的类型声明（unplugin）
+auto-imports.d.ts
+components.d.ts
+
+# 设计原型：独立的 HTML，不参与工程构建
+design
+
+# 锁文件：Prettier 不该重排它
+pnpm-lock.yaml
+
+# 记忆目录（不进版本库，也不该被格式化）
+.workbuddy-ai
