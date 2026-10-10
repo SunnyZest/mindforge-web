@@ -7,6 +7,7 @@ import { BizError } from '@mindforge/shared'
 import { roleApi } from '@/api/role'
 import { userApi } from '@/api/user'
 import StatusTag from '@/components/StatusTag.vue'
+import UserDetailDrawer from '@/components/UserDetailDrawer.vue'
 import UserFormDialog from '@/components/UserFormDialog.vue'
 import UserRoleDialog from '@/components/UserRoleDialog.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -46,6 +47,21 @@ const formUser = ref<UserSummaryVO | null>(null)
 
 const roleVisible = ref(false)
 const roleUser = ref<UserSummaryVO | null>(null)
+
+/**
+ * 详情抽屉。
+ *
+ * 为什么用抽屉而不是再加一个「详情」按钮：操作列已经有 4 个按钮了，
+ * 再加一个就会把列宽撑破（之前踩过这个坑）。改成**点用户名**打开 ——
+ * 不占列宽，而且「点名字看详情」是更自然的直觉。
+ */
+const detailVisible = ref(false)
+const detailUser = ref<UserSummaryVO | null>(null)
+
+function onDetail(row: UserSummaryVO): void {
+  detailUser.value = row
+  detailVisible.value = true
+}
 
 function fail(e: unknown, fallback: string): void {
   ElMessage.error(e instanceof BizError ? e.message : fallback)
@@ -207,7 +223,14 @@ onMounted(() => {
          要看具体时间可以进详情）—— 换来操作列能放下 4 个按钮。
          当前合计 960px，1280 视口也能放下。改列宽时重新加一遍总数。 -->
     <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip />
+      <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip>
+        <template #default="{ row }">
+          <!-- 点名字看详情 —— 比再加一个操作按钮省地方，也更符合直觉 -->
+          <el-button link type="primary" @click="onDetail(asUser(row))">
+            {{ asUser(row).username }}
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column prop="nickname" label="昵称" min-width="100" show-overflow-tooltip>
         <template #default="{ row }">{{ row.nickname || '-' }}</template>
       </el-table-column>
@@ -289,6 +312,24 @@ onMounted(() => {
 
     <UserFormDialog v-model="formVisible" :user="formUser" :roles="roles" @saved="load" />
     <UserRoleDialog v-model="roleVisible" :user="roleUser" :roles="roles" @saved="load" />
+
+    <!-- 抽屉底部的「编辑资料 / 分配角色」直接复用上面两个弹窗，不重复实现 -->
+    <UserDetailDrawer
+      v-model="detailVisible"
+      :user="detailUser"
+      @edit="
+        (u) => {
+          detailVisible = false
+          onEdit(u)
+        }
+      "
+      @assign-role="
+        (u) => {
+          detailVisible = false
+          onAssignRole(u)
+        }
+      "
+    />
   </el-card>
 </template>
 

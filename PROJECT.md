@@ -35,17 +35,17 @@ packages/shared   两端共用：API 客户端 / 类型 / 权限 / 设计 token
 
 ### 页面（管理端）
 
-| 页面     | 路由               | 权限码                 | 状态                               |
-| -------- | ------------------ | ---------------------- | ---------------------------------- |
-| 登录     | `/login`           | —                      | ✅                                 |
-| 首页统计 | `/dashboard`       | `admin:dashboard:read` | ✅                                 |
-| 用户管理 | `/users`           | `admin:user:list`      | ✅ 增删改 / 分配角色 / 启禁用      |
-| 角色权限 | `/roles`           | `admin:role:list`      | ✅ 增删改 / 权限分组勾选           |
-| 知识库   | `/knowledge-bases` | `admin:knowledge:list` | ✅ 列表 / 删除                     |
-| 文档     | `/documents`       | `admin:document:list`  | ✅ 列表 / 改状态 / 重试 / 分块查看 |
-| AI 配置  | `/ai-models`       | `admin:ai:manage`      | ✅ 增删改                          |
-| 审计日志 | `/audit-logs`      | `admin:audit:list`     | ✅ 列表 + 筛选                     |
-| 设计规范 | `/style-guide`     | —                      | ✅ 开发用，深浅两套对照            |
+| 页面     | 路由               | 权限码                 | 状态                                         |
+| -------- | ------------------ | ---------------------- | -------------------------------------------- |
+| 登录     | `/login`           | —                      | ✅                                           |
+| 首页统计 | `/dashboard`       | `admin:dashboard:read` | ✅                                           |
+| 用户管理 | `/users`           | `admin:user:list`      | ✅ 增删改 / 分配角色 / 启禁用 / **详情抽屉** |
+| 角色权限 | `/roles`           | `admin:role:list`      | ✅ 增删改 / 权限分组勾选                     |
+| 知识库   | `/knowledge-bases` | `admin:knowledge:list` | ✅ 列表 / 删除                               |
+| 文档     | `/documents`       | `admin:document:list`  | ✅ 列表 / 改状态 / 重试 / 分块查看           |
+| AI 配置  | `/ai-models`       | `admin:ai:manage`      | ✅ 增删改                                    |
+| 审计日志 | `/audit-logs`      | `admin:audit:list`     | ✅ 列表 + 筛选                               |
+| 设计规范 | `/style-guide`     | —                      | ✅ 开发用，深浅两套对照                      |
 
 另有 403 / 404 页，以及 `AdminLayout`（玻璃侧边栏 + 顶栏 + 主题切换）。
 
