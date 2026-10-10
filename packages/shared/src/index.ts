@@ -17,6 +17,11 @@ export type {
   UserInfoVO,
   UserSummaryVO,
   UserListQuery,
+  // 用户端：注册 / 改密 / 个人资料
+  RegisterDTO,
+  ChangePasswordDTO,
+  UserProfileVO,
+  UserProfileUpdateDTO,
   // 用户管理（写操作）
   AdminUserCreateDTO,
   UserUpdateDTO,

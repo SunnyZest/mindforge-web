@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="MindForge">
+  <title>MindForge</title>
+
+  <!--
+    ⚠️ SVG 是 XML —— 注释里【不能出现连续两个短横线】，否则整个文件解析失败、
+       图标直接不显示（而且浏览器只在控制台报一行错，很容易漏）。
+       所以这里提到 CSS 变量时不要写成带前缀的完整形式。
+  -->
+
+  <defs>
+    <!-- 品牌蓝渐变：上浅下深，取设计系统主色（Apple 系统蓝）的同色系 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a9eff"/>
+      <stop offset="1" stop-color="#0071e3"/>
+    </linearGradient>
+
+    <!-- 顶部高光：呼应界面里的 Liquid Glass 高光（specular） -->
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.26"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 方章。rx 取边长的 1/4，和设计系统的圆角比例一致 -->
+  <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <rect width="32" height="32" rx="8" fill="url(#sheen)"/>
+
+  <!-- 几何「M」，圆头圆角，跟整体的圆角语言统一 -->
+  <path d="M9 23V10.6L16 17.6L23 10.6V23"
+        fill="none" stroke="#ffffff" stroke-width="3.4"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

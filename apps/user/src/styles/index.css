@@ -1,0 +1,59 @@
+/* 用户端全局样式。
+ *
+ * ⚠️ 设计 token 不在这里引入 —— 它在 main.ts 里以 `@mindforge/shared/styles` 引入，
+ *    顺序是「先 token、后本文件」。
+ *
+ * 这个文件只放【页面骨架】这一层：基础重置、背景壁纸、滚动条。
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  font-size: var(--mf-font-sm);
+  line-height: var(--mf-leading);
+  color: var(--mf-text-primary);
+  background-color: var(--mf-bg-page);
+
+  /* ★ Liquid Glass 的「背景层」—— 多层柔和径向渐变，相当于 macOS 的桌面壁纸。
+     ⚠️ 没有它，玻璃就【没东西可糊】，backdrop-filter 出来是一层死灰，效果全无。
+
+     ★ 用户端和管理端的区别：管理端以浅色为底、深色是覆盖；
+       用户端反过来 —— 以【深色】为底（默认主题），浅色是覆盖。
+       深色是 Liquid Glass 效果最好的场景，所以这里可以比管理端放开一点。 */
+  background-image:
+    radial-gradient(52% 44% at 12% 6%, rgb(40 90 200 / 30%), transparent 62%),
+    radial-gradient(44% 40% at 88% 4%, rgb(120 60 190 / 26%), transparent 60%),
+    radial-gradient(50% 46% at 80% 94%, rgb(190 70 30 / 20%), transparent 62%),
+    radial-gradient(46% 44% at 14% 90%, rgb(10 110 130 / 24%), transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* 切到浅色时的背景壁纸 —— 浅色下渐变要【铺满视口】、中心别留白，
+   否则白玻璃叠近白背景 = 还是白，玻璃感全没（这个坑管理端踩过）。 */
+[data-theme='light'] body {
+  background-image:
+    radial-gradient(82% 72% at 4% -10%, rgb(96 150 255 / 68%), transparent 74%),
+    radial-gradient(76% 66% at 100% -8%, rgb(168 132 255 / 62%), transparent 72%),
+    radial-gradient(80% 70% at 96% 108%, rgb(255 168 128 / 48%), transparent 74%),
+    radial-gradient(76% 68% at -2% 106%, rgb(96 208 202 / 52%), transparent 72%);
+}
+
+/* 滚动条也跟主题走 —— 不处理的话深色页面里会挂一条亮色滚动条，很扎眼 */
+* {
+  scrollbar-color: var(--mf-border-strong) transparent;
+  scrollbar-width: thin;
+}

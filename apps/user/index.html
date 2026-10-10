@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindForge AI · 智能求职</title>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#0b0d12" />
+
+    <script>
+      // ★ 主题必须在首屏渲染前挂上，否则会先闪一下浅色再跳深色（FOUC）。
+      //   所以这段必须内联在 <head>，走打包或放 main.ts 里都太晚。
+      //
+      // ⚠️ 用户端默认【深色】（管理端相反，默认浅色）——
+      //    两端共用 theme-light.css / theme-dark.css，只有默认值不同。
+      //
+      // ⚠️ 这里读的 key 必须和 src/stores/theme.ts 里的 STORAGE_KEY 一致，
+      //    改一处要改两处。逻辑也要和 shared 的 normalizeTheme() 保持一致：
+      //    只认 light / dark，其它（脏数据、被清过）一律走默认值。
+      try {
+        var t = localStorage.getItem('mf_user_theme')
+        document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark')
+      } catch (e) {
+        // 隐私模式下 localStorage 可能直接抛错 —— 那就用默认深色
+        document.documentElement.setAttribute('data-theme', 'dark')
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -65,6 +65,49 @@ export interface LoginDTO {
   password: string
 }
 
+/**
+ * 用户端注册（Java 的 `RegisterDTO`）。
+ *
+ * ⚠️ 长度约束是照后端注解抄的（`@Size`），改后端时要一起改 ——
+ *    前端只是提前拦一下，后端那层才是真校验。
+ */
+export interface RegisterDTO {
+  /** 3~32 位 */
+  username: string
+  /** 可空 —— 后端 required 里没有 email */
+  email?: string
+  /** 6~64 位 */
+  password: string
+}
+
+/** 修改密码（Java 的 `ChangePasswordDTO`）—— 用户端和管理端共用这个形状 */
+export interface ChangePasswordDTO {
+  oldPassword: string
+  /** 6~64 位 */
+  newPassword: string
+}
+
+/** 个人资料（Java 的 `UserProfileVO`） */
+export interface UserProfileVO {
+  id: string
+  username: string
+  nickname: string | null
+  email: string | null
+  phone: string | null
+  avatarUrl: string | null
+  /** 1 正常 / 0 禁用 */
+  status: number
+  createdAt: string | null
+}
+
+/** 修改个人资料（Java 的 `UserProfileUpdateDTO`）—— 两个字段都可空，传了才改 */
+export interface UserProfileUpdateDTO {
+  /** 最长 64 */
+  nickname?: string
+  /** 最长 500 */
+  avatarUrl?: string
+}
+
 /** 用户列表行（Java 的 `UserSummaryVO`） */
 export interface UserSummaryVO {
   id: string

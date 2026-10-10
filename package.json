@@ -9,7 +9,10 @@
   },
   "scripts": {
     "dev:admin": "pnpm --filter @mindforge/admin dev",
+    "dev:user": "pnpm --filter @mindforge/user dev",
     "build:admin": "pnpm --filter @mindforge/admin build",
+    "build:user": "pnpm --filter @mindforge/user build",
+    "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
