@@ -9,6 +9,12 @@ components.d.ts
 # 设计原型：独立的 HTML，不参与工程构建
 design
 
+# SVG：Prettier 没有内置解析器，遇到就报 "No parser could be inferred"。
+# ⚠️ 用 `prettier --write .` 时它会按扩展名自己跳过，所以看不出来；
+#    但显式写 glob（比如 `prettier --write "apps/**"`）会硬试每个文件，就会炸。
+#    图标手写就行，不需要机器排版。
+*.svg
+
 # 锁文件：Prettier 不该重排它
 pnpm-lock.yaml
 

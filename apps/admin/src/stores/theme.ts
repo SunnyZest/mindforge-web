@@ -1,10 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
+import { applyTheme, persistTheme, readStoredTheme, type ThemeMode } from '@mindforge/shared'
+
 /**
  * 管理端的主题（浅色 / 深色）。
  *
- * 为什么单独一个 store 而不是在组件里 useState：
+ * ★ 读写逻辑在 `@mindforge/shared` 的 theme.ts 里 —— 用户端用的是同一份，
+ *   两端只有【storageKey】和【默认值】不同。这里只负责 Vue 的响应式胶水。
+ *
+ * 为什么用 store 而不是在组件里 useState：
  * 主题是**全局单例状态**（同时影响 Element Plus 变量、body 背景、玻璃材质），
  * 而且要在多个地方读写（顶栏切换、将来的设置页）。放组件里会变成
  * 「谁先挂载谁说了算」，刷新页面后还会丢。
@@ -16,19 +21,14 @@ import { computed, ref, watch } from 'vue'
  * 只做 ② 的话，用户刷新页面会先看到浅色闪一下再变深色。
  */
 
-export type ThemeMode = 'light' | 'dark'
-
 /** ⚠️ 这个 key 和 index.html 里内联脚本读的必须一致，改一处要改两处 */
 const STORAGE_KEY = 'mf_admin_theme'
 
-function readStored(): ThemeMode {
-  // 只认合法值 —— 脏数据（比如手工改过、旧版本遗留）一律回落到浅色
-  const v = localStorage.getItem(STORAGE_KEY)
-  return v === 'dark' ? 'dark' : 'light'
-}
+/** 管理端默认浅色（用户端相反，默认深色） */
+const DEFAULT_MODE: ThemeMode = 'light'
 
 export const useThemeStore = defineStore('theme', () => {
-  const mode = ref<ThemeMode>(readStored())
+  const mode = ref<ThemeMode>(readStoredTheme(STORAGE_KEY, DEFAULT_MODE))
   const isDark = computed(() => mode.value === 'dark')
 
   function set(next: ThemeMode): void {
@@ -48,12 +48,8 @@ export const useThemeStore = defineStore('theme', () => {
   watch(
     mode,
     (next) => {
-      document.documentElement.setAttribute('data-theme', next)
-      try {
-        localStorage.setItem(STORAGE_KEY, next)
-      } catch {
-        // 隐私模式 / 存储写满时写不进去 —— 主题本次会话仍然生效，只是下次打开会回到默认
-      }
+      applyTheme(next)
+      persistTheme(STORAGE_KEY, next)
     },
     { immediate: true },
   )

@@ -60,3 +60,10 @@ export type { TokenStore } from './auth'
 // ---------- 权限 ----------
 export { hasPermission, hasAnyPermission, hasAllPermissions } from './permission'
 export type { Permission, AdminPermission, AppPermission } from './permission'
+
+// ---------- 主题（两端共用，不依赖框架）----------
+export { THEME_ATTR, normalizeTheme, readStoredTheme, applyTheme, persistTheme } from './theme'
+export type { ThemeMode } from './theme'
+
+// ---------- 展示用的格式化（纯函数，两端共用）----------
+export { formatDateTime, formatCount, formatBytes } from './format'

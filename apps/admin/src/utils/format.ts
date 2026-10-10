@@ -1,33 +1,8 @@
-/** 后端返回的时间是 ISO 字符串（`2026-10-09T18:00:00`），展示时换成更常见的写法 */
-export function formatDateTime(value: string | null | undefined): string {
-  if (!value) return '-'
-  return value.replace('T', ' ').slice(0, 19)
-}
-
 /**
- * 大数字用「万」压缩。
+ * 格式化函数 —— 实现都在 `@mindforge/shared` 的 format.ts 里，两端共用一份。
  *
- * 为什么不用 `toLocaleString` 一路到底：Token 消耗动辄几十万上百万，
- * 原样显示（`1,204,318`）会把统计卡片撑变形，而且那个精度对人没意义。
- * 一万以下才给千分位 —— 那才是需要看清具体值的量级。
+ * ⚠️ 这里只做转发，别再往这个文件里加实现 ——
+ *    两端各写一份的话，同一个时间可能显示成两个样子，而且极难发现。
+ *    真需要新的格式化函数，加到 packages/shared/src/format.ts 去。
  */
-export function formatCount(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '-'
-  if (value < 10_000) return value.toLocaleString('zh-CN')
-
-  const wan = value / 10_000
-  // 整数就不显示小数点：10.0万 → 10万
-  return (Number.isInteger(wan) ? String(wan) : wan.toFixed(1)) + '万'
-}
-
-/**
- * 文件大小：后端给的是字节数（`AdminDocumentVO.fileSize`），
- * 原样显示 `1048576` 对人没意义。进位用 1024（操作系统习惯），不是 1000。
- */
-export function formatBytes(value: number | null | undefined): string {
-  if (value === null || value === undefined) return '-'
-  if (value < 1024) return `${value} B`
-  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
-  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`
-  return `${(value / 1024 ** 3).toFixed(2)} GB`
-}
+export { formatBytes, formatCount, formatDateTime } from '@mindforge/shared'
