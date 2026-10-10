@@ -20,3 +20,14 @@ export function formatCount(value: number | null | undefined): string {
   return (Number.isInteger(wan) ? String(wan) : wan.toFixed(1)) + '万'
 }
 
+/**
+ * 文件大小：后端给的是字节数（`AdminDocumentVO.fileSize`），
+ * 原样显示 `1048576` 对人没意义。进位用 1024（操作系统习惯），不是 1000。
+ */
+export function formatBytes(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '-'
+  if (value < 1024) return `${value} B`
+  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
+  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`
+  return `${(value / 1024 ** 3).toFixed(2)} GB`
+}

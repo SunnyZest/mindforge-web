@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { ArrowDown, Brush, Moon, Odometer, Sunny, User } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  Brush,
+  Collection,
+  Cpu,
+  Document,
+  Moon,
+  Odometer,
+  Sunny,
+  Tickets,
+  User,
+} from '@element-plus/icons-vue'
 import { computed, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -17,7 +28,15 @@ const theme = useThemeStore()
  * 只 import 用到的那几个，而不是 `import * as Icons from '@element-plus/icons-vue'` ——
  * 后者会把几百个图标全拉进来（`import *` 基本没法 tree-shake）。
  */
-const ICONS: Record<string, Component> = { Odometer, User, Brush }
+const ICONS: Record<string, Component> = {
+  Odometer,
+  User,
+  Brush,
+  Collection,
+  Document,
+  Cpu,
+  Tickets,
+}
 
 /**
  * 侧边栏菜单：从路由表里挑出带 `title` 的子路由，再按权限过滤。

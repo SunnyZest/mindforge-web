@@ -61,6 +61,35 @@ const router = createRouter({
           meta: { title: '角色权限', icon: 'Key', order: 3, permission: 'admin:role:list' },
         },
         {
+          path: 'knowledge-bases',
+          name: 'knowledge-bases',
+          component: () => import('@/views/KnowledgeListView.vue'),
+          meta: {
+            title: '知识库',
+            icon: 'Collection',
+            order: 4,
+            permission: 'admin:knowledge:list',
+          },
+        },
+        {
+          path: 'documents',
+          name: 'documents',
+          component: () => import('@/views/DocumentListView.vue'),
+          meta: { title: '文档', icon: 'Document', order: 5, permission: 'admin:document:list' },
+        },
+        {
+          path: 'ai-models',
+          name: 'ai-models',
+          component: () => import('@/views/AiModelListView.vue'),
+          meta: { title: 'AI 配置', icon: 'Cpu', order: 6, permission: 'admin:ai:manage' },
+        },
+        {
+          path: 'audit-logs',
+          name: 'audit-logs',
+          component: () => import('@/views/AuditLogListView.vue'),
+          meta: { title: '审计日志', icon: 'Tickets', order: 7, permission: 'admin:audit:list' },
+        },
+        {
           // 开发用的设计规范页 —— 不设 permission（登录即可看）
           path: 'style-guide',
           name: 'style-guide',
