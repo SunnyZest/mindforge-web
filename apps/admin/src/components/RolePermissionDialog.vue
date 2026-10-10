@@ -6,6 +6,7 @@ import { BizError } from '@mindforge/shared'
 
 import { permissionApi } from '@/api/permission'
 import { roleApi } from '@/api/role'
+import { groupPermissions, groupsOfSide, type PermissionGroup } from '@/utils/permission-group'
 
 const visible = defineModel<boolean>({ required: true })
 
@@ -25,71 +26,16 @@ const selected = ref<number[]>([])
 /** 打开时的已选数量 —— 用来判断这次保存是不是「清空」 */
 const originalCount = ref(0)
 
-/**
- * 模块显示名。
- *
- * ⚠️ 后端 `PermissionVO` 里 `path` / `method` 全是 null、`type` 恒为 "API"，
- *    所以分组只能靠**权限码的中间段**（`admin:user:list` → `admin` + `user`）。
- *    这张表是「中间段 → 中文名」的映射，缺了会回落成原始英文。
- */
-const MODULE_LABELS: Record<string, string> = {
-  'admin:ai': 'AI 配置',
-  'admin:audit': '审计日志',
-  'admin:dashboard': '后台首页',
-  'admin:document': '文档管理',
-  'admin:knowledge': '知识库',
-  'admin:permission': '权限字典',
-  'admin:prompt': 'Prompt 管理',
-  'admin:role': '角色',
-  'admin:usage': 'AI 用量',
-  'admin:user': '用户',
-  'app:conversation': '对话',
-  'app:document': '文档',
-  'app:interview': '面试',
-  'app:job': '职位',
-  'app:knowledge': '知识库',
-  'app:rag': 'RAG 检索',
-  'app:resume': '简历',
-}
+/** 分组逻辑在 utils/permission-group.ts —— 用户详情抽屉也用同一份 */
+const groups = computed<PermissionGroup[]>(() => groupPermissions(allPerms.value))
 
-interface PermGroup {
-  key: string
-  side: 'admin' | 'app'
-  sideLabel: string
-  label: string
-  items: PermissionVO[]
-}
-
-const groups = computed<PermGroup[]>(() => {
-  const map = new Map<string, PermGroup>()
-
-  for (const p of allPerms.value) {
-    const [side, mod] = p.code.split(':')
-    const key = `${side}:${mod}`
-    let g = map.get(key)
-    if (!g) {
-      g = {
-        key,
-        side: side === 'admin' ? 'admin' : 'app',
-        sideLabel: side === 'admin' ? '管理端' : '用户端',
-        label: MODULE_LABELS[key] ?? mod,
-        items: [],
-      }
-      map.set(key, g)
-    }
-    g.items.push(p)
-  }
-
-  return [...map.values()]
-})
-
-const adminGroups = computed(() => groups.value.filter((g) => g.side === 'admin'))
-const appGroups = computed(() => groups.value.filter((g) => g.side === 'app'))
+const adminGroups = computed(() => groupsOfSide(groups.value, 'admin'))
+const appGroups = computed(() => groupsOfSide(groups.value, 'app'))
 
 const roleName = computed(() => props.role?.name ?? '')
 
 // ---------- 勾选状态 ----------
-function idsOf(g: PermGroup): number[] {
+function idsOf(g: PermissionGroup): number[] {
   return g.items.map((p) => Number(p.id))
 }
 
@@ -103,38 +49,38 @@ function toggleOne(id: number, on: boolean): void {
     : selected.value.filter((x) => x !== id)
 }
 
-function groupAllChecked(g: PermGroup): boolean {
+function groupAllChecked(g: PermissionGroup): boolean {
   return g.items.every((p) => isChecked(Number(p.id)))
 }
 
-function groupPartial(g: PermGroup): boolean {
+function groupPartial(g: PermissionGroup): boolean {
   const hit = g.items.filter((p) => isChecked(Number(p.id))).length
   return hit > 0 && hit < g.items.length
 }
 
-function toggleGroup(g: PermGroup, on: boolean): void {
+function toggleGroup(g: PermissionGroup, on: boolean): void {
   const ids = idsOf(g)
   selected.value = on
     ? [...new Set([...selected.value, ...ids])]
     : selected.value.filter((x) => !ids.includes(x))
 }
 
-function sideIds(gs: PermGroup[]): number[] {
+function sideIds(gs: PermissionGroup[]): number[] {
   return gs.flatMap(idsOf)
 }
 
-function sideAllChecked(gs: PermGroup[]): boolean {
+function sideAllChecked(gs: PermissionGroup[]): boolean {
   const ids = sideIds(gs)
   return ids.length > 0 && ids.every(isChecked)
 }
 
-function sidePartial(gs: PermGroup[]): boolean {
+function sidePartial(gs: PermissionGroup[]): boolean {
   const ids = sideIds(gs)
   const hit = ids.filter(isChecked).length
   return hit > 0 && hit < ids.length
 }
 
-function toggleSide(gs: PermGroup[], on: boolean): void {
+function toggleSide(gs: PermissionGroup[], on: boolean): void {
   const ids = sideIds(gs)
   selected.value = on
     ? [...new Set([...selected.value, ...ids])]
