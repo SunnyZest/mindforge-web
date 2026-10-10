@@ -54,7 +54,7 @@ export type AdminPermission =
   | 'admin:ai:manage'
   | 'admin:prompt:manage'
 
-/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 24 条） */
+/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 25 条） */
 export type AppPermission =
   | 'app:knowledge:read'
   | 'app:knowledge:write'
@@ -67,6 +67,8 @@ export type AppPermission =
   | 'app:conversation:write'
   | 'app:rag:search'
   | 'app:rag:feedback'
+  /** 读可选的提示词变体（用户端问答时挑风格用） */
+  | 'app:prompt:read'
   | 'app:resume:read'
   | 'app:resume:write'
   | 'app:resume:parse'
