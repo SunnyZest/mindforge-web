@@ -56,7 +56,7 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <el-dialog v-model="visible" title="分配角色" width="440px" :close-on-click-modal="false">
+  <el-dialog v-model="visible" title="分配角色" width="440px" :close-on-click-modal="false" append-to-body>
     <p class="who">给 <b>{{ userName }}</b> 分配角色：</p>
 
     <el-checkbox-group v-model="selected" class="role-list">

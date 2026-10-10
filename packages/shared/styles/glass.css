@@ -5,13 +5,19 @@
  * 这是【全局】类，Element Plus 组件的玻璃化在 element-plus.css 里单独做
  * （那边要处理 EP 自己的变量和选择器权重，放一起会乱）。
  *
- * ⚠️ 三个必须知道的坑：
+ * ⚠️ 四个必须知道的坑：
  *  ① backdrop-filter 遇到父级有 filter / transform / will-change / contain 会【失效】——
  *     因为那会给父级创建新的 containing block，模糊采样的参照物就变了。
  *     加动效时如果玻璃突然「不模糊了」，先查这一条。
- *  ② 它是 GPU 重操作：一屏内的玻璃面板别超过 5~6 个，否则滚动会掉帧。
+ *  ② ★ 反过来也成立，而且更隐蔽：**加了 backdrop-filter 的元素自己就成了
+ *     containing block**，它内部的 `position: fixed` 子孙会改成相对【它】定位。
+ *     实测踩过：`.el-card` 有 backdrop-filter + `overflow: hidden`（EP 默认），
+ *     而 el-dialog 默认不 append-to-body、渲染在卡片内部 ——
+ *     结果弹窗被卡片裁掉，比卡片高的部分直接看不见。
+ *     **解法：卡片内部的弹窗/抽屉一律加 `append-to-body`。**
+ *  ③ 它是 GPU 重操作：一屏内的玻璃面板别超过 5~6 个，否则滚动会掉帧。
  *     侧边栏 + 顶栏 + 卡片 ×4 大概就是上限。
- *  ③ Safari 要 -webkit- 前缀（老版本 iOS 尤其）。
+ *  ④ Safari 要 -webkit- 前缀（老版本 iOS 尤其）。
  *
  * ★ 分层原则（别违背）：玻璃只用于【功能层】——侧边栏、顶栏、弹窗、浮动工具栏。
  *   内容层（表格、正文）保持不透明，否则可读性会崩。
