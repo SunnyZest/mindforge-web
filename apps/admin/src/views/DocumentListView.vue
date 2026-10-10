@@ -9,6 +9,7 @@ import { documentApi } from '@/api/document'
 import DocumentChunksDialog from '@/components/DocumentChunksDialog.vue'
 import DocumentStatusDialog from '@/components/DocumentStatusDialog.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
 
@@ -100,8 +101,13 @@ function asDoc(row: unknown): AdminDocumentVO {
   return row as AdminDocumentVO
 }
 
-async function load(): Promise<void> {
-  loading.value = true
+/**
+ * @param silent 静默刷新：不显示 loading 遮罩。
+ *   自动轮询必须用这个 —— 否则每 5 秒整个表格闪一下，比不刷新还烦。
+ */
+async function load(options: { silent?: boolean } = {}): Promise<void> {
+  const { silent = false } = options
+  if (!silent) loading.value = true
   try {
     /**
      * 知识库 ID 输入框绑的是 `v-model.number`，但**清空后运行时值是空串**不是 undefined
@@ -118,11 +124,41 @@ async function load(): Promise<void> {
     rows.value = data.records
     total.value = data.total
   } catch (e) {
-    fail(e, '加载失败')
+    // 静默轮询失败不弹提示 —— 网络抖一下就弹一个红框太吵，
+    // 而且下一轮（5 秒后）自己会重试。真正的失败用户会从数据没变上看出来。
+    if (!silent) fail(e, '加载失败')
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
+
+/**
+ * 这条文档还在处理中吗？
+ *
+ * ⚠️ 判断依据是**三段子状态**（解析 / 分块 / 向量），不是总状态：
+ *    总状态 `UPLOADED` 只表示「还没开始」，这时候后端队列已经排上了，
+ *    也应该继续刷 —— 否则用户上传完盯着看，界面永远不动。
+ *
+ * 取值范围来自后端 `DocumentStatusUtils.aggregate()`，不是猜的。
+ */
+const IN_PROGRESS = ['PENDING', 'PARSING', 'CHUNKING', 'EMBEDDING']
+
+function isProcessing(row: AdminDocumentVO): boolean {
+  // 总状态还在「已上传 / 解析中」说明整条流水线没走完
+  if (row.status === 'UPLOADED' || row.status === 'PARSING') return true
+  // 任一段在跑就还没完
+  return STAGES.some((s) => IN_PROGRESS.includes(row[s.key] ?? ''))
+}
+
+const {
+  enabled: autoRefresh,
+  active: refreshing,
+  exhausted,
+  resume,
+} = useAutoRefresh({
+  shouldContinue: () => rows.value.some(isProcessing),
+  onRefresh: () => load({ silent: true }),
+})
 
 function onSearch(): void {
   query.page = 1
@@ -210,6 +246,20 @@ onMounted(load)
       </el-select>
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
+
+      <!--
+        自动刷新开关。
+        文档的解析/分块/向量都是后端异步跑的，光靠手动点「查询」根本不知道
+        什么时候好 —— 所以只要有文档在处理中就自动刷（默认开）。
+        没有处理中的时候开关自动置灰：这时候刷也是白刷。
+      -->
+      <span class="auto">
+        <el-switch v-model="autoRefresh" size="small" :disabled="exhausted" />
+        <span class="auto__text" :class="{ 'auto__text--on': refreshing }">
+          {{ exhausted ? '自动刷新已暂停' : refreshing ? '自动刷新中' : '自动刷新' }}
+        </span>
+        <el-button v-if="exhausted" link type="primary" @click="resume">继续</el-button>
+      </span>
     </div>
 
     <!-- 列宽合计 985px，最窄视口（1366）下内容区约 1040px。改列宽重新加一遍总数 -->
@@ -289,11 +339,11 @@ onMounted(load)
       :page-sizes="[10, 20, 50]"
       layout="total, sizes, prev, pager, next"
       class="pagination"
-      @change="load"
+      @change="() => load()"
     />
 
     <DocumentChunksDialog v-model="chunksVisible" :doc="chunksDoc" />
-    <DocumentStatusDialog v-model="statusVisible" :doc="statusDoc" @saved="load" />
+    <DocumentStatusDialog v-model="statusVisible" :doc="statusDoc" @saved="() => load()" />
   </el-card>
 </template>
 
@@ -315,6 +365,42 @@ onMounted(load)
 
 .filters__select {
   width: 130px;
+}
+
+/* 自动刷新开关 —— margin-left:auto 把它推到工具栏最右，不跟筛选条件挤在一起 */
+.auto {
+  display: inline-flex;
+  gap: var(--mf-space-2);
+  align-items: center;
+  margin-left: auto;
+}
+
+.auto__text {
+  font-size: var(--mf-font-sm);
+  color: var(--mf-text-tertiary);
+}
+
+/* 正在刷的时候点亮 + 呼吸，让「数据是活的」这件事看得见 */
+.auto__text--on {
+  color: var(--mf-primary-text);
+  animation: auto-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes auto-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* 系统设了「减少动态效果」就别呼吸了，静态变色足够表达状态 */
+@media (prefers-reduced-motion: reduce) {
+  .auto__text--on {
+    animation: none;
+  }
 }
 
 /* 三个阶段标签一行排不下时允许折行 —— 行高变化比塞不下强 */
