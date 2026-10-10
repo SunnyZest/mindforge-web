@@ -580,3 +580,118 @@ export interface ResumeOptimizeVO {
 export interface ResumeQuery extends PageQuery {
   parseStatus?: ResumeParseStatus
 }
+
+// ============================================================================
+//  用户端 —— 职位 JD
+//  同样是对着源码核过的：Java 的 pojo/vo/JobVO、JobDetailVO、
+//  pojo/dto/JobCreateDTO、JobUpdateDTO；Python 的 app/services/job.py 的 _normalize()
+// ============================================================================
+
+/** 职位技能（Python `_normalize_skills`） */
+export interface JobSkill {
+  name: string
+  type: SkillType | null
+  /**
+   * 保留 JD 原话（「精通」「熟悉」「了解」），**不做标准化** ——
+   * 招聘方的用词本身就是信息，换算是丢信息。
+   */
+  requiredLevel: string | null
+  /**
+   * 是不是硬性要求。
+   * ⚠️ JD 里没写「必须」的一律按加分项处理（false）—— 后端定的默认值。
+   */
+  required: boolean
+}
+
+/** 结构化后的职位 JD（`job.structured_json` 列的 JSON） */
+export interface StructuredJob {
+  title: string | null
+  companyName: string | null
+  location: string | null
+  /** 经验要求，保留原文表述（「3-5 年」「不限」） */
+  experienceRequired: string | null
+  /** 学历要求，同上 */
+  educationRequired: string | null
+  summary: string | null
+  /** 岗位职责 */
+  responsibilities: string[]
+  skills: JobSkill[]
+  /** 福利待遇 */
+  benefits: string[]
+}
+
+/** 职位列表行（Java 的 `JobVO`） */
+export interface JobVO {
+  id: string
+  title: string
+  companyName: string | null
+  location: string | null
+  experienceRequired: string | null
+  educationRequired: string | null
+  parseStatus: ResumeParseStatus
+  status: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 职位详情（Java 的 `JobDetailVO`）—— 比列表多 rawContent / structuredJson / sourceUrl */
+export interface JobDetailVO {
+  id: string
+  title: string
+  companyName: string | null
+  location: string | null
+  sourceUrl: string | null
+  experienceRequired: string | null
+  educationRequired: string | null
+  /** JD 原文 —— 「左原文 / 右结构化」对照的左半边 */
+  rawContent: string | null
+  structuredJson: StructuredJob | null
+  parseStatus: ResumeParseStatus
+  errorMessage: string | null
+  status: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/**
+ * 创建职位（Java 的 `JobCreateDTO`）。
+ * 长度上限照抄后端的 @Size，前端先挡一道给个清楚的提示。
+ */
+export interface JobCreateDTO {
+  /** 必填，最长 255 */
+  title: string
+  companyName?: string
+  location?: string
+  /** 最长 1000 */
+  sourceUrl?: string
+  /** 最长 128 */
+  experienceRequired?: string
+  /** 最长 128 */
+  educationRequired?: string
+  /** 必填 —— JD 正文，解析就是拿它去跑模型 */
+  jobDescription: string
+}
+
+/**
+ * 修改职位（Java 的 `JobUpdateDTO`）。
+ * ⚠️ 和 Create 的区别：**没有必填项**，另外多了 `status`。
+ *    后端是「传了才改」的语义。
+ */
+export interface JobUpdateDTO {
+  title?: string
+  companyName?: string
+  location?: string
+  sourceUrl?: string
+  experienceRequired?: string
+  educationRequired?: string
+  jobDescription?: string
+  status?: number
+}
+
+/**
+ * 职位列表查询。
+ * ⚠️ 用类型别名而不是 `interface JobQuery extends PageQuery {}` ——
+ *    空接口继承会被 ESLint 的 no-empty-object-type 拦下，而且它确实没有意义。
+ *    留这个别名是为了调用方能写 JobQuery，比裸用 PageQuery 语义清楚。
+ */
+export type JobQuery = PageQuery

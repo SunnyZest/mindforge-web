@@ -46,7 +46,6 @@ const ENTRIES: Entry[] = [
     icon: Briefcase,
     to: '/jobs',
     permission: 'app:job:read',
-    comingSoon: true,
   },
   {
     title: '模拟面试',

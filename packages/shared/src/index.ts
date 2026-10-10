@@ -69,6 +69,14 @@ export type {
   ResumeOptimizeDTO,
   ResumeOptimizeVO,
   ResumeOptimizeItem,
+  // 用户端：职位 JD
+  JobVO,
+  JobQuery,
+  JobDetailVO,
+  JobCreateDTO,
+  JobUpdateDTO,
+  StructuredJob,
+  JobSkill,
 } from './types'
 
 // ---------- HTTP 客户端 ----------

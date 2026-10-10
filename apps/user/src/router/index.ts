@@ -71,14 +71,15 @@ const router = createRouter({
         {
           path: 'jobs',
           name: 'jobs',
-          component: () => import('@/views/ComingSoonView.vue'),
-          meta: {
-            title: '目标职位',
-            icon: 'Briefcase',
-            order: 3,
-            permission: 'app:job:read',
-            comingSoon: true,
-          },
+          component: () => import('@/views/JobListView.vue'),
+          meta: { title: '目标职位', icon: 'Briefcase', order: 3, permission: 'app:job:read' },
+        },
+        {
+          // 详情不进菜单（没有 title），只能从列表点进来
+          path: 'jobs/:id',
+          name: 'job-detail',
+          component: () => import('@/views/JobDetailView.vue'),
+          meta: { permission: 'app:job:read' },
         },
         {
           path: 'interviews',
