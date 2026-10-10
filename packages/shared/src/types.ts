@@ -294,11 +294,11 @@ export interface ChunkVO {
   /** 所属文档的文件名 —— 溯源时展示「来自哪个文档」 */
   documentName: string | null
   knowledgeBaseId: string
-  /** 从 0 开始 */
-  chunkIndex: number
+  /** 从 0 开始。⚠️ Java 侧是 Integer，理论上可空 */
+  chunkIndex: number | null
   content: string
-  /** 估算值，仅用于展示，不影响检索 */
-  tokenCount: number
+  /** 估算值，仅用于展示，不影响检索。同上，可空 */
+  tokenCount: number | null
   /** 所在页码，仅 PDF 有值 */
   pageNo: number | null
 }
@@ -850,4 +850,197 @@ export interface InterviewReportVO {
 /** 面试列表查询 */
 export interface InterviewQuery extends PageQuery {
   status?: InterviewStatus
+}
+
+// ============================================================================
+//  用户端 —— 知识库 / 文档 / 分块
+//  对着 Java 的 pojo/vo/KnowledgeBase*.java、Document*.java、ChunkVO.java
+//  和 pojo/dto/KnowledgeBase*.java 核过。
+// ============================================================================
+
+/** 知识库（Java 的 `KnowledgeBaseVO`）—— 列表和详情是同一个 VO */
+export interface KnowledgeBaseVO {
+  id: string
+  name: string
+  description: string | null
+  status: number
+  documentCount: number | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 创建知识库（Java 的 `KnowledgeBaseCreateDTO`） */
+export interface KnowledgeBaseCreateDTO {
+  /** 必填，最长 100 */
+  name: string
+  /** 最长 500 */
+  description?: string
+}
+
+/** 修改知识库（Java 的 `KnowledgeBaseUpdateDTO`）—— 无必填项，「传了才改」 */
+export interface KnowledgeBaseUpdateDTO {
+  name?: string
+  description?: string
+  status?: number
+}
+
+/** 知识库统计（Java 的 `KnowledgeBaseStatsVO`）—— 注意是 Long，不是 Integer */
+export interface KnowledgeBaseStatsVO {
+  documentCount: number
+  chunkCount: number
+  /** 处理完成的文档数 */
+  completedDocuments: number
+  /** 处理失败的文档数 */
+  failedDocuments: number
+}
+
+/** 文档（Java 的 `DocumentVO`） */
+export interface DocumentVO {
+  documentId: string
+  knowledgeBaseId: string
+  fileName: string
+  fileType: string | null
+  fileSize: number | null
+  /** 总状态：UPLOADED / PARSING / PARSED / CHUNKED / COMPLETED / FAILED */
+  status: string
+  parseStatus: ParseStatus | null
+  chunkStatus: ChunkStatus | null
+  vectorStatus: VectorStatus | null
+  errorMessage: string | null
+  pageCount: number | null
+  createdAt: string | null
+}
+
+/** 文档处理状态（Java 的 `DocumentStatusVO`）—— 轮询用，比 DocumentVO 窄 */
+export interface DocumentStatusVO {
+  documentId: string
+  status: string
+  parseStatus: ParseStatus | null
+  chunkStatus: ChunkStatus | null
+  vectorStatus: VectorStatus | null
+  errorMessage: string | null
+  updatedAt: string | null
+}
+
+// ============================================================================
+//  用户端 —— 对话问答（RAG）
+// ============================================================================
+
+/** 引用来源（Java 的 `SourceVO`）—— 正文里标注的就是它 */
+export interface SourceVO {
+  documentId: string
+  documentName: string | null
+  /** ★ 点它去 GET /app/chunks/{chunkId} 拿原文片段 —— 这是「引用溯源」的关键 */
+  chunkId: string
+  pageNo: number | null
+  /** 相关度得分 */
+  score: number | null
+}
+
+/** 会话（Java 的 `ConversationVO`） */
+export interface ConversationVO {
+  conversationId: string
+  knowledgeBaseId: string
+  title: string
+  modelName: string | null
+  messageCount: number | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 消息（Java 的 `MessageVO`） */
+export interface MessageVO {
+  messageId: string
+  /** USER / ASSISTANT */
+  role: string
+  content: string
+  modelName: string | null
+  /**
+   * ★ 助手消息带的引用来源。
+   *
+   * ⚠️ **可能是 null** —— 实测确认：用户消息的 sources 就是 null。
+   *    原因在后端：`ConversationServiceImpl` 只在来源非空时才 set，
+   *    其它服务（简历/职位/面试）都有 `nullToEmpty` 兜底，只有它没有。
+   *    所以这里必须按可空处理 —— 直接 `.length` 会让「打开带历史的会话」整页白屏。
+   */
+  sources: SourceVO[] | null
+  createdAt: string | null
+}
+
+/** 会话详情（Java 的 `ConversationDetailVO`） */
+export interface ConversationDetailVO extends ConversationVO {
+  messages: MessageVO[]
+}
+
+/** 创建会话（Java 的 `CreateConversationDTO`）—— 两个字段都必填 */
+export interface CreateConversationDTO {
+  knowledgeBaseId: string
+  /** 最长 255 */
+  title: string
+}
+
+/** 发消息（Java 的 `SendMessageDTO`） */
+export interface SendMessageDTO {
+  message: string
+  /** 1~50，默认 8 */
+  topK?: number
+  /** 是否重排，默认 false */
+  enableRerank?: boolean
+  promptId?: string
+}
+
+/** 非流式发消息的返回（Java 的 `SendMessageResultVO`） */
+export interface SendMessageResultVO {
+  messageId: string
+  answer: string
+  sources: SourceVO[]
+  /** 知识库里有没有检索到相关内容 */
+  hasContext: boolean
+  /** 模型有没有给出回答 */
+  hasAnswer: boolean
+}
+
+/** RAG 检索（Java 的 `RagSearchDTO`）—— 只检索不生成 */
+export interface RagSearchDTO {
+  knowledgeBaseId: string
+  query: string
+  /** 1~50，默认 8 */
+  topK?: number
+  enableRerank?: boolean
+}
+
+/** 给回答打分（Java 的 `RagFeedbackDTO`） */
+export interface RagFeedbackDTO {
+  messageId: string
+  /** 评价 —— 后端只校验非空，取值由前端约定 */
+  rating: string
+  /** 最长 500 */
+  reason?: string
+}
+
+/**
+ * SSE 流式返回的事件（Java 的 `ChatStreamEvents`）。
+ * 事件名固定四个：sources / delta / done / error。
+ */
+export interface ChatStreamSourcesEvent {
+  sources: SourceVO[]
+  hasContext: boolean
+  contextTruncated: boolean
+}
+
+/** 增量文本 —— 每次拿一小段，拼起来才是完整回答 */
+export interface ChatStreamDeltaEvent {
+  text: string
+}
+
+export interface ChatStreamDoneEvent {
+  messageId: string
+  answer: string
+  hasAnswer: boolean
+}
+
+export interface ChatStreamErrorEvent {
+  code: number
+  message: string
+  traceId: string | null
 }

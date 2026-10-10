@@ -91,6 +91,28 @@ export type {
   InterviewAnswerDTO,
   InterviewAnswerResultVO,
   InterviewReportVO,
+  // 用户端：知识库 / 文档 / 分块
+  KnowledgeBaseVO,
+  KnowledgeBaseCreateDTO,
+  KnowledgeBaseUpdateDTO,
+  KnowledgeBaseStatsVO,
+  DocumentVO,
+  DocumentStatusVO,
+  // ChunkVO 上面已经导出过（管理端在用），这里不重复 —— 同一个类型别导出两次
+  // 用户端：对话问答（RAG）
+  SourceVO,
+  ConversationVO,
+  ConversationDetailVO,
+  MessageVO,
+  CreateConversationDTO,
+  SendMessageDTO,
+  SendMessageResultVO,
+  RagSearchDTO,
+  RagFeedbackDTO,
+  ChatStreamSourcesEvent,
+  ChatStreamDeltaEvent,
+  ChatStreamDoneEvent,
+  ChatStreamErrorEvent,
 } from './types'
 
 // ---------- HTTP 客户端 ----------

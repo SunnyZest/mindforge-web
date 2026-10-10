@@ -30,6 +30,16 @@ function asChunk(row: unknown): ChunkVO {
 }
 
 /**
+ * 展示用的序号（从 1 开始）。
+ * ⚠️ 别写成 `chunkIndex + 1` —— chunkIndex 后端是 Integer（可空），
+ *    空值会算成 `null + 1 = 1`，序号静默显示成「1」而不是「-」。
+ */
+function chunkNo(row: unknown): string {
+  const i = asChunk(row).chunkIndex
+  return i === null ? '-' : String(i + 1)
+}
+
+/**
  * 分块列表是排查「RAG 为什么没召回到」的工具 ——
  * 看正文有没有被正确切分、token 数是否合理、页码能不能对回原文。
  */
@@ -84,7 +94,7 @@ watch(visible, (open) => {
         </template>
       </el-table-column>
       <el-table-column label="#" width="60" align="center">
-        <template #default="{ row }">{{ asChunk(row).chunkIndex + 1 }}</template>
+        <template #default="{ row }">{{ chunkNo(row) }}</template>
       </el-table-column>
       <el-table-column label="内容" min-width="380">
         <template #default="{ row }">

@@ -102,26 +102,21 @@ const router = createRouter({
         {
           path: 'knowledge',
           name: 'knowledge',
-          component: () => import('@/views/ComingSoonView.vue'),
-          meta: {
-            title: '知识库',
-            icon: 'Collection',
-            order: 5,
-            permission: 'app:knowledge:read',
-            comingSoon: true,
-          },
+          component: () => import('@/views/KnowledgeListView.vue'),
+          meta: { title: '知识库', icon: 'Collection', order: 5, permission: 'app:knowledge:read' },
+        },
+        {
+          // 库详情（文档列表 + 上传）。不进菜单。
+          path: 'knowledge/:id',
+          name: 'knowledge-detail',
+          component: () => import('@/views/KnowledgeDetailView.vue'),
+          meta: { permission: 'app:knowledge:read' },
         },
         {
           path: 'chat',
           name: 'chat',
-          component: () => import('@/views/ComingSoonView.vue'),
-          meta: {
-            title: 'AI 问答',
-            icon: 'ChatDotRound',
-            order: 6,
-            permission: 'app:rag:search',
-            comingSoon: true,
-          },
+          component: () => import('@/views/ChatView.vue'),
+          meta: { title: 'AI 问答', icon: 'ChatDotRound', order: 6, permission: 'app:rag:search' },
         },
         {
           path: 'profile',

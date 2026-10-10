@@ -60,7 +60,6 @@ const ENTRIES: Entry[] = [
     icon: Collection,
     to: '/knowledge',
     permission: 'app:knowledge:read',
-    comingSoon: true,
   },
   {
     title: 'AI 问答',
@@ -68,7 +67,6 @@ const ENTRIES: Entry[] = [
     icon: ChatDotRound,
     to: '/chat',
     permission: 'app:rag:search',
-    comingSoon: true,
   },
   {
     title: '个人资料',

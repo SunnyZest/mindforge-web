@@ -65,6 +65,19 @@ export interface HttpClient {
   post<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T>
   put<T>(url: string, body?: unknown, config?: AxiosRequestConfig): Promise<T>
   delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>
+  /**
+   * 主动刷新一次 accessToken。
+   *
+   * ★ 给「不走 axios」的调用方用 —— 目前只有 **SSE 流式对话**：
+   *   `EventSource` 不支持 POST 和自定义头，所以那边只能用 `fetch` 读流，
+   *   也就享受不到拦截器里的自动刷新。
+   *   流开始前先调一次这个，能把「聊到一半突然 401」的概率降到很低。
+   *
+   * ⚠️ 它和拦截器里的刷新共用同一个「单飞」Promise ——
+   *    并发调用不会打出多个刷新请求（后端的 refreshToken 有重放检测，
+   *    重复刷新会导致整条会话被撤销）。
+   */
+  refreshToken(): Promise<string>
   /** 底层实例，给需要自定义的场景用（如上传进度回调） */
   readonly raw: AxiosInstance
 }
@@ -192,6 +205,13 @@ export function createHttp(options: HttpClientOptions): HttpClient {
 
     delete: <T>(url: string, config?: AxiosRequestConfig) =>
       request<T>({ ...config, method: 'DELETE', url }),
+
+    /**
+     * ⚠️ 直接用内部那个 refreshAccessToken()，**不新写一份刷新逻辑** ——
+     *    它带着「单飞」保护，和后端 refreshToken 的轮换 + 重放检测是配套的。
+     *    自己再写一份并发刷新，就会把整条会话打成「重放」。
+     */
+    refreshToken: () => refreshAccessToken(),
 
     raw: instance,
   }
