@@ -9,6 +9,20 @@
  * ⚠️ <b>加权限时两边都要改</b>：这里加一个，后端的 sys_permission 也要加。
  * 这个类型只是前端的「已使用清单」，不是权威来源（权威在后端数据库）。
  *
+ * ⚠️⚠️ <b>这份清单已经漏过两次了</b>（`c8de220` 补了 3 个面试码，
+ * 2026-10-10 补了 `app:resume:match`）—— 后端加了权限码，前端忘了同步。
+ * 后果不致命（运行时 `permissions.includes()` 照样能匹配），但你在前端写
+ * `auth.can('app:resume:match')` 会直接编译不过，查半天不知道为什么。
+ *
+ * <b>核对办法</b>：起后端，登录拿 token，比对 code 集合：
+ * ```bash
+ * curl -s -X POST localhost:8080/api/admin/auth/login \
+ *   -H 'Content-Type: application/json' \
+ *   -d '{"username":"admin","password":"admin123"}'   # 取 data.accessToken
+ * curl -s localhost:8080/api/admin/permissions -H "Authorization: Bearer <token>"
+ * ```
+ * 和后端 `GET /admin/permissions` 返回的 code 集合应该**完全一致**。
+ *
  * ⚠️ <b>前端的权限判断只是 UX，不是安全边界</b>。
  * 隐藏了按钮不等于拦住了请求 —— 后端每个接口都有 @PreAuthorize，那才是真防线。
  */
@@ -40,7 +54,7 @@ export type AdminPermission =
   | 'admin:ai:manage'
   | 'admin:prompt:manage'
 
-/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 23 条） */
+/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 24 条） */
 export type AppPermission =
   | 'app:knowledge:read'
   | 'app:knowledge:write'
@@ -57,6 +71,7 @@ export type AppPermission =
   | 'app:resume:write'
   | 'app:resume:parse'
   | 'app:resume:optimize'
+  | 'app:resume:match'
   | 'app:job:read'
   | 'app:job:write'
   | 'app:job:parse'
