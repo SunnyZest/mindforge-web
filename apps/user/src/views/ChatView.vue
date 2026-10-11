@@ -20,11 +20,12 @@ import {
   type ConversationVO,
   type KnowledgeBaseVO,
   type MessageVO,
+  type PromptOptionVO,
   type SourceVO,
 } from '@mindforge/shared'
 
 import { chunkApi, knowledgeApi } from '@/api/knowledge'
-import { conversationApi, ragApi, streamChat } from '@/api/chat'
+import { conversationApi, promptApi, ragApi, streamChat } from '@/api/chat'
 import { renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
@@ -49,6 +50,24 @@ const streamingSources = ref<SourceVO[]>([])
 /** 检索阶段（还没开始吐字） */
 const retrieving = ref(true)
 let abortController: AbortController | null = null
+
+// ---------- 提示词风格 ----------
+const promptOptions = ref<PromptOptionVO[]>([])
+const selectedPromptId = ref<string>('')
+
+async function loadPromptOptions(): Promise<void> {
+  try {
+    const list = await promptApi.listSelectable('RAG_CHAT')
+    promptOptions.value = list ?? []
+    const defaultOpt = promptOptions.value.find((p) => p.isDefault) ?? promptOptions.value[0]
+    if (defaultOpt && !selectedPromptId.value) {
+      selectedPromptId.value = defaultOpt.id
+    }
+  } catch {
+    promptOptions.value = []
+  }
+}
+
 
 // ---------- 引用溯源 ----------
 const chunkVisible = ref(false)
@@ -203,7 +222,10 @@ async function onSend(): Promise<void> {
   try {
     await streamChat(
       activeId.value,
-      { message: text },
+      {
+        message: text,
+        promptId: selectedPromptId.value || undefined,
+      },
       {
         onSources: (e) => {
           streamingSources.value = e.sources
@@ -302,6 +324,7 @@ watch(
 )
 
 onMounted(async () => {
+  void loadPromptOptions()
   await loadConversations()
   // 默认打开最近一个会话
   const first = conversations.value[0]
@@ -455,7 +478,29 @@ onUnmounted(() => abortController?.abort())
             @keydown.enter.exact.prevent="onSend"
           />
           <div class="composer__foot">
-            <span class="composer__hint">回答只依据知识库里的资料，没有的内容会直说</span>
+            <div v-if="promptOptions.length" class="composer__style">
+              <span class="style-label">风格</span>
+              <el-select
+                v-model="selectedPromptId"
+                size="small"
+                :disabled="sending"
+                placeholder="默认风格"
+                class="style-select"
+              >
+                <el-option
+                  v-for="opt in promptOptions"
+                  :key="opt.id"
+                  :label="opt.label"
+                  :value="opt.id"
+                >
+                  <div class="style-opt">
+                    <span class="style-opt__label">{{ opt.label }}</span>
+                    <span v-if="opt.description" class="style-opt__desc">{{ opt.description }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+            </div>
+            <span v-else class="composer__hint">回答只依据知识库里的资料，没有的内容会直说</span>
             <el-button v-if="sending" :icon="VideoPause" @click="onStop">停止</el-button>
             <el-button type="primary" :icon="Promotion" :disabled="!canSend" @click="onSend">
               发送
@@ -829,6 +874,41 @@ onUnmounted(() => abortController?.abort())
   gap: var(--mf-space-3);
   align-items: center;
   justify-content: flex-end;
+}
+
+.composer__style {
+  display: flex;
+  gap: var(--mf-space-2);
+  align-items: center;
+  margin-right: auto;
+}
+
+.style-label {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+  white-space: nowrap;
+}
+
+.style-select {
+  width: 140px;
+}
+
+.style-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.style-opt__label {
+  font-size: var(--mf-font-sm);
+  font-weight: var(--mf-weight-medium);
+  color: var(--mf-text-primary);
+}
+
+.style-opt__desc {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
 }
 
 .composer__hint {

@@ -8,11 +8,12 @@ import type {
   CreateConversationDTO,
   PageQuery,
   PageResult,
+  PromptOptionVO,
   RagFeedbackDTO,
   RagSearchDTO,
+  RagSearchResultVO,
   SendMessageDTO,
   SendMessageResultVO,
-  SourceVO,
 } from '@mindforge/shared'
 
 import { http, tokenStore } from './index'
@@ -168,7 +169,15 @@ export async function streamChat(
 
 /** RAG 检索 —— 只查不生成，可以用来验证「知识库里到底有没有相关内容」 */
 export const ragApi = {
-  search: (dto: RagSearchDTO) => http.post<SourceVO[]>('/app/rag/search', dto),
+  search: (dto: RagSearchDTO) => http.post<RagSearchResultVO>('/app/rag/search', dto),
 
   feedback: (dto: RagFeedbackDTO) => http.post<void>('/app/rag/feedback', dto),
 }
+
+/** 提示词风格选项（用户端） */
+export const promptApi = {
+  /** 获取当前场景下可选的提示词风格列表（如 'RAG_CHAT'） */
+  listSelectable: (scene: string) =>
+    http.get<PromptOptionVO[]>('/app/prompts', { params: { scene } }),
+}
+
