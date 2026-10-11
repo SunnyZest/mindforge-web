@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "pnpm --filter \"./apps/*\" --parallel dev",
     "dev:admin": "pnpm --filter @mindforge/admin dev",
     "dev:user": "pnpm --filter @mindforge/user dev",
     "build:admin": "pnpm --filter @mindforge/admin build",
