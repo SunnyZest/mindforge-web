@@ -201,6 +201,72 @@ async function onDelete(row: UserSummaryVO): Promise<void> {
   }
 }
 
+// ---------- 批量操作 ----------
+const selectedRows = ref<UserSummaryVO[]>([])
+const tableRef = ref()
+
+function onSelectionChange(selection: UserSummaryVO[]): void {
+  selectedRows.value = selection
+}
+
+function clearSelection(): void {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+async function onBatchEnable(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map((r) => r.id)
+  try {
+    const count = await userApi.batchUpdateStatus({ ids, status: 1 })
+    ElMessage.success(`已批量启用 ${count} 个账号`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量启用失败')
+  }
+}
+
+async function onBatchDisable(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map((r) => r.id)
+  const ok = await ElMessageBox.confirm(
+    `确定批量禁用选中的 ${ids.length} 个用户账号吗？禁用后他们将无法登录系统。`,
+    '确认批量禁用',
+    { type: 'warning', confirmButtonText: '禁用' },
+  ).catch(() => false)
+  if (!ok) return
+
+  try {
+    const count = await userApi.batchUpdateStatus({ ids, status: 0 })
+    ElMessage.success(`已批量禁用 ${count} 个账号`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量禁用失败')
+  }
+}
+
+async function onBatchDelete(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map((r) => r.id)
+  const ok = await ElMessageBox.confirm(
+    `删除后不可恢复，确定批量删除选中的 ${ids.length} 个用户账号吗？`,
+    '高危操作确认',
+    { type: 'warning', confirmButtonText: '删除' },
+  ).catch(() => false)
+  if (!ok) return
+
+  try {
+    const count = await userApi.batchRemove({ ids })
+    ElMessage.success(`已批量删除 ${count} 个账号`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量删除失败')
+  }
+}
+
 onMounted(() => {
   void load()
   void loadRoles()
@@ -235,12 +301,56 @@ onMounted(() => {
       </el-button>
     </div>
 
+    <!-- 批量操作工具栏：仅在有选中项时展示 -->
+    <div v-if="selectedRows.length > 0" class="batch-bar">
+      <span class="batch-bar__tip">
+        已选择 <strong>{{ selectedRows.length }}</strong> 项
+      </span>
+      <div class="batch-bar__actions">
+        <el-button
+          v-if="auth.can('admin:user:disable')"
+          type="success"
+          size="small"
+          @click="onBatchEnable"
+        >
+          批量启用
+        </el-button>
+        <el-button
+          v-if="auth.can('admin:user:disable')"
+          type="danger"
+          size="small"
+          @click="onBatchDisable"
+        >
+          批量禁用
+        </el-button>
+        <el-button
+          v-if="auth.can('admin:user:delete')"
+          type="danger"
+          plain
+          size="small"
+          @click="onBatchDelete"
+        >
+          批量删除
+        </el-button>
+        <el-button link size="small" @click="clearSelection">取消选择</el-button>
+      </div>
+    </div>
+
     <!-- ⚠️ 列宽要按【最窄的常见视口】算，不是按 1440 算：
          1366×768 的笔记本浏览器最大化后，内容区只有约 1040px。
          所以这里把「创建时间」去掉了（用户列表里它最不重要，
          要看具体时间可以进详情）—— 换来操作列能放下 4 个按钮。
          当前合计 960px，1280 视口也能放下。改列宽时重新加一遍总数。 -->
-    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+    <el-table
+      ref="tableRef"
+      v-loading="loading"
+      :data="rows"
+      border
+      stripe
+      @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
+    >
+      <el-table-column type="selection" width="48" align="center" />
       <el-table-column
         prop="username"
         label="用户名"
@@ -375,6 +485,32 @@ onMounted(() => {
 /* 「新增」推到最右 —— 它和左边的筛选不是一组操作，挨着放容易误点 */
 .filters__add {
   margin-left: auto;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  margin-bottom: var(--mf-space-4);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 
 .roles {

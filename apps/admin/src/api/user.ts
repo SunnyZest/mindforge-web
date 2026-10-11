@@ -40,4 +40,16 @@ export const userApi = {
   assignRoles: (id: string, dto: AssignRolesDTO) => http.put<void>(`/admin/users/${id}/roles`, dto),
 
   remove: (id: string) => http.delete<void>(`/admin/users/${id}`),
+
+  /** 批量启用 / 禁用 */
+  batchUpdateStatus: (dto: { ids: (string | number)[]; status: number }) =>
+    http.put<number>('/admin/users/batch-status', dto),
+
+  /** 批量分配角色 */
+  batchAssignRoles: (dto: { ids: (string | number)[]; roleIds: (string | number)[] }) =>
+    http.put<number>('/admin/users/batch-roles', dto),
+
+  /** 批量删除（高危操作，二次确认） */
+  batchRemove: (dto: { ids: (string | number)[] }) =>
+    http.delete<number>('/admin/users/batch', { data: dto }),
 }

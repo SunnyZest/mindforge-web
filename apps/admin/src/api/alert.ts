@@ -21,4 +21,8 @@ export const alertApi = {
 
   /** 全部标记已读，返回本次标记的条数 */
   markAllRead: () => http.put<number>('/admin/alerts/read-all'),
+
+  /** 选定批量标记已读，返回本次标记的条数 */
+  batchMarkRead: (dto: { ids: (string | number)[] }) =>
+    http.put<number>('/admin/alerts/batch-read', dto),
 }

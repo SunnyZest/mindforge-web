@@ -36,6 +36,14 @@ export const documentApi = {
 
   remove: (id: string) => http.delete<void>(`/admin/documents/${id}`),
 
+  /** 批量重试解析流水线 */
+  batchRetry: (dto: { ids: (string | number)[] }) =>
+    http.post<number>('/admin/documents/batch-retry', dto),
+
+  /** 批量删除文档 */
+  batchRemove: (dto: { ids: (string | number)[] }) =>
+    http.delete<number>('/admin/documents/batch', { data: dto }),
+
   /**
    * 文档的分块列表。
    *
