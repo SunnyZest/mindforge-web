@@ -27,7 +27,7 @@
  * 隐藏了按钮不等于拦住了请求 —— 后端每个接口都有 @PreAuthorize，那才是真防线。
  */
 
-/** 管理端权限码（对齐 sys_permission 里 `admin:%` 的全部 24 条） */
+/** 管理端权限码（对齐 sys_permission 里 `admin:%` 的全部 25 条） */
 export type AdminPermission =
   | 'admin:dashboard:read'
   | 'admin:user:list'
@@ -53,6 +53,7 @@ export type AdminPermission =
   | 'admin:usage:read'
   | 'admin:ai:manage'
   | 'admin:prompt:manage'
+  | 'admin:alert:list'
 
 /** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 25 条） */
 export type AppPermission =

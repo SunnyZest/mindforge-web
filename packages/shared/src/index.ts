@@ -108,6 +108,7 @@ export type {
   SendMessageDTO,
   SendMessageResultVO,
   RagSearchDTO,
+  RagSearchResultVO,
   RagFeedbackDTO,
   ChatStreamSourcesEvent,
   ChatStreamDeltaEvent,
@@ -119,10 +120,21 @@ export type {
   PromptGroupVO,
   PromptCreateDTO,
   PromptUpdateDTO,
+  PromptOptionVO,
   UsageSummaryVO,
   UsageDailyVO,
   UsageByModelVO,
   UsageQuery,
+  // 管理端：高危操作告警
+  AdminAlertVO,
+  AdminAlertQuery,
+  // 用户端：简历-JD 匹配分析
+  AnalysisCategory,
+  AnalysisVerdict,
+  ResumeJobAnalysisItemVO,
+  ResumeJobAnalysisVO,
+  ResumeJobAnalysisDTO,
+  ResumeJobAnalysisQuery,
 } from './types'
 
 // ---------- HTTP 客户端 ----------

@@ -1009,6 +1009,13 @@ export interface RagSearchDTO {
   enableRerank?: boolean
 }
 
+/** RAG 检索返回（契约变更：2026-10-11，支持 rerank 标记） */
+export interface RagSearchResultVO {
+  results: SourceVO[]
+  /** 本次结果是否真的经过 rerank 精排（enableRerank=true 但未配精排模型或降级时为 false） */
+  reranked: boolean
+}
+
 /** 给回答打分（Java 的 `RagFeedbackDTO`） */
 export interface RagFeedbackDTO {
   messageId: string
@@ -1103,6 +1110,18 @@ export interface PromptGroupVO {
   versions: PromptVO[]
 }
 
+/** 用户端可选的回答风格（Java 的 `PromptOptionVO`） */
+export interface PromptOptionVO {
+  /** 提交时传这个 id（字符串） */
+  id: string
+  /** 给用户看的名字，如「严谨」「简洁」 */
+  label: string
+  /** 一句话说明这个风格的特点 */
+  description: string | null
+  /** 是否是默认风格 */
+  isDefault: boolean
+}
+
 /** 新建版本（Java 的 `PromptCreateDTO`）—— 同 (scene, name) 再加就是加版本 */
 export interface PromptCreateDTO {
   /** 必填，最长 32。⚠️ 后端会转成大写，填小写也存成大写 */
@@ -1174,3 +1193,88 @@ export interface UsageQuery {
   from?: string
   to?: string
 }
+
+// ---------- 管理端：高危操作告警（Java 的 AlertVO / AdminAlertController）----------
+export interface AdminAlertVO {
+  id: string
+  /** 触发操作的用户 id；系统触发时为 null */
+  userId: string | null
+  /** 高危操作，如 ROLE_ASSIGN_PERMISSION */
+  action: string
+  /** 资源类型 */
+  resourceType: string | null
+  /** 资源 id */
+  resourceId: string | null
+  /** 触发请求的 traceId，可跳审计日志对照 */
+  requestId: string | null
+  /** 告警标题，如「高危操作告警：ROLE_CREATE（成功）」 */
+  title: string
+  /** 操作明细 JSON 字符串，前端自行解析 */
+  detailJson: string | null
+  /** 是否已读 */
+  read: boolean
+  /** 标记已读的管理员 id */
+  readBy: string | null
+  /** 标记已读时间 */
+  readAt: string | null
+  /** 发生时间 */
+  createdAt: string
+}
+
+export interface AdminAlertQuery {
+  page?: number
+  pageSize?: number
+  /** 是否只看未读 */
+  unreadOnly?: boolean
+  /** 排序字段白名单：action | resourceType | createdAt */
+  sortBy?: 'action' | 'resourceType' | 'createdAt'
+  /** 排序方向：asc | desc */
+  sortOrder?: 'asc' | 'desc'
+}
+
+// ---------- 用户端：简历-JD 匹配分析 ----------
+export type AnalysisCategory = 'SKILL' | 'EXPERIENCE' | 'EDUCATION' | 'OTHER'
+
+export type AnalysisVerdict =
+  | 'MATCHED'
+  | 'EXPRESSION_GAP'
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'REAL_GAP'
+  | 'UNCERTAIN'
+
+export interface ResumeJobAnalysisItemVO {
+  category: AnalysisCategory
+  requirement: string
+  verdict: AnalysisVerdict
+  /** 简历原文中的凭据。verdict = MATCHED 时一定非空；判断不出依据时为 null */
+  evidence: string | null
+  /** 具体可执行的修改建议 */
+  advice: string
+}
+
+export interface ResumeJobAnalysisVO {
+  analysisId: string
+  resumeId: string
+  jobId: string
+  /** 仅展示参考，别拿它当主要结论 */
+  overallScore: number
+  summary: string
+  items: ResumeJobAnalysisItemVO[]
+  matchedSkills: string[]
+  missingSkills: string[]
+  matchedExperience: string[]
+  missingExperience: string[]
+  suggestions: string[]
+  createdAt: string
+}
+
+export interface ResumeJobAnalysisDTO {
+  resumeId: string
+  jobId: string
+}
+
+export interface ResumeJobAnalysisQuery {
+  resumeId: string
+  jobId: string
+}
+
