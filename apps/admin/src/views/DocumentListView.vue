@@ -32,6 +32,8 @@ const query = reactive({
   keyword: '',
   knowledgeBaseId: undefined as number | undefined,
   status: undefined as string | undefined,
+  sortBy: undefined as string | undefined,
+  sortOrder: undefined as 'asc' | 'desc' | undefined,
 })
 
 // 知识库页点「文档」跳过来会带 `?kbId=xxx` —— 进来就是筛好的
@@ -120,6 +122,8 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
       keyword: query.keyword.trim() || undefined,
       knowledgeBaseId: typeof kbId === 'number' && Number.isFinite(kbId) ? kbId : undefined,
       status: query.status,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     })
     rows.value = data.records
     total.value = data.total
@@ -169,7 +173,21 @@ function onReset(): void {
   query.keyword = ''
   query.knowledgeBaseId = undefined
   query.status = undefined
+  query.sortBy = undefined
+  query.sortOrder = undefined
   onSearch()
+}
+
+function onSortChange(data: { prop?: string | null; order?: string | null }): void {
+  if (!data.order || !data.prop) {
+    query.sortBy = undefined
+    query.sortOrder = undefined
+  } else {
+    query.sortBy = data.prop
+    query.sortOrder = data.order === 'ascending' ? 'asc' : 'desc'
+  }
+  query.page = 1
+  void load()
 }
 
 // ---------- 弹窗 ----------
@@ -263,8 +281,14 @@ onMounted(load)
     </div>
 
     <!-- 列宽合计 985px，最窄视口（1366）下内容区约 1040px。改列宽重新加一遍总数 -->
-    <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="fileName" label="文件名" min-width="150" show-overflow-tooltip />
+    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+      <el-table-column
+        prop="fileName"
+        label="文件名"
+        min-width="150"
+        sortable="custom"
+        show-overflow-tooltip
+      />
       <el-table-column label="知识库" min-width="110" show-overflow-tooltip>
         <template #default="{ row }">{{ asDoc(row).knowledgeBaseName || '-' }}</template>
       </el-table-column>
@@ -293,7 +317,7 @@ onMounted(load)
           </span>
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" width="145">
+      <el-table-column prop="createdAt" label="创建时间" width="145" sortable="custom">
         <template #default="{ row }">{{ formatDateTime(asDoc(row).createdAt) }}</template>
       </el-table-column>
 

@@ -38,6 +38,8 @@ const query = reactive({
   pageSize: 10,
   keyword: '',
   status: undefined as number | undefined,
+  sortBy: undefined as string | undefined,
+  sortOrder: undefined as 'asc' | 'desc' | undefined,
 })
 
 // ---------- 弹窗 ----------
@@ -87,6 +89,8 @@ async function load(): Promise<void> {
       // 后端拿到的是「空字符串」而不是「没传」，匹配逻辑会不一样
       keyword: query.keyword.trim() || undefined,
       status: query.status,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     })
     rows.value = data.records
     total.value = data.total
@@ -115,7 +119,21 @@ function onSearch(): void {
 function onReset(): void {
   query.keyword = ''
   query.status = undefined
+  query.sortBy = undefined
+  query.sortOrder = undefined
   onSearch()
+}
+
+function onSortChange(data: { prop?: string | null; order?: string | null }): void {
+  if (!data.order || !data.prop) {
+    query.sortBy = undefined
+    query.sortOrder = undefined
+  } else {
+    query.sortBy = data.prop
+    query.sortOrder = data.order === 'ascending' ? 'asc' : 'desc'
+  }
+  query.page = 1
+  void load()
 }
 
 function onCreate(): void {
@@ -222,8 +240,14 @@ onMounted(() => {
          所以这里把「创建时间」去掉了（用户列表里它最不重要，
          要看具体时间可以进详情）—— 换来操作列能放下 4 个按钮。
          当前合计 960px，1280 视口也能放下。改列宽时重新加一遍总数。 -->
-    <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip>
+    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+      <el-table-column
+        prop="username"
+        label="用户名"
+        min-width="120"
+        sortable="custom"
+        show-overflow-tooltip
+      >
         <template #default="{ row }">
           <!-- 点名字看详情 —— 比再加一个操作按钮省地方，也更符合直觉 -->
           <el-button link type="primary" @click="onDetail(asUser(row))">
@@ -245,14 +269,14 @@ onMounted(() => {
           </span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="80" align="center">
+      <el-table-column prop="status" label="状态" width="90" align="center" sortable="custom">
         <template #default="{ row }">
           <StatusTag :tone="row.status === 1 ? 'success' : 'danger'">
             {{ row.status === 1 ? '启用' : '禁用' }}
           </StatusTag>
         </template>
       </el-table-column>
-      <el-table-column label="最后登录" width="150">
+      <el-table-column prop="lastLoginAt" label="最后登录" width="160" sortable="custom">
         <template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template>
       </el-table-column>
 

@@ -98,6 +98,8 @@ const query = reactive({
   resourceType: undefined as string | undefined,
   result: undefined as string | undefined,
   range: null as [Date, Date] | null,
+  sortBy: undefined as string | undefined,
+  sortOrder: undefined as 'asc' | 'desc' | undefined,
 })
 
 function fail(e: unknown, fallback: string): void {
@@ -136,6 +138,8 @@ async function load(): Promise<void> {
       result: query.result,
       from: query.range?.[0] ? toLocalIso(query.range[0]) : undefined,
       to: query.range?.[1] ? toLocalIso(query.range[1]) : undefined,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     })
     rows.value = data.records
     total.value = data.total
@@ -157,7 +161,21 @@ function onReset(): void {
   query.resourceType = undefined
   query.result = undefined
   query.range = null
+  query.sortBy = undefined
+  query.sortOrder = undefined
   onSearch()
+}
+
+function onSortChange(data: { prop?: string | null; order?: string | null }): void {
+  if (!data.order || !data.prop) {
+    query.sortBy = undefined
+    query.sortOrder = undefined
+  } else {
+    query.sortBy = data.prop
+    query.sortOrder = data.order === 'ascending' ? 'asc' : 'desc'
+  }
+  query.page = 1
+  void load()
 }
 
 /**
@@ -222,7 +240,7 @@ onMounted(load)
     </div>
 
     <!-- 列宽合计 805px + 展开列，最窄视口（1366）下内容区约 1040px -->
-    <el-table v-loading="loading" :data="rows" border stripe>
+    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
       <el-table-column type="expand">
         <template #default="{ row }">
           <div class="detail">
@@ -235,18 +253,18 @@ onMounted(load)
           </div>
         </template>
       </el-table-column>
-      <el-table-column label="时间" width="145">
+      <el-table-column prop="createdAt" label="时间" width="145" sortable="custom">
         <template #default="{ row }">{{ formatDateTime(asLog(row).createdAt) }}</template>
       </el-table-column>
       <el-table-column label="操作人" width="90">
         <template #default="{ row }">{{ asLog(row).userId || '-' }}</template>
       </el-table-column>
-      <el-table-column label="动作" min-width="160">
+      <el-table-column prop="action" label="动作" min-width="160" sortable="custom">
         <template #default="{ row }">
           <code class="code">{{ asLog(row).action }}</code>
         </template>
       </el-table-column>
-      <el-table-column label="资源" min-width="130">
+      <el-table-column prop="resourceType" label="资源" min-width="130" sortable="custom">
         <template #default="{ row }">
           <span v-if="asLog(row).resourceType">
             <code class="code">{{ asLog(row).resourceType }}</code>
@@ -267,7 +285,7 @@ onMounted(load)
         </template>
       </el-table-column>
       <el-table-column prop="ip" label="IP" width="110" />
-      <el-table-column label="结果" width="80" align="center">
+      <el-table-column prop="result" label="结果" width="90" align="center" sortable="custom">
         <template #default="{ row }">
           <StatusTag :tone="asLog(row).result === 'SUCCESS' ? 'success' : 'danger'">
             {{ asLog(row).result === 'SUCCESS' ? '成功' : '失败' }}

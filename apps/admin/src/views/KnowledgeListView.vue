@@ -28,6 +28,8 @@ const query = reactive({
   pageSize: 10,
   keyword: '',
   status: undefined as number | undefined,
+  sortBy: undefined as string | undefined,
+  sortOrder: undefined as 'asc' | 'desc' | undefined,
 })
 
 function fail(e: unknown, fallback: string): void {
@@ -47,6 +49,8 @@ async function load(): Promise<void> {
       pageSize: query.pageSize,
       keyword: query.keyword.trim() || undefined,
       status: query.status,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     })
     rows.value = data.records
     total.value = data.total
@@ -66,7 +70,21 @@ function onSearch(): void {
 function onReset(): void {
   query.keyword = ''
   query.status = undefined
+  query.sortBy = undefined
+  query.sortOrder = undefined
   onSearch()
+}
+
+function onSortChange(data: { prop?: string | null; order?: string | null }): void {
+  if (!data.order || !data.prop) {
+    query.sortBy = undefined
+    query.sortOrder = undefined
+  } else {
+    query.sortBy = data.prop
+    query.sortOrder = data.order === 'ascending' ? 'asc' : 'desc'
+  }
+  query.page = 1
+  void load()
 }
 
 /**
@@ -120,8 +138,8 @@ onMounted(load)
     </div>
 
     <!-- 列宽合计 805px，最窄视口（1366）下内容区约 1040px，留有余量 -->
-    <el-table v-loading="loading" :data="rows" border stripe>
-      <el-table-column prop="name" label="名称" min-width="140" />
+    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+      <el-table-column prop="name" label="名称" min-width="140" sortable="custom" />
       <el-table-column label="归属人" min-width="90">
         <template #default="{ row }">{{ asKb(row).username || '-' }}</template>
       </el-table-column>
@@ -131,14 +149,14 @@ onMounted(load)
       <el-table-column label="文档数" width="80" align="center">
         <template #default="{ row }">{{ asKb(row).documentCount }}</template>
       </el-table-column>
-      <el-table-column label="状态" width="80" align="center">
+      <el-table-column prop="status" label="状态" width="90" align="center" sortable="custom">
         <template #default="{ row }">
           <StatusTag :tone="asKb(row).status === 1 ? 'success' : 'danger'">
             {{ asKb(row).status === 1 ? '启用' : '禁用' }}
           </StatusTag>
         </template>
       </el-table-column>
-      <el-table-column label="更新时间" width="145">
+      <el-table-column prop="updatedAt" label="更新时间" width="145" sortable="custom">
         <template #default="{ row }">{{ formatDateTime(asKb(row).updatedAt) }}</template>
       </el-table-column>
 

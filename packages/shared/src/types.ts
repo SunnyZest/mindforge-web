@@ -31,6 +31,10 @@ export interface PageQuery {
   pageSize?: number
   /** 关键词，各模块的匹配字段不同（用户是用户名/昵称，简历是名称/目标职位…） */
   keyword?: string
+  /** 排序字段（需在后端白名单内） */
+  sortBy?: string
+  /** 排序方向，默认 desc */
+  sortOrder?: 'asc' | 'desc'
 }
 
 /** 当前登录用户（Java 的 `UserInfoVO`） */
