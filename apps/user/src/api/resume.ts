@@ -1,6 +1,9 @@
 import type {
   PageResult,
   ResumeDetailVO,
+  ResumeJobAnalysisDTO,
+  ResumeJobAnalysisQuery,
+  ResumeJobAnalysisVO,
   ResumeOptimizeDTO,
   ResumeOptimizeVO,
   ResumeParsedVO,
@@ -80,4 +83,25 @@ export const resumeApi = {
     http.post<ResumeOptimizeVO>(`/app/resumes/${id}/optimize`, dto, {
       timeout: 5 * 60 * 1000,
     }),
+
+  /**
+   * 简历与目标职位匹配分析。
+   *
+   * ⚠️⚠️ **慢接口，实测 100~200 秒**，超时放宽到 5 分钟。
+   *      落库存储，重复调用会覆盖同一条记录。
+   *      权限 app:resume:match
+   */
+  match: (dto: ResumeJobAnalysisDTO) =>
+    http.post<ResumeJobAnalysisVO>('/app/resume-job-analysis', dto, {
+      timeout: 5 * 60 * 1000,
+    }),
+
+  /**
+   * 查询已有的匹配分析结果。
+   * 快接口（不调模型），若尚未匹配过则返回 40413。
+   * 权限 app:resume:read
+   */
+  getMatch: (query: ResumeJobAnalysisQuery) =>
+    http.get<ResumeJobAnalysisVO>('/app/resume-job-analysis', { params: query }),
 }
+

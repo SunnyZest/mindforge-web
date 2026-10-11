@@ -7,6 +7,7 @@ import { BizError, formatDateTime, type JobDetailVO } from '@mindforge/shared'
 
 import { jobApi } from '@/api/job'
 import JobFormDialog from '@/components/JobFormDialog.vue'
+import ResumeJobMatchPanel from '@/components/ResumeJobMatchPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -270,6 +271,13 @@ onMounted(load)
         </div>
       </section>
     </div>
+
+    <!-- ---------- 简历与岗位智能匹配分析 ---------- -->
+    <ResumeJobMatchPanel
+      :job-id="id"
+      :job-title="detail?.title ?? ''"
+      :job-parsed="detail?.parseStatus === 'SUCCESS'"
+    />
 
     <!-- 编辑弹窗。传 detail 就行 —— JobDetailVO 结构上包含 JobVO 的全部字段。
          保存后重新拉一次，让左边的原文和右边的结构化都跟着更新。 -->
