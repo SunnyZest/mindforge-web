@@ -80,7 +80,8 @@ export async function streamChat(
     // 刷新失败就继续用旧的试一次 —— 万一只是刷新接口抖了一下
   }
 
-  const url = `/api/app/conversations/${conversationId}/messages/stream`
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  const url = `${apiBase}/app/conversations/${conversationId}/messages/stream`
 
   const doFetch = () =>
     fetch(url, {

@@ -22,8 +22,8 @@ export function setSessionExpiredHandler(handler: () => void): void {
 }
 
 export const http = createHttp({
-  // 开发时由 Vite 代理到 :8080，上线由 nginx 代理 —— 两边都是 /api，前端不用改
-  baseURL: '/api',
+  // 开发时由 Vite 代理到 :8080，上线由 nginx 代理 —— 默认为 /api，支持通过环境变量定制
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   refreshPath: '/admin/auth/refresh',
   tokenStore,
   onSessionExpired: () => sessionExpiredHandler?.(),
