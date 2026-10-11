@@ -111,6 +111,37 @@ function onReset(): void {
   void load()
 }
 
+// ---------- 批量操作 ----------
+const selectedRows = ref<AdminAlertVO[]>([])
+const tableRef = ref()
+const markingBatch = ref(false)
+
+function onSelectionChange(selection: AdminAlertVO[]): void {
+  selectedRows.value = selection
+}
+
+function clearSelection(): void {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+/** 选定批量标记已读 */
+async function onBatchMarkRead(): Promise<void> {
+  if (!selectedRows.value.length) return
+  markingBatch.value = true
+  try {
+    const ids = selectedRows.value.map((r) => r.id)
+    const count = await alertApi.batchMarkRead({ ids })
+    ElMessage.success(`已将选中的 ${count} 条告警标记为已读`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量标记已读失败')
+  } finally {
+    markingBatch.value = false
+  }
+}
+
 onMounted(() => {
   void load()
 })
@@ -182,12 +213,37 @@ onMounted(() => {
       </div>
     </div>
 
+    <div v-if="selectedRows.length > 0" class="batch-bar">
+      <span class="batch-bar__tip">
+        已选择 <strong>{{ selectedRows.length }}</strong> 条告警
+      </span>
+      <div class="batch-bar__actions">
+        <el-button
+          type="primary"
+          size="small"
+          :icon="Check"
+          :loading="markingBatch"
+          @click="onBatchMarkRead"
+        >
+          标记已读
+        </el-button>
+        <el-button link size="small" @click="clearSelection">取消选择</el-button>
+      </div>
+    </div>
+
     <!--
       表格列宽预算（基于最窄视口 1366x768 内容区 1040px 计算）：
-      展开(48) + 状态(80) + 标题(220) + 动作(180) + 资源(140) + 操作人(110) + 时间(160) + 操作(90) = 1028px
-      合计 1028px <= 1040px，避免横向滚动导致右侧固定操作列遮挡内容
+      选择(48) + 展开(48) + 状态(75) + 标题(180) + 动作(160) + 资源(130) + 操作人(100) + 时间(150) + 操作(90) = 981px <= 1040px
     -->
-    <el-table v-loading="loading" :data="rows" row-key="id" class="alert-table">
+    <el-table
+      ref="tableRef"
+      v-loading="loading"
+      :data="rows"
+      row-key="id"
+      class="alert-table"
+      @selection-change="onSelectionChange"
+    >
+      <el-table-column type="selection" width="48" align="center" />
       <!-- 展开明细行 -->
       <el-table-column type="expand" width="48">
         <template #default="{ row }">
@@ -231,7 +287,7 @@ onMounted(() => {
       </el-table-column>
 
       <!-- 已读状态 -->
-      <el-table-column label="状态" width="80" align="center">
+      <el-table-column label="状态" width="75" align="center">
         <template #default="{ row }">
           <el-tag v-if="!asAlert(row).read" type="danger" size="small" effect="dark">未读</el-tag>
           <el-tag v-else type="info" size="small">已读</el-tag>
@@ -239,7 +295,7 @@ onMounted(() => {
       </el-table-column>
 
       <!-- 告警标题 -->
-      <el-table-column label="告警标题" min-width="220" show-overflow-tooltip>
+      <el-table-column label="告警标题" min-width="180" show-overflow-tooltip>
         <template #default="{ row }">
           <span
             class="alert-title"
@@ -251,14 +307,14 @@ onMounted(() => {
       </el-table-column>
 
       <!-- 高危操作 -->
-      <el-table-column prop="action" label="操作类型" width="180">
+      <el-table-column prop="action" label="操作类型" width="160">
         <template #default="{ row }">
           <code class="action-tag">{{ asAlert(row).action }}</code>
         </template>
       </el-table-column>
 
       <!-- 资源类型与 ID -->
-      <el-table-column label="关联资源" width="140" show-overflow-tooltip>
+      <el-table-column label="关联资源" width="130" show-overflow-tooltip>
         <template #default="{ row }">
           <span v-if="asAlert(row).resourceType">
             {{ asAlert(row).resourceType }}
@@ -269,14 +325,14 @@ onMounted(() => {
       </el-table-column>
 
       <!-- 操作人 -->
-      <el-table-column label="操作人" width="110">
+      <el-table-column label="操作人" width="100">
         <template #default="{ row }">
           <span>{{ asAlert(row).userId ? `用户 #${asAlert(row).userId}` : '系统触发' }}</span>
         </template>
       </el-table-column>
 
       <!-- 发生时间 -->
-      <el-table-column label="发生时间" width="160">
+      <el-table-column label="发生时间" width="150">
         <template #default="{ row }">
           <span>{{ formatDateTime(asAlert(row).createdAt) }}</span>
         </template>
@@ -437,6 +493,32 @@ onMounted(() => {
   border-radius: var(--mf-radius-sm);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  margin-bottom: var(--mf-space-4);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 
 .pagination {

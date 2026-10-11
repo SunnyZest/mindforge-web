@@ -104,6 +104,77 @@ async function onRemove(row: InterviewVO): Promise<void> {
 /** 进行中的排前面 —— 没做完的才是用户要接着做的 */
 const empty = computed(() => !loading.value && rows.value.length === 0)
 
+// ---------- 批量管理 ----------
+const batchMode = ref(false)
+const selectedIds = ref<string[]>([])
+const batchDeleting = ref(false)
+
+function toggleBatchMode(): void {
+  batchMode.value = !batchMode.value
+  if (!batchMode.value) {
+    selectedIds.value = []
+  }
+}
+
+function toggleSelect(id: string, checked?: boolean): void {
+  const isChecked = checked ?? !selectedIds.value.includes(id)
+  if (isChecked) {
+    if (!selectedIds.value.includes(id)) {
+      selectedIds.value.push(id)
+    }
+  } else {
+    selectedIds.value = selectedIds.value.filter((i) => i !== id)
+  }
+}
+
+function onCardCheck(id: string, val: unknown): void {
+  toggleSelect(id, Boolean(val))
+}
+
+function selectAll(): void {
+  selectedIds.value = rows.value.map((it) => it.id)
+}
+
+function clearSelection(): void {
+  selectedIds.value = []
+}
+
+async function onBatchDelete(): Promise<void> {
+  if (!selectedIds.value.length) return
+  const count = selectedIds.value.length
+  try {
+    await ElMessageBox.confirm(
+      `确定批量删除选中的 ${count} 场面试记录？题目和报告会一并清理，此操作不可恢复。`,
+      '批量删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  batchDeleting.value = true
+  try {
+    const results = await Promise.allSettled(
+      selectedIds.value.map((id) => interviewApi.remove(id)),
+    )
+    const successCount = results.filter((r) => r.status === 'fulfilled').length
+    ElMessage.success(`已成功删除 ${successCount} 场面试记录`)
+    clearSelection()
+    if (rows.value.length === count && query.page > 1) {
+      query.page -= 1
+    }
+    await load()
+  } catch (e) {
+    fail(e, '批量删除失败')
+  } finally {
+    batchDeleting.value = false
+  }
+}
+
 const FILTERS: { label: string; value?: InterviewStatus }[] = [
   { label: '全部', value: undefined },
   { label: '未开始', value: 'CREATED' },
@@ -122,7 +193,12 @@ onMounted(load)
         <p class="page__sub">按你的简历和目标岗位出题，答完逐题点评 + 一份总报告</p>
       </div>
 
-      <el-button type="primary" :icon="Plus" @click="createVisible = true">新建面试</el-button>
+      <div class="page__actions">
+        <el-button :type="batchMode ? 'primary' : 'default'" @click="toggleBatchMode">
+          {{ batchMode ? '退出批量' : '批量管理' }}
+        </el-button>
+        <el-button type="primary" :icon="Plus" @click="createVisible = true">新建面试</el-button>
+      </div>
     </header>
 
     <div class="tabs">
@@ -138,8 +214,40 @@ onMounted(load)
       </button>
     </div>
 
+    <div v-if="batchMode" class="batch-bar">
+      <span class="batch-bar__tip">
+        已选择 <strong>{{ selectedIds.length }}</strong> / {{ rows.length }} 场面试
+      </span>
+      <div class="batch-bar__actions">
+        <el-button size="small" @click="selectAll">全选本页</el-button>
+        <el-button size="small" @click="clearSelection">清空已选</el-button>
+        <el-button
+          type="danger"
+          size="small"
+          :disabled="selectedIds.length === 0"
+          :loading="batchDeleting"
+          @click="onBatchDelete"
+        >
+          批量删除
+        </el-button>
+      </div>
+    </div>
+
     <div v-loading="loading" class="grid">
-      <article v-for="it in rows" :key="it.id" class="card">
+      <article
+        v-for="it in rows"
+        :key="it.id"
+        class="card"
+        :class="{ 'card--selected': selectedIds.includes(it.id), 'card--selectable': batchMode }"
+        @click="batchMode ? toggleSelect(it.id) : undefined"
+      >
+        <div v-if="batchMode" class="card__select">
+          <el-checkbox
+            :model-value="selectedIds.includes(it.id)"
+            @click.stop
+            @change="(val: unknown) => onCardCheck(it.id, val)"
+          />
+        </div>
         <div class="card__head">
           <el-icon class="card__icon"><Microphone /></el-icon>
           <div class="card__main">
@@ -239,6 +347,37 @@ onMounted(load)
   color: var(--mf-text-tertiary);
 }
 
+.page__actions {
+  display: flex;
+  gap: var(--mf-space-3);
+  align-items: center;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
 /* ---------- 状态筛选 ---------- */
 .tabs {
   display: flex;
@@ -283,6 +422,7 @@ onMounted(load)
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-3);
@@ -290,6 +430,24 @@ onMounted(load)
   background-color: var(--mf-glass-card);
   border: 1px solid var(--mf-glass-border-soft);
   border-radius: var(--mf-radius-lg);
+  transition: all 0.2s ease;
+}
+
+.card--selectable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.card--selected {
+  background-color: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
+}
+
+.card__select {
+  position: absolute;
+  top: var(--mf-space-3);
+  right: var(--mf-space-3);
+  z-index: 2;
 }
 
 .card__head {

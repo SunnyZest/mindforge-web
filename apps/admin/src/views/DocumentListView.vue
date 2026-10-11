@@ -239,6 +239,52 @@ async function onDelete(row: AdminDocumentVO): Promise<void> {
   }
 }
 
+// ---------- 批量操作 ----------
+const selectedRows = ref<AdminDocumentVO[]>([])
+const tableRef = ref()
+
+function onSelectionChange(selection: AdminDocumentVO[]): void {
+  selectedRows.value = selection
+}
+
+function clearSelection(): void {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+async function onBatchRetry(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map((r) => r.documentId)
+  try {
+    const count = await documentApi.batchRetry({ ids })
+    ElMessage.success(`已重新提交 ${count} 篇文档进入处理流水线`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量重试失败')
+  }
+}
+
+async function onBatchDelete(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const ids = selectedRows.value.map((r) => r.documentId)
+  const ok = await ElMessageBox.confirm(
+    `删除后不可恢复，对应文档的分块与向量索引也将一并清理。确定批量删除选中的 ${ids.length} 篇文档吗？`,
+    '高危操作确认',
+    { type: 'warning', confirmButtonText: '删除' },
+  ).catch(() => false)
+  if (!ok) return
+
+  try {
+    const count = await documentApi.batchRemove({ ids })
+    ElMessage.success(`已批量删除 ${count} 篇文档`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量删除失败')
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -280,8 +326,42 @@ onMounted(load)
       </span>
     </div>
 
-    <!-- 列宽合计 985px，最窄视口（1366）下内容区约 1040px。改列宽重新加一遍总数 -->
-    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+    <div v-if="selectedRows.length > 0" class="batch-bar">
+      <span class="batch-bar__tip">
+        已选择 <strong>{{ selectedRows.length }}</strong> 篇文档
+      </span>
+      <div class="batch-bar__actions">
+        <el-button
+          v-if="auth.can('admin:document:retry')"
+          type="warning"
+          size="small"
+          @click="onBatchRetry"
+        >
+          批量重试
+        </el-button>
+        <el-button
+          v-if="auth.can('admin:document:delete')"
+          type="danger"
+          size="small"
+          @click="onBatchDelete"
+        >
+          批量删除
+        </el-button>
+        <el-button link size="small" @click="clearSelection">取消选择</el-button>
+      </div>
+    </div>
+
+    <!-- 列宽合计 1033px，最窄视口（1366）下内容区约 1040px。改列宽重新加一遍总数 -->
+    <el-table
+      ref="tableRef"
+      v-loading="loading"
+      :data="rows"
+      border
+      stripe
+      @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
+    >
+      <el-table-column type="selection" width="48" align="center" />
       <el-table-column
         prop="fileName"
         label="文件名"
@@ -438,6 +518,32 @@ onMounted(load)
   display: inline-flex;
   gap: var(--mf-space-2);
   white-space: nowrap;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  margin-bottom: var(--mf-space-4);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 
 .pagination {

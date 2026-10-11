@@ -191,6 +191,92 @@ function prettyDetail(row: AuditLogVO): string {
   }
 }
 
+// ---------- 批量与导出操作 ----------
+const selectedRows = ref<AuditLogVO[]>([])
+const tableRef = ref()
+
+function onSelectionChange(selection: AuditLogVO[]): void {
+  selectedRows.value = selection
+}
+
+function clearSelection(): void {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+function exportToCsv(logs: AuditLogVO[], filename: string): void {
+  if (!logs.length) {
+    ElMessage.warning('没有可导出的日志数据')
+    return
+  }
+
+  const headers = [
+    'ID',
+    '时间',
+    '操作人ID',
+    '动作',
+    '资源类型',
+    '资源ID',
+    '请求方法',
+    '请求路径',
+    'IP地址',
+    '结果',
+    'TraceID',
+    '详情明细',
+  ]
+
+  const escapeCell = (val: unknown): string => {
+    if (val === null || val === undefined) return '""'
+    const str = String(val).replace(/"/g, '""')
+    return `"${str}"`
+  }
+
+  const csvRows = [headers.map(escapeCell).join(',')]
+
+  for (const log of logs) {
+    csvRows.push(
+      [
+        log.id,
+        formatDateTime(log.createdAt),
+        log.userId ?? '',
+        log.action,
+        log.resourceType ?? '',
+        log.resourceId ?? '',
+        log.httpMethod ?? '',
+        log.requestUri ?? '',
+        log.ip ?? '',
+        log.result === 'SUCCESS' ? '成功' : '失败',
+        log.requestId ?? '',
+        log.detailJson ?? '',
+      ]
+        .map(escapeCell)
+        .join(','),
+    )
+  }
+
+  // \uFEFF 是 UTF-8 BOM，能保证 Windows Excel 打开不乱码
+  const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filename}_${toLocalIso(new Date()).replace(/[:T]/g, '-')}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  ElMessage.success(`成功导出 ${logs.length} 条审计日志`)
+}
+
+function onExportSelected(): void {
+  if (!selectedRows.value.length) return
+  exportToCsv(selectedRows.value, 'audit_logs_selected')
+}
+
+function onExportCurrentPage(): void {
+  if (!rows.value.length) return
+  exportToCsv(rows.value, 'audit_logs_page')
+}
+
 onMounted(load)
 </script>
 
@@ -237,10 +323,32 @@ onMounted(load)
       />
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
+      <el-button type="success" plain @click="onExportCurrentPage">导出本页</el-button>
     </div>
 
-    <!-- 列宽合计 805px + 展开列，最窄视口（1366）下内容区约 1040px -->
-    <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
+    <div v-if="selectedRows.length > 0" class="batch-bar">
+      <span class="batch-bar__tip">
+        已选择 <strong>{{ selectedRows.length }}</strong> 条日志
+      </span>
+      <div class="batch-bar__actions">
+        <el-button type="success" size="small" @click="onExportSelected">
+          导出选中 (CSV)
+        </el-button>
+        <el-button link size="small" @click="clearSelection">取消选择</el-button>
+      </div>
+    </div>
+
+    <!-- 列宽合计 853px + 展开列，最窄视口（1366）下内容区约 1040px -->
+    <el-table
+      ref="tableRef"
+      v-loading="loading"
+      :data="rows"
+      border
+      stripe
+      @selection-change="onSelectionChange"
+      @sort-change="onSortChange"
+    >
+      <el-table-column type="selection" width="48" align="center" />
       <el-table-column type="expand">
         <template #default="{ row }">
           <div class="detail">
@@ -383,6 +491,32 @@ onMounted(load)
   color: var(--mf-text-secondary);
   background-color: var(--mf-bg-subtle);
   border-radius: var(--mf-radius-sm);
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  margin-bottom: var(--mf-space-4);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 
 .pagination {

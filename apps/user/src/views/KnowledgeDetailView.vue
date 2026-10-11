@@ -137,21 +137,99 @@ function pickFile(): void {
 
 async function onFileChange(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
+  const files = Array.from(input.files || [])
   // ⚠️ 先清空 input.value：不清的话「选同一个文件第二次」不会触发 change，
   //    用户会以为按钮坏了
   input.value = ''
-  if (!file) return
+  if (!files.length) return
 
   uploading.value = true
   try {
-    await knowledgeApi.uploadDocument(id.value, file)
-    ElMessage.success('已上传，正在后台处理（解析 → 分块 → 向量）')
+    if (files.length === 1) {
+      await knowledgeApi.uploadDocument(id.value, files[0])
+      ElMessage.success('已上传，正在后台处理（解析 → 分块 → 向量）')
+    } else {
+      const results = await Promise.allSettled(
+        files.map((file) => knowledgeApi.uploadDocument(id.value, file)),
+      )
+      const successCount = results.filter((r) => r.status === 'fulfilled').length
+      const failCount = results.length - successCount
+      if (failCount === 0) {
+        ElMessage.success(`已批量上传 ${successCount} 个文件，正在后台处理`)
+      } else {
+        ElMessage.warning(`批量上传完成：成功 ${successCount} 个，失败 ${failCount} 个`)
+      }
+    }
     await load()
   } catch (e) {
     fail(e, '上传失败')
   } finally {
     uploading.value = false
+  }
+}
+
+// ---------- 批量操作 ----------
+const selectedRows = ref<DocumentVO[]>([])
+const tableRef = ref()
+const batchActing = ref(false)
+
+function onSelectionChange(selection: DocumentVO[]): void {
+  selectedRows.value = selection
+}
+
+function clearSelection(): void {
+  tableRef.value?.clearSelection()
+  selectedRows.value = []
+}
+
+async function onBatchRetry(): Promise<void> {
+  if (!selectedRows.value.length) return
+  batchActing.value = true
+  try {
+    const results = await Promise.allSettled(
+      selectedRows.value.map((d) => documentApi.retry(d.documentId)),
+    )
+    const successCount = results.filter((r) => r.status === 'fulfilled').length
+    ElMessage.success(`已重新提交 ${successCount} 篇文档进入流水线处理`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量重试失败')
+  } finally {
+    batchActing.value = false
+  }
+}
+
+async function onBatchDelete(): Promise<void> {
+  if (!selectedRows.value.length) return
+  const count = selectedRows.value.length
+  try {
+    await ElMessageBox.confirm(
+      `确定删除选中的 ${count} 篇文档？分块和向量索引也会一起删掉，操作不可恢复。`,
+      '批量删除确认',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+      },
+    )
+  } catch {
+    return
+  }
+
+  batchActing.value = true
+  try {
+    const results = await Promise.allSettled(
+      selectedRows.value.map((d) => documentApi.remove(d.documentId)),
+    )
+    const successCount = results.filter((r) => r.status === 'fulfilled').length
+    ElMessage.success(`已成功删除 ${successCount} 篇文档`)
+    clearSelection()
+    await load()
+  } catch (e) {
+    fail(e, '批量删除失败')
+  } finally {
+    batchActing.value = false
   }
 }
 
@@ -264,6 +342,7 @@ onMounted(load)
           <input
             ref="fileInput"
             type="file"
+            multiple
             :accept="ACCEPT"
             class="pane__file"
             @change="onFileChange"
@@ -274,7 +353,40 @@ onMounted(load)
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="rows" border stripe>
+      <div v-if="selectedRows.length > 0" class="batch-bar">
+        <span class="batch-bar__tip">
+          已选择 <strong>{{ selectedRows.length }}</strong> 篇文档
+        </span>
+        <div class="batch-bar__actions">
+          <el-button
+            type="warning"
+            size="small"
+            :loading="batchActing"
+            @click="onBatchRetry"
+          >
+            批量重试
+          </el-button>
+          <el-button
+            type="danger"
+            size="small"
+            :loading="batchActing"
+            @click="onBatchDelete"
+          >
+            批量删除
+          </el-button>
+          <el-button link size="small" @click="clearSelection">取消选择</el-button>
+        </div>
+      </div>
+
+      <el-table
+        ref="tableRef"
+        v-loading="loading"
+        :data="rows"
+        border
+        stripe
+        @selection-change="onSelectionChange"
+      >
+        <el-table-column type="selection" width="48" align="center" />
         <el-table-column label="文件名" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="doc__name">{{ asDoc(row).fileName }}</span>
@@ -613,5 +725,31 @@ onMounted(load)
 .tag--danger {
   color: var(--mf-danger-text);
   background-color: var(--mf-danger-subtle);
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mf-space-2) var(--mf-space-4);
+  margin-bottom: var(--mf-space-3);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: var(--mf-radius-md);
+}
+
+.batch-bar__tip {
+  font-size: var(--mf-font-size-sm);
+  color: var(--el-text-color-primary);
+}
+
+.batch-bar__tip strong {
+  color: var(--el-color-primary);
+}
+
+.batch-bar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 </style>
