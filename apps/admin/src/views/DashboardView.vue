@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { Collection, Cpu, DataLine, Document, User } from '@element-plus/icons-vue'
+import {
+  ArrowRight,
+  Bell,
+  Collection,
+  Cpu,
+  DataLine,
+  Document,
+  Operation,
+  Reading,
+  User,
+} from '@element-plus/icons-vue'
 import { computed, onMounted, ref, type Component } from 'vue'
+import { useRouter } from 'vue-router'
 
-import type { DashboardVO } from '@mindforge/shared'
+import type { DashboardVO, UsageSummaryVO } from '@mindforge/shared'
 import { BizError } from '@mindforge/shared'
 
+import { alertApi } from '@/api/alert'
 import { dashboardApi } from '@/api/dashboard'
+import { usageApi } from '@/api/usage'
 import { useAuthStore } from '@/stores/auth'
 import { formatCount } from '@/utils/format'
 
+const router = useRouter()
 const auth = useAuthStore()
 
 const loading = ref(false)
 const stats = ref<DashboardVO | null>(null)
+const usageSummary = ref<UsageSummaryVO | null>(null)
+const unreadAlertCount = ref(0)
 
 /**
  * 统计项的静态定义。
@@ -42,12 +58,65 @@ const metrics = computed(() =>
   })),
 )
 
+// ---------- AI 运行态势衍生指标 ----------
+const aiSuccessRate = computed(() => {
+  if (!usageSummary.value || usageSummary.value.requests === 0) return '-'
+  const rate = (usageSummary.value.successCount / usageSummary.value.requests) * 100
+  return `${rate.toFixed(1)}%`
+})
+
+const aiAvgLatency = computed(() => {
+  if (!usageSummary.value?.avgDurationMs) return '-'
+  return `${usageSummary.value.avgDurationMs}ms`
+})
+
+// ---------- 快捷通道定义 ----------
+interface QuickAction {
+  label: string
+  path: string
+  icon: Component
+  desc: string
+  badge?: () => number
+}
+
+const quickActions: QuickAction[] = [
+  { label: '用户与角色', path: '/users', icon: User, desc: '账号生命周期与权限分配' },
+  { label: '知识库管理', path: '/knowledge-bases', icon: Collection, desc: '知识库与文档分块处理' },
+  {
+    label: '高危告警中心',
+    path: '/alerts',
+    icon: Bell,
+    desc: '高危操作即时留痕与确认',
+    badge: () => unreadAlertCount.value,
+  },
+  { label: '提示词版本', path: '/prompts', icon: Reading, desc: '多场景提示词灰度与发布' },
+  { label: 'AI 模型管控', path: '/ai-models', icon: Operation, desc: '对话与嵌入模型配置' },
+  { label: '调用用量大盘', path: '/usage', icon: DataLine, desc: '按天趋势与模型成本分析' },
+]
+
 async function load(): Promise<void> {
   loading.value = true
   try {
-    stats.value = await dashboardApi.stats()
-  } catch (e) {
-    ElMessage.error(e instanceof BizError ? e.message : '统计加载失败')
+    const [dashRes, usageRes, alertRes] = await Promise.allSettled([
+      dashboardApi.stats(),
+      usageApi.summary(),
+      alertApi.unreadCount(),
+    ])
+
+    if (dashRes.status === 'fulfilled') {
+      stats.value = dashRes.value
+    } else {
+      const err = dashRes.reason
+      ElMessage.error(err instanceof BizError ? err.message : '大盘统计加载失败')
+    }
+
+    if (usageRes.status === 'fulfilled') {
+      usageSummary.value = usageRes.value
+    }
+
+    if (alertRes.status === 'fulfilled') {
+      unreadAlertCount.value = alertRes.value
+    }
   } finally {
     loading.value = false
   }
@@ -58,9 +127,13 @@ onMounted(load)
 
 <template>
   <div class="dashboard">
+    <!-- 顶部数据大盘 -->
     <el-card shadow="never">
       <div class="card-head">
-        <h2 class="card-head__title">数据概览</h2>
+        <div>
+          <h2 class="card-head__title">数据概览</h2>
+          <p class="card-head__desc">全站核心资源与服务实时统计</p>
+        </div>
         <el-button :loading="loading" @click="load">刷新</el-button>
       </div>
 
@@ -79,6 +152,84 @@ onMounted(load)
       </div>
     </el-card>
 
+    <!-- 中部双列：AI 态势 + 快捷入口 -->
+    <div class="dashboard__mid">
+      <!-- AI 服务运行态势 -->
+      <el-card shadow="never" class="ai-card">
+        <div class="card-head">
+          <div class="ai-card__head">
+            <el-icon class="ai-card__icon"><Cpu /></el-icon>
+            <h3 class="card-head__sub">AI 运行健康度</h3>
+          </div>
+          <el-button text size="small" type="primary" @click="router.push('/usage')">
+            用量详情 <el-icon><ArrowRight /></el-icon>
+          </el-button>
+        </div>
+
+        <div v-loading="loading" class="ai-stats">
+          <div class="ai-stat">
+            <span class="ai-stat__label">调用成功率</span>
+            <span class="ai-stat__value">{{ aiSuccessRate }}</span>
+            <span class="ai-stat__hint">
+              成功 {{ formatCount(usageSummary?.successCount ?? 0) }} /
+              失败 {{ formatCount(usageSummary?.failedCount ?? 0) }}
+            </span>
+          </div>
+
+          <div class="ai-stat">
+            <span class="ai-stat__label">平均响应延迟</span>
+            <span class="ai-stat__value">{{ aiAvgLatency }}</span>
+            <span class="ai-stat__hint">模型平均生成耗时</span>
+          </div>
+
+          <div class="ai-stat">
+            <span class="ai-stat__label">输入 / 输出 Token</span>
+            <span class="ai-stat__value">
+              {{ formatCount(usageSummary?.promptTokens ?? 0) }} /
+              {{ formatCount(usageSummary?.completionTokens ?? 0) }}
+            </span>
+            <span class="ai-stat__hint">提示词与生成文本分布</span>
+          </div>
+        </div>
+      </el-card>
+
+      <!-- 快捷工作台 -->
+      <el-card shadow="never" class="shortcuts-card">
+        <div class="card-head">
+          <h3 class="card-head__sub">常用管理工作台</h3>
+          <span class="shortcuts-hint">高频功能直达</span>
+        </div>
+
+        <div class="shortcuts">
+          <button
+            v-for="a in quickActions"
+            :key="a.path"
+            type="button"
+            class="shortcut"
+            @click="router.push(a.path)"
+          >
+            <span class="shortcut__icon">
+              <el-icon><component :is="a.icon" /></el-icon>
+            </span>
+            <div class="shortcut__info">
+              <div class="shortcut__title-row">
+                <span class="shortcut__title">{{ a.label }}</span>
+                <el-badge
+                  v-if="a.badge && a.badge() > 0"
+                  :value="a.badge()"
+                  :max="99"
+                  type="danger"
+                />
+              </div>
+              <span class="shortcut__desc">{{ a.desc }}</span>
+            </div>
+            <el-icon class="shortcut__arrow"><ArrowRight /></el-icon>
+          </button>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- 底部管理员身份 -->
     <el-card shadow="never">
       <h2 class="card-head__title">
         你好，{{ auth.user?.nickname || auth.user?.username || '管理员' }}
@@ -120,6 +271,162 @@ onMounted(load)
   font-size: var(--mf-font-lg);
   font-weight: var(--mf-weight-medium);
   letter-spacing: -0.02em;
+}
+
+.card-head__desc {
+  margin: 4px 0 0;
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+}
+
+.card-head__sub {
+  margin: 0;
+  font-size: var(--mf-font-md);
+  font-weight: var(--mf-weight-medium);
+}
+
+.dashboard__mid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mf-space-4);
+}
+
+@media (max-width: 992px) {
+  .dashboard__mid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- AI 服务运行态势 ---------- */
+.ai-card__head {
+  display: flex;
+  gap: var(--mf-space-2);
+  align-items: center;
+}
+
+.ai-card__icon {
+  font-size: var(--mf-font-md);
+  color: var(--mf-primary);
+}
+
+.ai-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+}
+
+.ai-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--mf-space-3);
+  background-color: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-md);
+}
+
+.ai-stat__label {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-secondary);
+}
+
+.ai-stat__value {
+  font-size: var(--mf-font-lg);
+  font-weight: var(--mf-weight-semibold);
+  letter-spacing: -0.02em;
+  color: var(--mf-text-primary);
+}
+
+.ai-stat__hint {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+}
+
+/* ---------- 快捷工作台 ---------- */
+.shortcuts-hint {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+}
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--mf-space-2);
+}
+
+.shortcut {
+  display: flex;
+  gap: var(--mf-space-3);
+  align-items: center;
+  padding: var(--mf-space-3);
+  background: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+.shortcut:hover {
+  background: var(--mf-glass-tint-strong);
+  border-color: var(--mf-primary);
+  transform: translateY(-1px);
+}
+
+.shortcut:focus-visible {
+  outline: 2px solid var(--mf-primary);
+  outline-offset: 2px;
+}
+
+.shortcut__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mf-radius-sm);
+  background-color: var(--mf-primary-subtle);
+  color: var(--mf-primary-text);
+  font-size: var(--mf-font-sm);
+}
+
+.shortcut__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shortcut__title-row {
+  display: flex;
+  gap: var(--mf-space-2);
+  align-items: center;
+}
+
+.shortcut__title {
+  font-size: var(--mf-font-sm);
+  font-weight: var(--mf-weight-medium);
+  color: var(--mf-text-primary);
+}
+
+.shortcut__desc {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shortcut__arrow {
+  color: var(--mf-text-tertiary);
+  font-size: var(--mf-font-xs);
+  transition: transform var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+.shortcut:hover .shortcut__arrow {
+  color: var(--mf-primary);
+  transform: translateX(2px);
 }
 
 /* ★ 五个指标放在【一张】卡片里，而不是五张玻璃卡 ——

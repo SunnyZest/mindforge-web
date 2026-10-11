@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowDown,
+  Bell,
   Brush,
   Collection,
   Cpu,
@@ -14,9 +15,10 @@ import {
   TrendCharts,
   User,
 } from '@element-plus/icons-vue'
-import { computed, type Component } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { alertApi } from '@/api/alert'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
@@ -45,6 +47,7 @@ const ICONS: Record<string, Component> = {
   Tickets,
   EditPen,
   TrendCharts,
+  Bell,
 }
 
 /**
@@ -101,6 +104,42 @@ async function onCommand(command: string): Promise<void> {
     await router.replace({ name: 'login' })
   }
 }
+
+// ---------- 高危告警未读数与定时轮询 ----------
+const unreadAlerts = ref(0)
+let alertTimer: ReturnType<typeof setInterval> | null = null
+
+async function fetchUnreadAlerts(): Promise<void> {
+  if (!auth.can('admin:alert:list')) return
+  try {
+    unreadAlerts.value = await alertApi.unreadCount()
+  } catch {
+    // 接口异常时静默忽略，不打断主界面
+  }
+}
+
+onMounted(() => {
+  void fetchUnreadAlerts()
+  // 60 秒轮询一次高危操作未读数
+  alertTimer = setInterval(() => {
+    void fetchUnreadAlerts()
+  }, 60_000)
+})
+
+onUnmounted(() => {
+  if (alertTimer) {
+    clearInterval(alertTimer)
+    alertTimer = null
+  }
+})
+
+// 路由变化时（例如在告警页已读完或切回首页），及时更新角标
+watch(
+  () => route.path,
+  () => {
+    void fetchUnreadAlerts()
+  },
+)
 </script>
 
 <template>
@@ -121,6 +160,20 @@ async function onCommand(command: string): Promise<void> {
         <span class="layout__title">{{ route.meta.title ?? '' }}</span>
 
         <div class="layout__actions">
+          <!-- 高危告警铃铛按钮 -->
+          <button
+            v-if="auth.can('admin:alert:list')"
+            type="button"
+            class="layout__alert-btn"
+            :title="unreadAlerts > 0 ? `有 ${unreadAlerts} 条未读高危告警` : '告警中心'"
+            :aria-label="unreadAlerts > 0 ? `有 ${unreadAlerts} 条未读高危告警` : '告警中心'"
+            @click="router.push({ name: 'alerts' })"
+          >
+            <el-badge :value="unreadAlerts" :max="99" :hidden="unreadAlerts === 0">
+              <el-icon><Bell /></el-icon>
+            </el-badge>
+          </button>
+
           <!-- 主题切换。图标显示的是「点了会切到哪个」，不是当前状态 ——
                moon 表示「切到深色」，这是这类按钮的通行约定。
 
@@ -210,7 +263,9 @@ async function onCommand(command: string): Promise<void> {
    ★ 它是「功能层」元素，所以用玻璃 + 轻微回弹，和用户区保持同一套语言。
    ⚠️ 尺寸写死 32px 是为了「点击热区 ≥ 32px」这个无障碍底线，
       不是因为好看 —— 别为了紧凑把它压小。 */
-.layout__theme {
+.layout__theme,
+.layout__alert-btn {
+  position: relative;
   display: grid;
   place-items: center;
   width: 32px;
@@ -228,19 +283,34 @@ async function onCommand(command: string): Promise<void> {
     transform var(--mf-duration-fast) var(--mf-ease-spring);
 }
 
-.layout__theme:hover {
+.layout__theme:hover,
+.layout__alert-btn:hover {
   background-color: var(--mf-glass-tint-strong);
   color: var(--mf-text-primary);
 }
 
-.layout__theme:active {
+.layout__theme:active,
+.layout__alert-btn:active {
   transform: scale(0.92);
 }
 
 /* 键盘可达性：默认的 focus ring 在玻璃上很糊，换成主色描边 */
-.layout__theme:focus-visible {
+.layout__theme:focus-visible,
+.layout__alert-btn:focus-visible {
   outline: 2px solid var(--mf-primary);
   outline-offset: 2px;
+}
+
+.layout__alert-btn :deep(.el-badge) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layout__alert-btn :deep(.el-badge__content) {
+  top: -2px;
+  right: -2px;
+  transform: scale(0.75);
 }
 
 /* 用户区做成胶囊按钮 —— 悬停有反馈，符合「功能层元素可交互」的暗示 */

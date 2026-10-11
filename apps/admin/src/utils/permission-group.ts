@@ -11,6 +11,7 @@ import type { PermissionVO } from '@mindforge/shared'
  */
 export const PERMISSION_MODULE_LABELS: Record<string, string> = {
   'admin:ai': 'AI 配置',
+  'admin:alert': '高危告警',
   'admin:audit': '审计日志',
   'admin:dashboard': '后台首页',
   'admin:document': '文档管理',
@@ -25,6 +26,7 @@ export const PERMISSION_MODULE_LABELS: Record<string, string> = {
   'app:interview': '面试',
   'app:job': '职位',
   'app:knowledge': '知识库',
+  'app:prompt': '提示词',
   'app:rag': 'RAG 检索',
   'app:resume': '简历',
 }

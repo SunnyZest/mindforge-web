@@ -107,6 +107,12 @@ const router = createRouter({
           meta: { title: 'AI 用量', icon: 'TrendCharts', order: 9, permission: 'admin:usage:read' },
         },
         {
+          path: 'alerts',
+          name: 'alerts',
+          component: () => import('@/views/AlertListView.vue'),
+          meta: { title: '高危告警', icon: 'Bell', order: 10, permission: 'admin:alert:list' },
+        },
+        {
           // 开发用的设计规范页 —— 不设 permission（登录即可看）
           path: 'style-guide',
           name: 'style-guide',
