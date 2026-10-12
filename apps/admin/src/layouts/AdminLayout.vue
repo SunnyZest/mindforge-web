@@ -16,7 +16,7 @@ import {
   User,
 } from '@element-plus/icons-vue'
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 
 import { alertApi } from '@/api/alert'
 import { useAuthStore } from '@/stores/auth'
@@ -105,6 +105,32 @@ async function onCommand(command: string): Promise<void> {
   }
 }
 
+/** 菜单点击：当前路径短路防御，捕获重复导航与被新导航取消的异常 */
+function onMenuSelect(path: string): void {
+  if (route.path === path) return
+  void router.push(path).catch((err) => {
+    if (
+      isNavigationFailure(err, NavigationFailureType.duplicated | NavigationFailureType.cancelled)
+    ) {
+      return
+    }
+    console.error('[AdminLayout] 菜单导航异常:', err)
+  })
+}
+
+/** 告警按钮点击：当前已在告警页时短路返回 */
+function onAlertClick(): void {
+  if (route.name === 'alerts') return
+  void router.push({ name: 'alerts' }).catch((err) => {
+    if (
+      isNavigationFailure(err, NavigationFailureType.duplicated | NavigationFailureType.cancelled)
+    ) {
+      return
+    }
+    console.error('[AdminLayout] 告警导航异常:', err)
+  })
+}
+
 // ---------- 高危告警未读数与定时轮询 ----------
 const unreadAlerts = ref(0)
 let alertTimer: ReturnType<typeof setInterval> | null = null
@@ -147,7 +173,7 @@ watch(
     <el-aside width="220px" class="layout__aside mf-glass--edge">
       <div class="layout__brand">MindForge 管理后台</div>
 
-      <el-menu :default-active="route.path" router class="layout__menu">
+      <el-menu :default-active="route.path" class="layout__menu" @select="onMenuSelect">
         <el-menu-item v-for="m in menus" :key="m.name" :index="m.path">
           <el-icon v-if="m.icon"><component :is="m.icon" /></el-icon>
           <span>{{ m.title }}</span>
@@ -167,7 +193,7 @@ watch(
             class="layout__alert-btn"
             :title="unreadAlerts > 0 ? `有 ${unreadAlerts} 条未读高危告警` : '告警中心'"
             :aria-label="unreadAlerts > 0 ? `有 ${unreadAlerts} 条未读高危告警` : '告警中心'"
-            @click="router.push({ name: 'alerts' })"
+            @click="onAlertClick"
           >
             <el-badge :value="unreadAlerts" :max="99" :hidden="unreadAlerts === 0">
               <el-icon><Bell /></el-icon>

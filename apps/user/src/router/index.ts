@@ -1,4 +1,4 @@
-import { doneProgress, startProgress, type Permission } from '@mindforge/shared'
+import { doneProgress, lazyView, startProgress, type Permission } from '@mindforge/shared'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { setSessionExpiredHandler, tokenStore } from '@/api'
@@ -33,59 +33,59 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: lazyView(() => import('@/views/LoginView.vue')),
     },
     {
       path: '/register',
       name: 'register',
-      component: () => import('@/views/RegisterView.vue'),
+      component: lazyView(() => import('@/views/RegisterView.vue')),
     },
     {
       path: '/forbidden',
       name: 'forbidden',
-      component: () => import('@/views/ForbiddenView.vue'),
+      component: lazyView(() => import('@/views/ForbiddenView.vue')),
     },
     {
       path: '/',
-      component: () => import('@/layouts/UserLayout.vue'),
+      component: lazyView(() => import('@/layouts/UserLayout.vue')),
       redirect: { name: 'workspace' },
       children: [
         {
           path: 'workspace',
           name: 'workspace',
-          component: () => import('@/views/WorkspaceView.vue'),
+          component: lazyView(() => import('@/views/WorkspaceView.vue')),
           meta: { title: '工作台', icon: 'HomeFilled', order: 1 },
         },
         {
           path: 'resumes',
           name: 'resumes',
-          component: () => import('@/views/ResumeListView.vue'),
+          component: lazyView(() => import('@/views/ResumeListView.vue')),
           meta: { title: '我的简历', icon: 'Document', order: 2, permission: 'app:resume:read' },
         },
         {
           // 详情不进菜单（没有 title），只能从列表点进来
           path: 'resumes/:id',
           name: 'resume-detail',
-          component: () => import('@/views/ResumeDetailView.vue'),
+          component: lazyView(() => import('@/views/ResumeDetailView.vue')),
           meta: { permission: 'app:resume:read' },
         },
         {
           path: 'jobs',
           name: 'jobs',
-          component: () => import('@/views/JobListView.vue'),
+          component: lazyView(() => import('@/views/JobListView.vue')),
           meta: { title: '目标职位', icon: 'Briefcase', order: 3, permission: 'app:job:read' },
         },
         {
           // 详情不进菜单（没有 title），只能从列表点进来
           path: 'jobs/:id',
           name: 'job-detail',
-          component: () => import('@/views/JobDetailView.vue'),
+          component: lazyView(() => import('@/views/JobDetailView.vue')),
           meta: { permission: 'app:job:read' },
         },
         {
           path: 'interviews',
           name: 'interviews',
-          component: () => import('@/views/InterviewListView.vue'),
+          component: lazyView(() => import('@/views/InterviewListView.vue')),
           meta: {
             title: '模拟面试',
             icon: 'Microphone',
@@ -97,32 +97,32 @@ const router = createRouter({
           // 面试间（五步流程 + 报告）。不进菜单。
           path: 'interviews/:id',
           name: 'interview-room',
-          component: () => import('@/views/InterviewRoomView.vue'),
+          component: lazyView(() => import('@/views/InterviewRoomView.vue')),
           meta: { permission: 'app:interview:read' },
         },
         {
           path: 'knowledge',
           name: 'knowledge',
-          component: () => import('@/views/KnowledgeListView.vue'),
+          component: lazyView(() => import('@/views/KnowledgeListView.vue')),
           meta: { title: '知识库', icon: 'Collection', order: 5, permission: 'app:knowledge:read' },
         },
         {
           // 库详情（文档列表 + 上传）。不进菜单。
           path: 'knowledge/:id',
           name: 'knowledge-detail',
-          component: () => import('@/views/KnowledgeDetailView.vue'),
+          component: lazyView(() => import('@/views/KnowledgeDetailView.vue')),
           meta: { permission: 'app:knowledge:read' },
         },
         {
           path: 'chat',
           name: 'chat',
-          component: () => import('@/views/ChatView.vue'),
+          component: lazyView(() => import('@/views/ChatView.vue')),
           meta: { title: 'AI 问答', icon: 'ChatDotRound', order: 6, permission: 'app:rag:search' },
         },
         {
           path: 'profile',
           name: 'profile',
-          component: () => import('@/views/ProfileView.vue'),
+          component: lazyView(() => import('@/views/ProfileView.vue')),
           meta: { title: '个人资料', icon: 'User', order: 90 },
         },
       ],
@@ -130,7 +130,7 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
-      component: () => import('@/views/NotFoundView.vue'),
+      component: lazyView(() => import('@/views/NotFoundView.vue')),
     },
   ],
 })

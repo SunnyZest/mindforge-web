@@ -170,3 +170,5 @@ export {
   getCommonGrid,
 } from './echarts-theme'
 
+// ---------- 异步路由分包重试辅助 ----------
+export { lazyView } from './router-util'

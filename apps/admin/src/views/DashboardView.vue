@@ -12,9 +12,9 @@ import {
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { useRouter } from 'vue-router'
+import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 
-import type { DashboardVO, UsageSummaryVO } from '@mindforge/shared'
+import type { DashboardVO, Permission, UsageSummaryVO } from '@mindforge/shared'
 import { BizError, formatCount } from '@mindforge/shared'
 
 import { alertApi } from '@/api/alert'
@@ -23,6 +23,7 @@ import { usageApi } from '@/api/usage'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
+const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -60,7 +61,6 @@ const metrics = computed(() =>
   })),
 )
 
-
 const aiAvgLatency = computed(() => {
   if (!usageSummary.value?.avgDurationMs) return '-'
   return `${usageSummary.value.avgDurationMs}ms`
@@ -70,25 +70,75 @@ const aiAvgLatency = computed(() => {
 interface QuickAction {
   label: string
   path: string
+  permission?: Permission
   icon: Component
   desc: string
   badge?: () => number
 }
 
-const quickActions: QuickAction[] = [
-  { label: '用户与角色', path: '/users', icon: User, desc: '账号生命周期与权限分配' },
-  { label: '知识库管理', path: '/knowledge-bases', icon: Collection, desc: '知识库与文档分块处理' },
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    label: '用户与角色',
+    path: '/users',
+    permission: 'admin:user:list',
+    icon: User,
+    desc: '账号生命周期与权限分配',
+  },
+  {
+    label: '知识库管理',
+    path: '/knowledge-bases',
+    permission: 'admin:knowledge:list',
+    icon: Collection,
+    desc: '知识库与文档分块处理',
+  },
   {
     label: '高危告警中心',
     path: '/alerts',
+    permission: 'admin:alert:list',
     icon: Bell,
     desc: '高危操作即时留痕与确认',
     badge: () => unreadAlertCount.value,
   },
-  { label: '提示词版本', path: '/prompts', icon: Reading, desc: '多场景提示词灰度与发布' },
-  { label: 'AI 模型管控', path: '/ai-models', icon: Operation, desc: '对话与嵌入模型配置' },
-  { label: '调用用量大盘', path: '/usage', icon: DataLine, desc: '按天趋势与模型成本分析' },
+  {
+    label: '提示词版本',
+    path: '/prompts',
+    permission: 'admin:prompt:manage',
+    icon: Reading,
+    desc: '多场景提示词灰度与发布',
+  },
+  {
+    label: 'AI 模型管控',
+    path: '/ai-models',
+    permission: 'admin:ai:manage',
+    icon: Operation,
+    desc: '对话与嵌入模型配置',
+  },
+  {
+    label: '调用用量大盘',
+    path: '/usage',
+    permission: 'admin:usage:read',
+    icon: DataLine,
+    desc: '按天趋势与模型成本分析',
+  },
 ]
+
+/** 仅展示当前登录管理员具备权限的模块，杜绝越权无效点击或误拦截弹回 */
+const quickActions = computed(() =>
+  QUICK_ACTIONS.filter((a) => !a.permission || auth.can(a.permission)),
+)
+
+/** 统一导航处理：当前路径短路防御与防抖，捕获重复及覆盖异常 */
+function navigate(path: string): void {
+  if (route.path === path) return
+  void router.push(path).catch((err) => {
+    if (
+      isNavigationFailure(err, NavigationFailureType.duplicated | NavigationFailureType.cancelled)
+    ) {
+      return
+    }
+    console.error('[DashboardView] 导航跳转失败:', err)
+  })
+}
 
 async function load(): Promise<void> {
   loading.value = true
@@ -248,7 +298,13 @@ onUnmounted(() => {
             <el-icon class="ai-card__icon"><Cpu /></el-icon>
             <h3 class="card-head__sub">AI 运行健康度</h3>
           </div>
-          <el-button text size="small" type="primary" @click="router.push('/usage')">
+          <el-button
+            v-if="auth.can('admin:usage:read')"
+            text
+            size="small"
+            type="primary"
+            @click="navigate('/usage')"
+          >
             用量详情 <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
@@ -288,7 +344,7 @@ onUnmounted(() => {
             :key="a.path"
             type="button"
             class="shortcut"
-            @click="router.push(a.path)"
+            @click="navigate(a.path)"
           >
             <span class="shortcut__icon">
               <el-icon><component :is="a.icon" /></el-icon>

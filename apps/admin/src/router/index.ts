@@ -1,4 +1,4 @@
-import { doneProgress, startProgress, type Permission } from '@mindforge/shared'
+import { doneProgress, lazyView, startProgress, type Permission } from '@mindforge/shared'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { setSessionExpiredHandler, tokenStore } from '@/api'
@@ -31,40 +31,40 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/LoginView.vue'),
+      component: lazyView(() => import('@/views/LoginView.vue')),
     },
     {
       path: '/forbidden',
       name: 'forbidden',
-      component: () => import('@/views/ForbiddenView.vue'),
+      component: lazyView(() => import('@/views/ForbiddenView.vue')),
     },
     {
       path: '/',
-      component: () => import('@/layouts/AdminLayout.vue'),
+      component: lazyView(() => import('@/layouts/AdminLayout.vue')),
       redirect: { name: 'dashboard' },
       children: [
         {
           path: 'dashboard',
           name: 'dashboard',
-          component: () => import('@/views/DashboardView.vue'),
+          component: lazyView(() => import('@/views/DashboardView.vue')),
           meta: { title: '首页', icon: 'Odometer', order: 1, permission: 'admin:dashboard:read' },
         },
         {
           path: 'users',
           name: 'users',
-          component: () => import('@/views/UserListView.vue'),
+          component: lazyView(() => import('@/views/UserListView.vue')),
           meta: { title: '用户管理', icon: 'User', order: 2, permission: 'admin:user:list' },
         },
         {
           path: 'roles',
           name: 'roles',
-          component: () => import('@/views/RoleListView.vue'),
+          component: lazyView(() => import('@/views/RoleListView.vue')),
           meta: { title: '角色权限', icon: 'Key', order: 3, permission: 'admin:role:list' },
         },
         {
           path: 'knowledge-bases',
           name: 'knowledge-bases',
-          component: () => import('@/views/KnowledgeListView.vue'),
+          component: lazyView(() => import('@/views/KnowledgeListView.vue')),
           meta: {
             title: '知识库',
             icon: 'Collection',
@@ -75,25 +75,25 @@ const router = createRouter({
         {
           path: 'documents',
           name: 'documents',
-          component: () => import('@/views/DocumentListView.vue'),
+          component: lazyView(() => import('@/views/DocumentListView.vue')),
           meta: { title: '文档', icon: 'Document', order: 5, permission: 'admin:document:list' },
         },
         {
           path: 'ai-models',
           name: 'ai-models',
-          component: () => import('@/views/AiModelListView.vue'),
+          component: lazyView(() => import('@/views/AiModelListView.vue')),
           meta: { title: 'AI 配置', icon: 'Cpu', order: 6, permission: 'admin:ai:manage' },
         },
         {
           path: 'audit-logs',
           name: 'audit-logs',
-          component: () => import('@/views/AuditLogListView.vue'),
+          component: lazyView(() => import('@/views/AuditLogListView.vue')),
           meta: { title: '审计日志', icon: 'Tickets', order: 7, permission: 'admin:audit:list' },
         },
         {
           path: 'prompts',
           name: 'prompts',
-          component: () => import('@/views/PromptListView.vue'),
+          component: lazyView(() => import('@/views/PromptListView.vue')),
           meta: {
             title: 'Prompt 管理',
             icon: 'EditPen',
@@ -104,20 +104,20 @@ const router = createRouter({
         {
           path: 'usage',
           name: 'usage',
-          component: () => import('@/views/UsageView.vue'),
+          component: lazyView(() => import('@/views/UsageView.vue')),
           meta: { title: 'AI 用量', icon: 'TrendCharts', order: 9, permission: 'admin:usage:read' },
         },
         {
           path: 'alerts',
           name: 'alerts',
-          component: () => import('@/views/AlertListView.vue'),
+          component: lazyView(() => import('@/views/AlertListView.vue')),
           meta: { title: '高危告警', icon: 'Bell', order: 10, permission: 'admin:alert:list' },
         },
         {
           // 开发用的设计规范页 —— 不设 permission（登录即可看）
           path: 'style-guide',
           name: 'style-guide',
-          component: () => import('@/views/StyleGuideView.vue'),
+          component: lazyView(() => import('@/views/StyleGuideView.vue')),
           meta: { title: '设计规范', icon: 'Brush', order: 90 },
         },
       ],
@@ -125,7 +125,7 @@ const router = createRouter({
     {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
-      component: () => import('@/views/NotFoundView.vue'),
+      component: lazyView(() => import('@/views/NotFoundView.vue')),
     },
   ],
 })
