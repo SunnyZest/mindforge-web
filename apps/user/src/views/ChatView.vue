@@ -232,7 +232,7 @@ async function onSend(): Promise<void> {
           // 来源到了就说明检索完了，接下来是模型吐字
           retrieving.value = false
           if (!e.hasContext) {
-            ElMessage.warning('知识库里没有检索到相关内容，回答可能不准确')
+            ElMessage.info('未在知识库中检索到直接相关资料，已为您提供通用专业解答')
           }
         },
         onDelta: (e) => {
@@ -464,7 +464,7 @@ onUnmounted(() => abortController?.abort())
           <el-empty
             v-if="!loadingDetail && !messages.length && !sending"
             :image-size="80"
-            description="问点什么吧 —— 回答只依据这个知识库里的资料"
+            description="问点什么吧 —— 优先基于知识库资料回答，未收录时由通用专业顾问为您解答"
           />
         </div>
 
@@ -500,7 +500,7 @@ onUnmounted(() => abortController?.abort())
                 </el-option>
               </el-select>
             </div>
-            <span v-else class="composer__hint">回答只依据知识库里的资料，没有的内容会直说</span>
+            <span v-else class="composer__hint">优先基于知识库回答，未收录内容由通用顾问补充</span>
             <el-button v-if="sending" :icon="VideoPause" @click="onStop">停止</el-button>
             <el-button type="primary" :icon="Promotion" :disabled="!canSend" @click="onSend">
               发送
