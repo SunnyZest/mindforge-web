@@ -3,6 +3,7 @@ import type {
   AdminDocumentVO,
   ChunkVO,
   DocumentStatusUpdateDTO,
+  ImportUrlDTO,
   PageQuery,
   PageResult,
 } from '@mindforge/shared'
@@ -22,6 +23,25 @@ export const documentApi = {
     http.get<PageResult<AdminDocumentVO>>('/admin/documents', { params: query }),
 
   detail: (id: string) => http.get<AdminDocumentVO>(`/admin/documents/${id}`),
+
+  upload: (knowledgeBaseId: string, file: File, description?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (description) {
+      formData.append('description', description)
+    }
+    return http.post<AdminDocumentVO>(
+      `/admin/knowledge-bases/${knowledgeBaseId}/documents/upload`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+  },
+
+  importUrl: (knowledgeBaseId: string, dto: ImportUrlDTO) =>
+    http.post<AdminDocumentVO>(
+      `/admin/knowledge-bases/${knowledgeBaseId}/documents/import-url`,
+      dto,
+    ),
 
   /**
    * 手动改状态。

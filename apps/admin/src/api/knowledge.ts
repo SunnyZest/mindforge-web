@@ -1,18 +1,28 @@
-import type { AdminKnowledgeBaseQuery, AdminKnowledgeBaseVO, PageResult } from '@mindforge/shared'
+import type {
+  AdminKnowledgeBaseQuery,
+  AdminKnowledgeBaseVO,
+  KnowledgeBaseCreateDTO,
+  KnowledgeBaseUpdateDTO,
+  PageResult,
+} from '@mindforge/shared'
 
 import { http } from './index'
 
 /**
  * 知识库管理（管理端视角）。
- *
- * ⚠️ 管理端**只能看和删**，不能建 —— 建库是用户端的事（`POST /app/knowledge-bases`）。
- * 这里管的是「所有用户的知识库」，所以列表项带 `username` 表示归属人。
+ * 支持查看所有用户知识库、创建官方/管理端知识库、修改与级联删除。
  */
 export const knowledgeApi = {
   page: (query: AdminKnowledgeBaseQuery) =>
     http.get<PageResult<AdminKnowledgeBaseVO>>('/admin/knowledge-bases', { params: query }),
 
   detail: (id: string) => http.get<AdminKnowledgeBaseVO>(`/admin/knowledge-bases/${id}`),
+
+  create: (dto: KnowledgeBaseCreateDTO) =>
+    http.post<AdminKnowledgeBaseVO>('/admin/knowledge-bases', dto),
+
+  update: (id: string, dto: KnowledgeBaseUpdateDTO) =>
+    http.put<void>(`/admin/knowledge-bases/${id}`, dto),
 
   /**
    * 删除知识库。

@@ -115,6 +115,66 @@ async function onDelete(row: AdminKnowledgeBaseVO): Promise<void> {
   }
 }
 
+// ---------- 创建 / 编辑弹窗 ----------
+const dialogVisible = ref(false)
+const dialogMode = ref<'create' | 'edit'>('create')
+const editId = ref<string>('')
+const form = reactive({
+  name: '',
+  description: '',
+  status: 1,
+})
+const submitting = ref(false)
+
+function openCreateDialog(): void {
+  dialogMode.value = 'create'
+  editId.value = ''
+  form.name = ''
+  form.description = ''
+  form.status = 1
+  dialogVisible.value = true
+}
+
+function onEdit(row: AdminKnowledgeBaseVO): void {
+  dialogMode.value = 'edit'
+  editId.value = row.id
+  form.name = row.name
+  form.description = row.description || ''
+  form.status = row.status
+  dialogVisible.value = true
+}
+
+async function onSubmit(): Promise<void> {
+  const name = form.name.trim()
+  if (!name) {
+    ElMessage.warning('请输入知识库名称')
+    return
+  }
+  submitting.value = true
+  try {
+    if (dialogMode.value === 'create') {
+      await knowledgeApi.create({
+        name,
+        description: form.description.trim() || undefined,
+      })
+      ElMessage.success('知识库创建成功')
+    } else {
+      await knowledgeApi.update(editId.value, {
+        name,
+        description: form.description.trim() || undefined,
+        status: form.status,
+      })
+      ElMessage.success('知识库更新成功')
+    }
+    dialogVisible.value = false
+    await load()
+  } catch (e) {
+    fail(e, dialogMode.value === 'create' ? '创建失败' : '修改失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -135,9 +195,10 @@ onMounted(load)
       </el-select>
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
+      <el-button type="success" @click="openCreateDialog">+ 新建知识库</el-button>
     </div>
 
-    <!-- 列宽合计 805px，最窄视口（1366）下内容区约 1040px，留有余量 -->
+    <!-- 列宽合计 855px，最窄视口（1366）下内容区约 1040px，留有余量 -->
     <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
       <el-table-column prop="name" label="名称" min-width="140" sortable="custom" />
       <el-table-column label="归属人" min-width="90">
@@ -160,7 +221,7 @@ onMounted(load)
         <template #default="{ row }">{{ formatDateTime(asKb(row).updatedAt) }}</template>
       </el-table-column>
 
-      <el-table-column label="操作" width="110" fixed="right">
+      <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <span class="actions">
             <el-button
@@ -171,6 +232,7 @@ onMounted(load)
             >
               文档
             </el-button>
+            <el-button link type="primary" @click="onEdit(asKb(row))">编辑</el-button>
             <el-button
               v-if="auth.can('admin:knowledge:delete')"
               link
@@ -195,6 +257,45 @@ onMounted(load)
       class="pagination"
       @change="() => load()"
     />
+
+    <!-- 新建 / 编辑弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogMode === 'create' ? '新建知识库（官方/管理端）' : '编辑知识库'"
+      width="480px"
+      destroy-on-close
+    >
+      <el-form label-position="top">
+        <el-form-item label="知识库名称" required>
+          <el-input
+            v-model="form.name"
+            placeholder="例如：MindForge 官方求职与面试真题智库"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="描述说明">
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="3"
+            placeholder="填写知识库用途及包含的主题内容"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item v-if="dialogMode === 'edit'" label="启用状态">
+          <el-radio-group v-model="form.status">
+            <el-radio :value="1">启用</el-radio>
+            <el-radio :value="0">禁用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="submitting" @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="onSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 

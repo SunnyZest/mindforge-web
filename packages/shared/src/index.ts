@@ -96,6 +96,7 @@ export type {
   KnowledgeBaseCreateDTO,
   KnowledgeBaseUpdateDTO,
   KnowledgeBaseStatsVO,
+  ImportUrlDTO,
   DocumentVO,
   DocumentStatusVO,
   // ChunkVO 上面已经导出过（管理端在用），这里不重复 —— 同一个类型别导出两次

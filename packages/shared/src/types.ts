@@ -888,6 +888,11 @@ export interface KnowledgeBaseUpdateDTO {
   status?: number
 }
 
+/** 网页 URL 导入请求（Java 的 `ImportUrlDTO`） */
+export interface ImportUrlDTO {
+  url: string
+}
+
 /** 知识库统计（Java 的 `KnowledgeBaseStatsVO`）—— 注意是 Long，不是 Integer */
 export interface KnowledgeBaseStatsVO {
   documentCount: number

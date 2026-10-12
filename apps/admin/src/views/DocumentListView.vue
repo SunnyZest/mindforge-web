@@ -2,10 +2,11 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { AdminDocumentVO } from '@mindforge/shared'
+import type { AdminDocumentVO, AdminKnowledgeBaseVO } from '@mindforge/shared'
 import { BizError } from '@mindforge/shared'
 
 import { documentApi } from '@/api/document'
+import { knowledgeApi } from '@/api/knowledge'
 import DocumentChunksDialog from '@/components/DocumentChunksDialog.vue'
 import DocumentStatusDialog from '@/components/DocumentStatusDialog.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -285,7 +286,106 @@ async function onBatchDelete(): Promise<void> {
   }
 }
 
-onMounted(load)
+// ---------- 知识库下拉选项 ----------
+const kbOptions = ref<AdminKnowledgeBaseVO[]>([])
+async function loadKbOptions(): Promise<void> {
+  try {
+    const data = await knowledgeApi.page({ page: 1, pageSize: 100 })
+    kbOptions.value = data.records
+  } catch {
+    // ignore
+  }
+}
+
+// ---------- 上传文档弹窗 ----------
+const uploadVisible = ref(false)
+const uploadSubmitting = ref(false)
+const uploadForm = reactive({
+  knowledgeBaseId: undefined as string | number | undefined,
+  file: null as File | null,
+  description: '',
+})
+
+function openUploadDialog(): void {
+  uploadForm.knowledgeBaseId = query.knowledgeBaseId || kbOptions.value[0]?.id
+  uploadForm.file = null
+  uploadForm.description = ''
+  uploadVisible.value = true
+  void loadKbOptions()
+}
+
+function onFileChange(uploadFile: { raw?: File }): void {
+  uploadForm.file = uploadFile.raw ?? null
+}
+
+async function submitUpload(): Promise<void> {
+  if (!uploadForm.knowledgeBaseId) {
+    ElMessage.warning('请选择目标知识库')
+    return
+  }
+  if (!uploadForm.file) {
+    ElMessage.warning('请选择要上传的文件')
+    return
+  }
+  uploadSubmitting.value = true
+  try {
+    await documentApi.upload(
+      String(uploadForm.knowledgeBaseId),
+      uploadForm.file,
+      uploadForm.description.trim() || undefined,
+    )
+    ElMessage.success('上传成功，已提交异步解析向量化流水线')
+    uploadVisible.value = false
+    await load()
+  } catch (e) {
+    fail(e, '上传失败')
+  } finally {
+    uploadSubmitting.value = false
+  }
+}
+
+// ---------- 导入网页弹窗 ----------
+const importUrlVisible = ref(false)
+const importUrlSubmitting = ref(false)
+const importUrlForm = reactive({
+  knowledgeBaseId: undefined as string | number | undefined,
+  url: '',
+})
+
+function openImportUrlDialog(): void {
+  importUrlForm.knowledgeBaseId = query.knowledgeBaseId || kbOptions.value[0]?.id
+  importUrlForm.url = ''
+  importUrlVisible.value = true
+  void loadKbOptions()
+}
+
+async function submitImportUrl(): Promise<void> {
+  if (!importUrlForm.knowledgeBaseId) {
+    ElMessage.warning('请选择目标知识库')
+    return
+  }
+  const url = importUrlForm.url.trim()
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    ElMessage.warning('请输入以 http:// 或 https:// 开头的合法网页链接')
+    return
+  }
+  importUrlSubmitting.value = true
+  try {
+    await documentApi.importUrl(String(importUrlForm.knowledgeBaseId), { url })
+    ElMessage.success('网页正文提取成功，并已生成 Markdown 入库开始解析！')
+    importUrlVisible.value = false
+    await load()
+  } catch (e) {
+    fail(e, '导入网页文章失败')
+  } finally {
+    importUrlSubmitting.value = false
+  }
+}
+
+onMounted(() => {
+  void load()
+  void loadKbOptions()
+})
 </script>
 
 <template>
@@ -310,6 +410,8 @@ onMounted(load)
       </el-select>
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
+      <el-button type="success" @click="openUploadDialog">+ 上传文档</el-button>
+      <el-button type="primary" plain @click="openImportUrlDialog">🌐 导入网页</el-button>
 
       <!--
         自动刷新开关。
@@ -448,10 +550,117 @@ onMounted(load)
 
     <DocumentChunksDialog v-model="chunksVisible" :doc="chunksDoc" />
     <DocumentStatusDialog v-model="statusVisible" :doc="statusDoc" @saved="() => load()" />
+
+    <!-- 上传文档弹窗 -->
+    <el-dialog
+      v-model="uploadVisible"
+      title="上传文档到知识库"
+      width="520px"
+      destroy-on-close
+    >
+      <el-form label-position="top">
+        <el-form-item label="目标知识库" required>
+          <el-select
+            v-model="uploadForm.knowledgeBaseId"
+            placeholder="请选择知识库"
+            filterable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="kb in kbOptions"
+              :key="kb.id"
+              :label="`${kb.name} (${kb.username || '官方'})`"
+              :value="kb.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="文档文件" required>
+          <el-upload
+            action="#"
+            :auto-upload="false"
+            :limit="1"
+            accept=".pdf,.docx,.txt,.md,.markdown,.html,.htm"
+            :on-change="onFileChange"
+          >
+            <template #trigger>
+              <el-button type="primary">选择文件</el-button>
+            </template>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 PDF / DOCX / TXT / Markdown / HTML 格式文档
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="文档说明">
+          <el-input
+            v-model="uploadForm.description"
+            placeholder="可选：备注信息"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="uploadSubmitting" @click="uploadVisible = false">取消</el-button>
+        <el-button type="primary" :loading="uploadSubmitting" @click="submitUpload">
+          开始上传
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 导入网页文章弹窗 -->
+    <el-dialog
+      v-model="importUrlVisible"
+      title="从网页 URL 一键导入文章"
+      width="540px"
+      destroy-on-close
+    >
+      <el-form label-position="top">
+        <el-form-item label="目标知识库" required>
+          <el-select
+            v-model="importUrlForm.knowledgeBaseId"
+            placeholder="请选择知识库"
+            filterable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="kb in kbOptions"
+              :key="kb.id"
+              :label="`${kb.name} (${kb.username || '官方'})`"
+              :value="kb.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="网页文章 URL" required>
+          <el-input
+            v-model="importUrlForm.url"
+            placeholder="例如：https://example.com/article"
+            clearable
+          />
+          <div class="import-tip">
+            💡 系统将调用原生网页提取引擎，自动去除广告、导航等干扰，精准提取正文并转换为 Markdown 入库。
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button :disabled="importUrlSubmitting" @click="importUrlVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importUrlSubmitting" @click="submitImportUrl">
+          提取并入库
+        </el-button>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
 <style scoped>
+.import-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
