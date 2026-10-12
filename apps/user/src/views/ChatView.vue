@@ -35,6 +35,7 @@ const router = useRouter()
 const convLoading = ref(false)
 const conversations = ref<ConversationVO[]>([])
 const activeId = ref('')
+const activeConv = computed(() => conversations.value.find((c) => c.conversationId === activeId.value))
 
 // ---------- 当前会话 ----------
 const messages = ref<MessageVO[]>([])
@@ -147,34 +148,28 @@ async function openNew(): Promise<void> {
   // 深链带过来的 kb 优先（从知识库页点「问答」进来）
   const preset = typeof route.query.kb === 'string' ? route.query.kb : ''
   newForm.knowledgeBaseId = preset
-  newForm.title = ''
+  newForm.title = preset ? '' : '与通用顾问的对话'
   newVisible.value = true
 
   if (!kbs.value.length) {
     try {
       const data = await knowledgeApi.page({ page: 1, pageSize: 100 })
       kbs.value = data.records
-    } catch (e) {
-      fail(e, '加载知识库失败')
+    } catch {
+      // 知识库加载异常不阻断通用问答
+      kbs.value = []
     }
   }
 }
 
 async function onCreateConversation(): Promise<void> {
-  if (!newForm.knowledgeBaseId) {
-    ElMessage.warning('请选择知识库')
-    return
-  }
-  if (!newForm.title.trim()) {
-    ElMessage.warning('请填对话标题')
-    return
-  }
+  const title = newForm.title.trim() || (newForm.knowledgeBaseId ? '知识库对话' : '与通用顾问的对话')
 
   newSaving.value = true
   try {
     const c = await conversationApi.create({
-      knowledgeBaseId: newForm.knowledgeBaseId,
-      title: newForm.title.trim(),
+      knowledgeBaseId: newForm.knowledgeBaseId || undefined,
+      title,
     })
     newVisible.value = false
     await loadConversations()
@@ -231,7 +226,7 @@ async function onSend(): Promise<void> {
           streamingSources.value = e.sources
           // 来源到了就说明检索完了，接下来是模型吐字
           retrieving.value = false
-          if (!e.hasContext) {
+          if (!e.hasContext && activeConv.value?.knowledgeBaseId) {
             ElMessage.info('未在知识库中检索到直接相关资料，已为您提供通用专业解答')
           }
         },
@@ -356,7 +351,7 @@ onUnmounted(() => abortController?.abort())
           <div class="conv__main">
             <span class="conv__title">{{ c.title }}</span>
             <span class="conv__meta">
-              {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
+              {{ c.knowledgeBaseId ? '📚 知识库' : '🤖 通用顾问' }} · {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
             </span>
           </div>
           <el-button
@@ -536,8 +531,13 @@ onUnmounted(() => abortController?.abort())
     <!-- ---------- 新建对话 ---------- -->
     <el-dialog v-model="newVisible" title="新建对话" width="480px" append-to-body>
       <el-form label-position="top" @submit.prevent="onCreateConversation">
-        <el-form-item label="知识库">
-          <el-select v-model="newForm.knowledgeBaseId" placeholder="选一个知识库">
+        <el-form-item label="知识库（可选）">
+          <el-select
+            v-model="newForm.knowledgeBaseId"
+            placeholder="选择知识库，不选为通用顾问"
+            clearable
+          >
+            <el-option label="🤖 MindForge AI 通用顾问（无需知识库）" value="" />
             <el-option v-for="k in kbs" :key="k.id" :label="k.name" :value="k.id">
               <span>{{ k.name }}</span>
               <span class="opt__hint">{{ k.documentCount ?? 0 }} 份文档</span>
@@ -546,7 +546,7 @@ onUnmounted(() => abortController?.abort())
         </el-form-item>
 
         <el-form-item label="标题">
-          <el-input v-model="newForm.title" placeholder="如：订单模块的问题" maxlength="255" />
+          <el-input v-model="newForm.title" placeholder="如：系统架构与求职咨询" maxlength="255" />
         </el-form-item>
       </el-form>
 

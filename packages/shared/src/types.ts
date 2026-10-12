@@ -944,7 +944,7 @@ export interface SourceVO {
 /** 会话（Java 的 `ConversationVO`） */
 export interface ConversationVO {
   conversationId: string
-  knowledgeBaseId: string
+  knowledgeBaseId: string | null
   title: string
   modelName: string | null
   messageCount: number | null
@@ -978,7 +978,7 @@ export interface ConversationDetailVO extends ConversationVO {
 
 /** 创建会话（Java 的 `CreateConversationDTO`）—— 两个字段都必填 */
 export interface CreateConversationDTO {
-  knowledgeBaseId: string
+  knowledgeBaseId?: string | null
   /** 最长 255 */
   title: string
 }
