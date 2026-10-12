@@ -572,7 +572,7 @@ onMounted(() => {
             <el-option
               v-for="kb in kbOptions"
               :key="kb.id"
-              :label="`${kb.name} (${kb.username || '官方'})`"
+              :label="`${kb.name} (${kb.isSystem === 1 ? '官方智库' : kb.username || '普通'})`"
               :value="kb.id"
             />
           </el-select>
@@ -633,7 +633,7 @@ onMounted(() => {
             <el-option
               v-for="kb in kbOptions"
               :key="kb.id"
-              :label="`${kb.name} (${kb.username || '官方'})`"
+              :label="`${kb.name} (${kb.isSystem === 1 ? '官方智库' : kb.username || '普通'})`"
               :value="kb.id"
             />
           </el-select>

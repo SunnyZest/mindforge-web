@@ -117,7 +117,12 @@ onMounted(load)
         <div class="card__head">
           <el-icon class="card__icon"><Collection /></el-icon>
           <div class="card__main">
-            <button type="button" class="card__name" @click="openDetail(kb)">{{ kb.name }}</button>
+            <div class="card__name-row">
+              <button type="button" class="card__name" @click="openDetail(kb)">{{ kb.name }}</button>
+              <el-tag v-if="kb.isSystem === 1" type="success" size="small" effect="plain" round>
+                官方智库
+              </el-tag>
+            </div>
             <span class="card__meta">
               {{ kb.documentCount ?? 0 }} 份文档 · 建于 {{ formatDateTime(kb.createdAt) }}
             </span>
@@ -132,8 +137,15 @@ onMounted(load)
             问答
           </el-button>
           <el-button size="small" :icon="Right" @click="openDetail(kb)">文档</el-button>
-          <el-button size="small" :icon="Edit" @click="onEdit(kb)">编辑</el-button>
-          <el-button size="small" text type="danger" :icon="Delete" @click="onRemove(kb)">
+          <el-button v-if="kb.isSystem !== 1" size="small" :icon="Edit" @click="onEdit(kb)">编辑</el-button>
+          <el-button
+            v-if="kb.isSystem !== 1"
+            size="small"
+            text
+            type="danger"
+            :icon="Delete"
+            @click="onRemove(kb)"
+          >
             删除
           </el-button>
         </div>
@@ -239,6 +251,12 @@ onMounted(load)
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+.card__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
 }
 
 .card__name {

@@ -538,9 +538,21 @@ onUnmounted(() => abortController?.abort())
             clearable
           >
             <el-option label="🤖 MindForge AI 通用顾问（无需知识库）" value="" />
-            <el-option v-for="k in kbs" :key="k.id" :label="k.name" :value="k.id">
-              <span>{{ k.name }}</span>
-              <span class="opt__hint">{{ k.documentCount ?? 0 }} 份文档</span>
+            <el-option
+              v-for="k in kbs"
+              :key="k.id"
+              :label="k.isSystem === 1 ? `🌐 ${k.name}（官方智库）` : k.name"
+              :value="k.id"
+            >
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <span>{{ k.name }}</span>
+                  <el-tag v-if="k.isSystem === 1" type="success" size="small" effect="plain" round>
+                    官方智库
+                  </el-tag>
+                </span>
+                <span class="opt__hint">{{ k.documentCount ?? 0 }} 份文档</span>
+              </div>
             </el-option>
           </el-select>
         </el-form-item>

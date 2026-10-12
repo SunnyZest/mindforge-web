@@ -292,12 +292,17 @@ onMounted(load)
       <el-button text :icon="Back" @click="router.push({ name: 'knowledge' })">返回列表</el-button>
 
       <div class="head__main">
-        <h1 class="head__title">{{ kb?.name ?? '知识库' }}</h1>
+        <div class="head__title-row">
+          <h1 class="head__title">{{ kb?.name ?? '知识库' }}</h1>
+          <el-tag v-if="kb?.isSystem === 1" type="success" size="small" effect="plain" round>
+            官方智库
+          </el-tag>
+        </div>
         <p class="head__meta">{{ kb?.description || '（没有描述）' }}</p>
       </div>
 
       <div class="head__actions">
-        <el-button :icon="Edit" :disabled="!kb" @click="dialogVisible = true">编辑</el-button>
+        <el-button v-if="kb?.isSystem !== 1" :icon="Edit" :disabled="!kb" @click="dialogVisible = true">编辑</el-button>
         <el-button type="primary" :icon="ChatDotRound" :disabled="!kb" @click="startChat">
           开始问答
         </el-button>
@@ -339,21 +344,24 @@ onMounted(load)
             <el-button v-if="exhausted" link type="primary" @click="resume">继续</el-button>
           </span>
 
-          <input
-            ref="fileInput"
-            type="file"
-            multiple
-            :accept="ACCEPT"
-            class="pane__file"
-            @change="onFileChange"
-          />
-          <el-button type="primary" :icon="Upload" :loading="uploading" @click="pickFile">
-            上传文档
-          </el-button>
+          <template v-if="kb?.isSystem !== 1">
+            <input
+              ref="fileInput"
+              type="file"
+              multiple
+              :accept="ACCEPT"
+              class="pane__file"
+              @change="onFileChange"
+            />
+            <el-button type="primary" :icon="Upload" :loading="uploading" @click="pickFile">
+              上传文档
+            </el-button>
+          </template>
+          <el-tag v-else type="info" effect="plain">官方智库仅只读浏览，不可上传</el-tag>
         </div>
       </div>
 
-      <div v-if="selectedRows.length > 0" class="batch-bar">
+      <div v-if="kb?.isSystem !== 1 && selectedRows.length > 0" class="batch-bar">
         <span class="batch-bar__tip">
           已选择 <strong>{{ selectedRows.length }}</strong> 篇文档
         </span>
@@ -386,7 +394,7 @@ onMounted(load)
         stripe
         @selection-change="onSelectionChange"
       >
-        <el-table-column type="selection" width="48" align="center" />
+        <el-table-column v-if="kb?.isSystem !== 1" type="selection" width="48" align="center" />
         <el-table-column label="文件名" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="doc__name">{{ asDoc(row).fileName }}</span>
@@ -441,10 +449,10 @@ onMounted(load)
           <template #default="{ row }">{{ formatDateTime(asDoc(row).createdAt) }}</template>
         </el-table-column>
 
-        <el-table-column label="操作" width="190" fixed="right">
+        <el-table-column label="操作" :width="kb?.isSystem === 1 ? 90 : 190" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="asDoc(row).status === 'FAILED'"
+              v-if="kb?.isSystem !== 1 && asDoc(row).status === 'FAILED'"
               size="small"
               text
               type="primary"
@@ -457,7 +465,14 @@ onMounted(load)
             <el-button size="small" text :icon="Download" @click="onDownload(asDoc(row))"
               >下载</el-button
             >
-            <el-button size="small" text type="danger" :icon="Delete" @click="onRemove(asDoc(row))">
+            <el-button
+              v-if="kb?.isSystem !== 1"
+              size="small"
+              text
+              type="danger"
+              :icon="Delete"
+              @click="onRemove(asDoc(row))"
+            >
               删除
             </el-button>
           </template>
@@ -467,7 +482,7 @@ onMounted(load)
       <el-empty
         v-if="empty"
         :image-size="80"
-        description="还没有文档，点右上角上传 —— 支持 PDF / Word / 文本 / Markdown"
+        :description="kb?.isSystem === 1 ? '该官方智库暂无文档' : '还没有文档，点右上角上传 —— 支持 PDF / Word / 文本 / Markdown'"
       />
 
       <el-pagination
@@ -508,8 +523,15 @@ onMounted(load)
   min-width: 0;
 }
 
+.head__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  margin-bottom: var(--mf-space-1);
+}
+
 .head__title {
-  margin: 0 0 var(--mf-space-1);
+  margin: 0;
   font-size: var(--mf-font-xl);
   font-weight: var(--mf-weight-medium);
   letter-spacing: -0.02em;

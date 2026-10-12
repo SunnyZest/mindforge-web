@@ -237,6 +237,8 @@ export interface AdminKnowledgeBaseVO {
   description: string | null
   /** 1 正常 / 0 禁用 */
   status: number
+  /** 是否官方系统全局智库：1 是 / 0 否 */
+  isSystem?: number
   /** 文档数（实时统计，不是表里的冗余字段） */
   documentCount: number
   createdAt: string | null
@@ -868,6 +870,8 @@ export interface KnowledgeBaseVO {
   name: string
   description: string | null
   status: number
+  /** 是否官方系统全局智库：1 是 / 0 否 */
+  isSystem?: number
   documentCount: number | null
   createdAt: string | null
   updatedAt: string | null

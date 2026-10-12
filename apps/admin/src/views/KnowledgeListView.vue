@@ -200,7 +200,16 @@ onMounted(load)
 
     <!-- 列宽合计 855px，最窄视口（1366）下内容区约 1040px，留有余量 -->
     <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
-      <el-table-column prop="name" label="名称" min-width="140" sortable="custom" />
+      <el-table-column prop="name" label="名称" min-width="160" sortable="custom">
+        <template #default="{ row }">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span>{{ asKb(row).name }}</span>
+            <el-tag v-if="asKb(row).isSystem === 1" type="success" size="small" effect="plain" round>
+              官方智库
+            </el-tag>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column label="归属人" min-width="90">
         <template #default="{ row }">{{ asKb(row).username || '-' }}</template>
       </el-table-column>
@@ -269,6 +278,14 @@ onMounted(load)
       destroy-on-close
     >
       <el-form label-position="top">
+        <el-alert
+          v-if="dialogMode === 'create'"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: var(--mf-space-4)"
+          title="管理端创建的知识库将自动作为全站【官方智库】全局共享，所有求职者均可查阅并关联问答。"
+        />
         <el-form-item label="知识库名称" required>
           <el-input
             v-model="form.name"
