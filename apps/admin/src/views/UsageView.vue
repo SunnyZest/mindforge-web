@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { Check, Clock, Cpu, DataLine, PieChart, Refresh, TrendCharts } from '@element-plus/icons-vue'
+import {
+  Check,
+  Clock,
+  Cpu,
+  DataLine,
+  PieChart,
+  Refresh,
+  TrendCharts,
+} from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -212,9 +220,9 @@ function renderTrendChart(): void {
     },
     legend: {
       data: ['请求次数', '消耗 Token'],
-      top: 4,
-      right: 36,
-      itemGap: 20,
+      top: 6,
+      right: 120,
+      itemGap: 24,
       textStyle: {
         color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.7)',
         fontSize: 12,
@@ -222,9 +230,9 @@ function renderTrendChart(): void {
     },
     grid: {
       left: '3%',
-      right: '6%',
-      top: '18%',
-      bottom: '6%',
+      right: '5%',
+      top: '56px',
+      bottom: '24px',
       containLabel: true,
     },
     xAxis: {
@@ -246,7 +254,7 @@ function renderTrendChart(): void {
           color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
           fontSize: 11,
           align: 'left',
-          padding: [0, 0, 8, 4],
+          padding: [0, 0, 10, 4],
         },
         splitLine: {
           lineStyle: {
@@ -266,7 +274,7 @@ function renderTrendChart(): void {
           color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
           fontSize: 11,
           align: 'right',
-          padding: [0, 4, 8, 0],
+          padding: [0, 4, 10, 0],
         },
         splitLine: { show: false },
         axisLabel: {
@@ -276,6 +284,7 @@ function renderTrendChart(): void {
         },
       },
     ],
+
     series: [
       {
         name: '请求次数',
@@ -440,7 +449,6 @@ onUnmounted(() => {
   trendChartInstance?.dispose()
   pieChartInstance?.dispose()
 })
-
 </script>
 
 <template>
@@ -533,7 +541,9 @@ onUnmounted(() => {
             <el-icon class="title-icon"><TrendCharts /></el-icon>
             AI 调用量与 Token 消耗趋势
           </h2>
-          <p class="pane__note">每日 API 调用频次（左轴）与 Token 吞吐波动曲线（右轴）实时联动监控</p>
+          <p class="pane__note">
+            每日 API 调用频次（左轴）与 Token 吞吐波动曲线（右轴）实时联动监控
+          </p>
         </div>
       </div>
 
@@ -552,7 +562,11 @@ onUnmounted(() => {
               {{ pieDimension === 'scene' ? '业务场景消耗占比' : '模型规格消耗占比' }}
             </h2>
             <p class="pane__note">
-              {{ pieDimension === 'scene' ? '各求职业务模块的模型调用与资源开销' : '不同厂商与模型规格的总体调用比重' }}
+              {{
+                pieDimension === 'scene'
+                  ? '各求职业务模块的模型调用与资源开销'
+                  : '不同厂商与模型规格的总体调用比重'
+              }}
             </p>
           </div>
           <div class="pane__toggles">
@@ -579,7 +593,7 @@ onUnmounted(() => {
         </h2>
         <p class="pane__note">细粒度请求、成功率与平均延迟数据留痕</p>
 
-        <el-table :data="byModel" border stripe size="small" :row-key="rowKey" max-height="310">
+        <el-table :data="byModel" border stripe size="small" :row-key="rowKey" max-height="350">
           <el-table-column label="场景" min-width="120">
             <template #default="{ row }">
               <span class="scene-tag">{{ sceneDisplayName(row.scene) }}</span>
@@ -600,13 +614,12 @@ onUnmounted(() => {
           <el-table-column label="Token" width="85" align="right">
             <template #default="{ row }">{{ formatCount(row.totalTokens) }}</template>
           </el-table-column>
-          <el-table-column label="耗时" width="75" align="right">
+          <el-table-column label="平均耗时" width="85" align="right">
             <template #default="{ row }">
               {{ row.avgDurationMs ? (row.avgDurationMs / 1000).toFixed(1) + 's' : '-' }}
             </template>
           </el-table-column>
         </el-table>
-
         <el-empty v-if="!byModel.length" :image-size="70" description="这段时间没有记录" />
       </section>
     </div>
@@ -617,21 +630,22 @@ onUnmounted(() => {
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--mf-space-5);
+  gap: var(--mf-space-6);
 }
 
 .page__head {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mf-space-4);
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
+  padding-bottom: var(--mf-space-1);
 }
 
 .page__title {
   margin: 0 0 var(--mf-space-1);
   font-size: var(--mf-font-xl);
-  font-weight: var(--mf-weight-medium);
+  font-weight: var(--mf-weight-semibold);
   letter-spacing: -0.02em;
 }
 
@@ -639,6 +653,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: var(--mf-font-sm);
   color: var(--mf-text-tertiary);
+  line-height: 1.5;
 }
 
 .page__actions {
@@ -656,7 +671,7 @@ onUnmounted(() => {
 .cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--mf-space-4);
+  gap: var(--mf-space-5);
 }
 
 @media (width <= 900px) {
@@ -674,7 +689,7 @@ onUnmounted(() => {
   gap: var(--mf-space-2);
   padding: var(--mf-space-6) var(--mf-space-4);
   border-radius: var(--mf-radius-lg);
-  min-height: 146px;
+  min-height: 140px;
 }
 
 .card__t {
@@ -732,8 +747,8 @@ onUnmounted(() => {
 .pane {
   display: flex;
   flex-direction: column;
-  gap: var(--mf-space-3);
-  padding: var(--mf-space-5);
+  gap: var(--mf-space-4);
+  padding: var(--mf-space-6);
   background-color: var(--mf-glass-card);
   border: 1px solid var(--mf-glass-border-soft);
   border-radius: var(--mf-radius-lg);
@@ -743,12 +758,16 @@ onUnmounted(() => {
   margin: 0;
   font-size: var(--mf-font-md);
   font-weight: var(--mf-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .pane__note {
-  margin: calc(-1 * var(--mf-space-1)) 0 0;
+  margin: 4px 0 0;
   font-size: var(--mf-font-xs);
   color: var(--mf-text-tertiary);
+  line-height: 1.5;
 }
 
 .pane__head-between {
@@ -767,7 +786,7 @@ onUnmounted(() => {
 
 /* ---------- 图表容器 ---------- */
 .title-icon {
-  margin-right: 6px;
+  margin-right: 2px;
   color: var(--mf-primary);
   vertical-align: -2px;
 }
@@ -777,17 +796,17 @@ onUnmounted(() => {
 }
 
 .echarts-box--trend {
-  height: 320px;
+  height: 350px;
 }
 
 .echarts-box--pie {
-  height: 320px;
+  height: 350px;
 }
 
 .model-section-grid {
   display: grid;
   grid-template-columns: minmax(460px, 1.15fr) 1.85fr;
-  gap: var(--mf-space-4);
+  gap: var(--mf-space-6);
 }
 
 @media (width <= 1180px) {
