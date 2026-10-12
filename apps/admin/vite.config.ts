@@ -38,11 +38,11 @@ export default defineConfig({
   ],
 
   optimizeDeps: {
+    exclude: ['@mindforge/shared'],
     include: [
       'vue',
       'vue-router',
       'pinia',
-      'axios',
       'element-plus',
       '@element-plus/icons-vue',
       'element-plus/es',

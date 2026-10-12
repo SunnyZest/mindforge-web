@@ -61,3 +61,13 @@ export function setupAmbientBackground(): void {
     { passive: true },
   )
 }
+
+// 浏览器环境下自动保证环境光斑自启动
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setupAmbientBackground())
+  } else {
+    queueMicrotask(() => setupAmbientBackground())
+  }
+}
+
