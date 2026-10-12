@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import { setSessionExpiredHandler, tokenStore } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 
 // 给路由的 meta 补上我们自己的字段
 declare module 'vue-router' {
@@ -172,8 +173,11 @@ router.beforeEach(async (to, from) => {
   // ⚠️ 这只是 UX —— 后端每个接口都有 @PreAuthorize，那才是真防线。
   const required = to.meta.permission
   if (required && !auth.can(required)) {
-    // 别死循环：如果连目标页自己都是「去工作台」，那就去 403 页
-    return to.name === 'workspace' ? { name: 'forbidden' } : { name: 'workspace' }
+    ElMessage.warning({
+      message: `您暂无权限访问「${to.meta.title || '该页面'}」，请联系管理员分配对应权限`,
+      grouping: true,
+    })
+    return { name: 'forbidden' }
   }
 
   return true

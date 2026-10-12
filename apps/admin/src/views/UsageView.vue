@@ -143,6 +143,28 @@ function rowKey(m: UsageByModelVO, i: number): string {
   return `${m.scene}-${m.provider}-${m.modelName}-${i}`
 }
 
+/** 场景中文名称映射 */
+const SCENE_NAMES: Record<string, string> = {
+  RAG_CHAT: 'AI 智能问答',
+  INTERVIEW_ANALYZE: '面试复盘分析',
+  INTERVIEW_GENERATE: '模拟面试出题',
+  EMBEDDING: '知识库向量化',
+  RERANK: '文档检索重排',
+  RESUME_PARSE: '简历解析提取',
+  RESUME_OPTIMIZE: '简历智能打磨',
+  RESUME_MATCH: '简历职位匹配',
+  JOB_PARSE: '职位 JD 画像',
+}
+
+function sceneDisplayName(scene: string): string {
+  return SCENE_NAMES[scene] || scene
+}
+
+/** 占比图统计维度：scene = 业务场景，model = 模型规格 */
+const pieDimension = ref<'scene' | 'model'>('scene')
+/** 占比指标：tokens = Token 消耗，requests = 调用频次 */
+const pieMetric = ref<'tokens' | 'requests'>('tokens')
+
 // ---------- ECharts 可视化挂载与自适应 ----------
 const trendChartRef = ref<HTMLDivElement | null>(null)
 const pieChartRef = ref<HTMLDivElement | null>(null)
@@ -190,17 +212,18 @@ function renderTrendChart(): void {
     },
     legend: {
       data: ['请求次数', '消耗 Token'],
-      top: 0,
-      right: 10,
+      top: 4,
+      right: 36,
+      itemGap: 20,
       textStyle: {
-        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
+        color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.7)',
         fontSize: 12,
       },
     },
     grid: {
-      left: '2%',
-      right: '3%',
-      top: '14%',
+      left: '3%',
+      right: '6%',
+      top: '18%',
       bottom: '6%',
       containLabel: true,
     },
@@ -220,8 +243,10 @@ function renderTrendChart(): void {
         type: 'value',
         name: '请求 (次)',
         nameTextStyle: {
-          color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
           fontSize: 11,
+          align: 'left',
+          padding: [0, 0, 8, 4],
         },
         splitLine: {
           lineStyle: {
@@ -238,8 +263,10 @@ function renderTrendChart(): void {
         type: 'value',
         name: 'Token 消耗',
         nameTextStyle: {
-          color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
           fontSize: 11,
+          align: 'right',
+          padding: [0, 4, 8, 0],
         },
         splitLine: { show: false },
         axisLabel: {
@@ -298,16 +325,20 @@ function renderPieChart(): void {
 
   const isDark = theme.isDark
 
-  // 聚合各模型或场景的总 Token
+  // 聚合各模型或场景的数据
   const map = new Map<string, number>()
   byModel.value.forEach((m) => {
-    const key = modelName(m)
-    map.set(key, (map.get(key) ?? 0) + m.totalTokens)
+    const key = pieDimension.value === 'scene' ? sceneDisplayName(m.scene) : modelName(m)
+    const val = pieMetric.value === 'tokens' ? m.totalTokens : m.requests
+    map.set(key, (map.get(key) ?? 0) + val)
   })
 
   const pieData = Array.from(map.entries())
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
+
+  const isTokens = pieMetric.value === 'tokens'
+  const unit = isTokens ? 'Token' : '次'
 
   const option: echarts.EChartsOption = {
     color: APPLE_PALETTE,
@@ -317,12 +348,12 @@ function renderPieChart(): void {
         const item = params as { name: string; value: number; percent: number; color: string }
         return `
           <div style="font-weight:600;margin-bottom:4px">${item.name}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
             <span style="display:flex;align-items:center;gap:6px">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>
-              消耗占比
+              ${isTokens ? '消耗占比' : '调用占比'}
             </span>
-            <span style="font-weight:600">${item.percent.toFixed(1)}% (${formatCount(item.value)} Token)</span>
+            <span style="font-weight:600">${item.percent.toFixed(1)}% (${formatCount(item.value)} ${unit})</span>
           </div>`
       },
     },
@@ -331,18 +362,22 @@ function renderPieChart(): void {
       right: '2%',
       top: 'middle',
       textStyle: {
-        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
+        color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.7)',
         fontSize: 11,
       },
       itemWidth: 10,
       itemHeight: 10,
+      formatter: (name: string) => {
+        return name.length > 22 ? name.slice(0, 20) + '…' : name
+      },
     },
     series: [
       {
-        name: '模型用量分布',
+        name: pieDimension.value === 'scene' ? '业务场景分布' : '模型规格分布',
         type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['36%', '50%'],
+        radius: ['44%', '70%'],
+        center: ['35%', '50%'],
+        minAngle: 3,
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 8,
@@ -510,11 +545,27 @@ onUnmounted(() => {
     <div class="model-section-grid">
       <!-- 环形占比图 -->
       <section class="pane mf-glass-card-interactive">
-        <h2 class="pane__title">
-          <el-icon class="title-icon"><PieChart /></el-icon>
-          模型消耗占比
-        </h2>
-        <p class="pane__note">各场景调用大模型的总 Token 消耗比重</p>
+        <div class="pane__head-between">
+          <div>
+            <h2 class="pane__title">
+              <el-icon class="title-icon"><PieChart /></el-icon>
+              {{ pieDimension === 'scene' ? '业务场景消耗占比' : '模型规格消耗占比' }}
+            </h2>
+            <p class="pane__note">
+              {{ pieDimension === 'scene' ? '各求职业务模块的模型调用与资源开销' : '不同厂商与模型规格的总体调用比重' }}
+            </p>
+          </div>
+          <div class="pane__toggles">
+            <el-radio-group v-model="pieDimension" size="small" @change="renderPieChart">
+              <el-radio-button value="scene">按场景</el-radio-button>
+              <el-radio-button value="model">按模型</el-radio-button>
+            </el-radio-group>
+            <el-radio-group v-model="pieMetric" size="small" @change="renderPieChart">
+              <el-radio-button value="tokens">Token</el-radio-button>
+              <el-radio-button value="requests">频次</el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
 
         <div v-show="byModel.length" ref="pieChartRef" class="echarts-box echarts-box--pie" />
         <el-empty v-if="!byModel.length" :image-size="70" description="暂无分布数据" />
@@ -528,9 +579,11 @@ onUnmounted(() => {
         </h2>
         <p class="pane__note">细粒度请求、成功率与平均延迟数据留痕</p>
 
-        <el-table :data="byModel" border stripe size="small" :row-key="rowKey" max-height="290">
-          <el-table-column label="场景" min-width="110">
-            <template #default="{ row }">{{ row.scene }}</template>
+        <el-table :data="byModel" border stripe size="small" :row-key="rowKey" max-height="310">
+          <el-table-column label="场景" min-width="120">
+            <template #default="{ row }">
+              <span class="scene-tag">{{ sceneDisplayName(row.scene) }}</span>
+            </template>
           </el-table-column>
           <el-table-column label="模型" min-width="140" show-overflow-tooltip>
             <template #default="{ row }">{{ modelName(asModel(row)) }}</template>
@@ -698,6 +751,20 @@ onUnmounted(() => {
   color: var(--mf-text-tertiary);
 }
 
+.pane__head-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--mf-space-3);
+  flex-wrap: wrap;
+}
+
+.pane__toggles {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+
 /* ---------- 图表容器 ---------- */
 .title-icon {
   margin-right: 6px;
@@ -710,23 +777,28 @@ onUnmounted(() => {
 }
 
 .echarts-box--trend {
-  height: 290px;
+  height: 320px;
 }
 
 .echarts-box--pie {
-  height: 280px;
+  height: 320px;
 }
 
 .model-section-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: minmax(460px, 1.15fr) 1.85fr;
   gap: var(--mf-space-4);
 }
 
-@media (width <= 1024px) {
+@media (width <= 1180px) {
   .model-section-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.scene-tag {
+  font-weight: 500;
+  color: var(--mf-text-primary);
 }
 
 .ok {

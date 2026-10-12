@@ -161,11 +161,11 @@ const DIFFERENTIATORS: Differentiator[] = [
   },
   {
     icon: Lock,
-    badge: '沉浸安全',
-    title: 'macOS 液态玻璃与企业级隐私',
-    vsTraditional: '传统网站界面沉闷呆板，缺乏沉浸感；且敏感个人简历信息与求职意向缺乏完善的隐私权限保障。',
+    badge: '隐私沙箱',
+    title: '求职资产私有隔离与数据零泄露',
+    vsTraditional: '传统招聘工具或公开 AI 会将你的简历、经历沉淀为公开训练数据，求职意向存在向现公司或第三方泄露的风险。',
     mindforgeAdvantage:
-      '采用细腻流畅的 macOS 液态玻璃质感与环境动态光影，搭配 Spring Security + RBAC 细粒度权限管控与审计。',
+      '个人简历、意向 JD 与问答面经全程处于专属隔离沙箱中，严格遵循企业级私有加密存储，绝不参与公网模型训练，坚决守护求职隐私。',
     accentColor: '#ff9500',
   },
 ]

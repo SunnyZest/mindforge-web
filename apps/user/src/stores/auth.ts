@@ -27,6 +27,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** 权限判断。用法：`auth.can('app:resume:read')` */
   function can(permission: Permission): boolean {
+    if (user.value?.roles?.includes('SUPER_ADMIN')) {
+      return true
+    }
     return hasPermission(permissions.value, permission)
   }
 

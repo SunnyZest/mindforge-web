@@ -25,4 +25,6 @@ app.use(router)
 // index.html 的内联脚本只保证了首帧，这里是运行时的唯一真相。
 useThemeStore(pinia)
 
-app.mount('#app')
+void router.isReady().then(() => {
+  app.mount('#app')
+})

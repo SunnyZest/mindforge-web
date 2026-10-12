@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import { setSessionExpiredHandler, tokenStore } from '@/api'
 import { useAuthStore } from '@/stores/auth'
+import { ElMessage } from 'element-plus'
 
 // 给路由的 meta 补上我们自己的字段
 declare module 'vue-router' {
@@ -168,8 +169,11 @@ router.beforeEach(async (to, from) => {
   //    前端拦住了只是不让用户看到进不去的页面，拦不住有心人直接发请求。
   const required = to.meta.permission
   if (required && !auth.can(required)) {
-    // 注意别死循环：如果连目标页自己都是「去 dashboard」，那就去 403 页
-    return to.name === 'dashboard' ? { name: 'forbidden' } : { name: 'dashboard' }
+    ElMessage.warning({
+      message: `您暂无权限访问「${to.meta.title || '该页面'}」，请联系管理员分配对应权限`,
+      grouping: true,
+    })
+    return { name: 'forbidden' }
   }
 
   return true

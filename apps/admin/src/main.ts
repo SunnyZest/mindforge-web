@@ -28,4 +28,6 @@ app.use(router)
 // 显式把 pinia 传进去，不依赖「当前活跃实例」这种隐式状态。
 useThemeStore(pinia)
 
-app.mount('#app')
+void router.isReady().then(() => {
+  app.mount('#app')
+})

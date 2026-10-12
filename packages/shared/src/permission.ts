@@ -92,6 +92,9 @@ export type Permission = AdminPermission | AppPermission
  * @param granted 当前用户的权限码列表（来自 `GET /admin/auth/me` 或登录响应）
  */
 export function hasPermission(granted: readonly string[], required: Permission): boolean {
+  if (granted.includes('*') || granted.includes('*:*:*')) {
+    return true
+  }
   return granted.includes(required)
 }
 
