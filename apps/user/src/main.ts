@@ -6,9 +6,13 @@ import { createApp } from 'vue'
 import '@mindforge/shared/styles'
 import './styles/index.css'
 
+import { setupAmbientBackground } from '@mindforge/shared'
+
 import App from './App.vue'
 import router from './router'
 import { useThemeStore } from './stores/theme'
+
+setupAmbientBackground()
 
 const app = createApp(App)
 

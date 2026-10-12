@@ -1,0 +1,190 @@
+/**
+ * 动态极光环境背景 (Dynamic Ambient Aurora)
+ *
+ * 为 macOS 液态玻璃提供流动、呼吸的多彩底质，使毛玻璃（backdrop-filter）
+ * 能够采样到真实流动的色彩，呈现媲美 macOS Sequoia 动态壁纸的通透液态质感。
+ *
+ * 特性：
+ * - 纯 GPU transform 驱动，极低 CPU/GPU 开销
+ * - 鼠标指针跟随微光交互 (Interactive Spotlight)
+ * - 自动适配浅色 / 深色模式
+ * - 严格遵循 prefers-reduced-motion 降级
+ */
+
+.mf-ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--mf-bg-page);
+}
+
+/* 极光光斑层 */
+.mf-ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  will-change: transform;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  animation-direction: alternate;
+}
+
+/* 浅色主题下的极光柔光球 */
+:root .mf-ambient-blob--1,
+[data-theme='light'] .mf-ambient-blob--1 {
+  top: -10%;
+  left: -5%;
+  width: 58vw;
+  height: 58vw;
+  background: radial-gradient(circle, rgb(0 122 255 / 38%) 0%, transparent 70%);
+  animation: mf-float-1 22s infinite alternate ease-in-out;
+}
+
+:root .mf-ambient-blob--2,
+[data-theme='light'] .mf-ambient-blob--2 {
+  top: 5%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgb(168 132 255 / 35%) 0%, transparent 70%);
+  animation: mf-float-2 26s infinite alternate ease-in-out;
+}
+
+:root .mf-ambient-blob--3,
+[data-theme='light'] .mf-ambient-blob--3 {
+  bottom: -15%;
+  right: 10%;
+  width: 55vw;
+  height: 55vw;
+  background: radial-gradient(circle, rgb(255 149 0 / 25%) 0%, transparent 70%);
+  animation: mf-float-3 20s infinite alternate ease-in-out;
+}
+
+:root .mf-ambient-blob--4,
+[data-theme='light'] .mf-ambient-blob--4 {
+  bottom: -10%;
+  left: 5%;
+  width: 48vw;
+  height: 48vw;
+  background: radial-gradient(circle, rgb(48 176 199 / 28%) 0%, transparent 70%);
+  animation: mf-float-4 24s infinite alternate ease-in-out;
+}
+
+/* 深色主题下的极光深邃光斑 */
+[data-theme='dark'] .mf-ambient-blob--1 {
+  top: -12%;
+  left: -6%;
+  width: 55vw;
+  height: 55vw;
+  background: radial-gradient(circle, rgb(40 90 220 / 32%) 0%, transparent 70%);
+  animation: mf-float-1 22s infinite alternate ease-in-out;
+}
+
+[data-theme='dark'] .mf-ambient-blob--2 {
+  top: 8%;
+  right: -8%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgb(130 60 210 / 28%) 0%, transparent 70%);
+  animation: mf-float-2 26s infinite alternate ease-in-out;
+}
+
+[data-theme='dark'] .mf-ambient-blob--3 {
+  bottom: -12%;
+  right: 8%;
+  width: 52vw;
+  height: 52vw;
+  background: radial-gradient(circle, rgb(210 70 30 / 20%) 0%, transparent 70%);
+  animation: mf-float-3 20s infinite alternate ease-in-out;
+}
+
+[data-theme='dark'] .mf-ambient-blob--4 {
+  bottom: -8%;
+  left: 8%;
+  width: 46vw;
+  height: 46vw;
+  background: radial-gradient(circle, rgb(10 120 140 / 25%) 0%, transparent 70%);
+  animation: mf-float-4 24s infinite alternate ease-in-out;
+}
+
+/* 跟随鼠标交互的环境光晕 */
+.mf-ambient-cursor-glow {
+  position: absolute;
+  top: var(--cursor-y, -999px);
+  left: var(--cursor-x, -999px);
+  width: 600px;
+  height: 600px;
+  margin-top: -300px;
+  margin-left: -300px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(0 122 255 / 10%) 0%, transparent 65%);
+  filter: blur(40px);
+  opacity: 0;
+  transition: opacity 400ms ease;
+  will-change: transform;
+}
+
+.mf-ambient-bg:hover .mf-ambient-cursor-glow,
+body:hover .mf-ambient-cursor-glow {
+  opacity: 1;
+}
+
+/* 缓动漂浮关键帧 */
+@keyframes mf-float-1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6vw, 4vh, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-3vw, 8vh, 0) scale(0.96);
+  }
+}
+
+@keyframes mf-float-2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-5vw, 6vh, 0) scale(0.95);
+  }
+  100% {
+    transform: translate3d(-8vw, -3vh, 0) scale(1.06);
+  }
+}
+
+@keyframes mf-float-3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-6vw, -5vh, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(4vw, -7vh, 0) scale(0.94);
+  }
+}
+
+@keyframes mf-float-4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(7vw, -4vh, 0) scale(0.96);
+  }
+  100% {
+    transform: translate3d(3vw, 5vh, 0) scale(1.08);
+  }
+}
+
+/* 无障碍降级：用户开启减少动态效果时停止动画 */
+@media (prefers-reduced-motion: reduce) {
+  .mf-ambient-blob {
+    animation: none !important;
+  }
+}

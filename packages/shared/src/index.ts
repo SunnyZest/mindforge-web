@@ -159,3 +159,6 @@ export { formatDateTime, formatCount, formatBytes } from './format'
 // ---------- 路由加载进度条（两端共用）----------
 export { startProgress, doneProgress } from './progress'
 
+// ---------- 动态环境背景与鼠标微交互 ----------
+export { setupAmbientBackground } from './ambient'
+

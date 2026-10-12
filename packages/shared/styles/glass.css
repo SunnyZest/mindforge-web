@@ -77,11 +77,56 @@
 /* 玻璃的过渡：换主题 / 换状态时颜色要「化」过去，不能硬切 */
 .mf-glass,
 .mf-glass--strong,
-.mf-glass--edge {
+.mf-glass--edge,
+.mf-glass-card-interactive {
   transition:
     background-color var(--mf-duration) var(--mf-ease-out),
     border-color var(--mf-duration) var(--mf-ease-out),
-    box-shadow var(--mf-duration) var(--mf-ease-out);
+    box-shadow var(--mf-duration) var(--mf-ease-out),
+    transform var(--mf-duration-fast) var(--mf-ease-spring);
+}
+
+/* ★ 交互式 macOS 玻璃卡片（带有鼠标停留互动与微光跟随） */
+.mf-glass-card-interactive {
+  position: relative;
+  background-color: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-lg);
+  -webkit-backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  backdrop-filter: blur(var(--mf-glass-blur)) saturate(var(--mf-glass-saturate))
+    brightness(var(--mf-glass-brightness));
+  box-shadow: var(--mf-card-shadow);
+  overflow: hidden;
+}
+
+/* 顶部与边缘内嵌流光 */
+.mf-glass-card-interactive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 0%),
+    rgb(255 255 255 / 15%),
+    transparent 40%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+.mf-glass-card-interactive:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--mf-primary) 45%, var(--mf-glass-border));
+  box-shadow:
+    0 16px 36px rgb(0 122 255 / 10%),
+    0 4px 12px rgb(31 38 58 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+}
+
+.mf-glass-card-interactive:hover::before {
+  opacity: 1;
 }
 
 /* ---------- 无障碍降级 ①：用户主动要求「降低透明度」----------
