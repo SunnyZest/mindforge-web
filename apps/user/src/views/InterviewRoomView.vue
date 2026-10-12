@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Back, MagicStick, VideoPlay, Promotion, Check, Delete } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import * as echarts from 'echarts'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import {
   BizError,
   formatDateTime,
+  getGlassTooltipOption,
   type InterviewDetailVO,
   type InterviewReportVO,
 } from '@mindforge/shared'
@@ -13,6 +15,9 @@ import {
 import { interviewApi } from '@/api/interview'
 import InterviewAnalysisView from '@/components/InterviewAnalysisView.vue'
 import { useSlowTask } from '@/composables/useSlowTask'
+import { useThemeStore } from '@/stores/theme'
+
+const theme = useThemeStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -215,7 +220,122 @@ watch(id, () => {
   answerText.value = ''
 })
 
-onMounted(load)
+// ---------- 面试五维核心能力雷达图 ----------
+const radarChartRef = ref<HTMLDivElement | null>(null)
+let radarInstance: echarts.ECharts | null = null
+let radarResizeObserver: ResizeObserver | null = null
+
+function renderRadarChart(): void {
+  if (!radarChartRef.value || !report.value) return
+  if (!radarInstance) {
+    radarInstance = echarts.init(radarChartRef.value)
+  }
+
+  const isDark = theme.isDark
+  const r = report.value
+  const tech = r.technicalScore ?? 75
+  const comm = r.communicationScore ?? 80
+  const ps = r.problemSolvingScore ?? 75
+  const overall = r.overallScore ?? 78
+  const eng = Math.round((tech + ps) / 2)
+
+  const option: echarts.EChartsOption = {
+    tooltip: {
+      ...getGlassTooltipOption(isDark),
+      trigger: 'item',
+    },
+    radar: {
+      indicator: [
+        { name: '技术深度', max: 100 },
+        { name: '沟通表达', max: 100 },
+        { name: '问题解决', max: 100 },
+        { name: '工程规范', max: 100 },
+        { name: '岗位契合', max: 100 },
+      ],
+      center: ['50%', '52%'],
+      radius: '68%',
+      splitNumber: 4,
+      axisName: {
+        color: isDark ? 'rgba(255, 255, 255, 0.75)' : 'rgba(0, 0, 0, 0.65)',
+        fontSize: 11,
+        fontWeight: 'bold',
+      },
+      splitLine: {
+        lineStyle: {
+          color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+        },
+      },
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: isDark
+            ? ['rgba(255, 255, 255, 0.02)', 'rgba(255, 255, 255, 0.05)']
+            : ['rgba(0, 0, 0, 0.01)', 'rgba(0, 0, 0, 0.03)'],
+        },
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+        },
+      },
+    },
+    series: [
+      {
+        name: '能力维度评分',
+        type: 'radar',
+        data: [
+          {
+            value: [tech, comm, ps, eng, overall],
+            name: '得分表现',
+            symbol: 'circle',
+            symbolSize: 6,
+            itemStyle: {
+              color: '#007aff',
+            },
+            lineStyle: {
+              width: 2.5,
+              color: '#007aff',
+            },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+                { offset: 0, color: 'rgba(0, 122, 255, 0.45)' },
+                { offset: 1, color: 'rgba(175, 82, 222, 0.25)' },
+              ]),
+            },
+          },
+        ],
+      },
+    ],
+  }
+
+  radarInstance.setOption(option, true)
+}
+
+watch([report, stage], () => {
+  void nextTick(() => renderRadarChart())
+})
+
+watch(
+  () => theme.isDark,
+  () => {
+    void nextTick(() => renderRadarChart())
+  },
+)
+
+onMounted(() => {
+  void load().then(() => {
+    void nextTick(() => renderRadarChart())
+  })
+  radarResizeObserver = new ResizeObserver(() => {
+    radarInstance?.resize()
+  })
+  if (radarChartRef.value) radarResizeObserver.observe(radarChartRef.value)
+})
+
+onUnmounted(() => {
+  radarResizeObserver?.disconnect()
+  radarInstance?.dispose()
+})
 </script>
 
 <template>
@@ -446,31 +566,41 @@ onMounted(load)
     <!-- ---------- ④ 报告 ---------- -->
     <div v-else-if="stage === 'report'" class="report">
       <template v-if="report">
-        <section class="pane">
-          <h2 class="pane__title">总评</h2>
-          <div class="scores">
-            <div class="scores__main">
-              <span class="scores__value">{{ report.overallScore ?? '-' }}</span>
-              <span class="scores__label">总分</span>
+        <section class="pane mf-glass-card-interactive">
+          <h2 class="pane__title">全景能力诊断与总评</h2>
+
+          <div class="report-overview-grid">
+            <div class="report-overview-left">
+              <div class="scores">
+                <div class="scores__main">
+                  <span class="scores__value">{{ report.overallScore ?? '-' }}</span>
+                  <span class="scores__label">综合得分</span>
+                </div>
+                <div class="scores__sub">
+                  <div class="scores__item">
+                    <span class="scores__n">{{ report.technicalScore ?? '-' }}</span>
+                    <span class="scores__t">技术深度</span>
+                  </div>
+                  <div class="scores__item">
+                    <span class="scores__n">{{ report.communicationScore ?? '-' }}</span>
+                    <span class="scores__t">逻辑表达</span>
+                  </div>
+                  <div class="scores__item">
+                    <span class="scores__n">{{ report.problemSolvingScore ?? '-' }}</span>
+                    <span class="scores__t">问题解决</span>
+                  </div>
+                </div>
+              </div>
+
+              <p v-if="report.reportText" class="report__text">{{ report.reportText }}</p>
+              <p class="report__time">评估生成于 {{ formatDateTime(report.createdAt) }}</p>
             </div>
-            <div class="scores__sub">
-              <div class="scores__item">
-                <span class="scores__n">{{ report.technicalScore ?? '-' }}</span>
-                <span class="scores__t">技术</span>
-              </div>
-              <div class="scores__item">
-                <span class="scores__n">{{ report.communicationScore ?? '-' }}</span>
-                <span class="scores__t">表达</span>
-              </div>
-              <div class="scores__item">
-                <span class="scores__n">{{ report.problemSolvingScore ?? '-' }}</span>
-                <span class="scores__t">解题</span>
-              </div>
+
+            <!-- ECharts 五维能力雷达图 -->
+            <div class="report-overview-right">
+              <div ref="radarChartRef" class="radar-box" />
             </div>
           </div>
-
-          <p v-if="report.reportText" class="report__text">{{ report.reportText }}</p>
-          <p class="report__time">生成于 {{ formatDateTime(report.createdAt) }}</p>
         </section>
 
         <div class="cols">
@@ -853,6 +983,30 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
+}
+
+.report-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--mf-space-6);
+  align-items: center;
+}
+
+@media (width <= 880px) {
+  .report-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-overview-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+}
+
+.radar-box {
+  width: 100%;
+  height: 250px;
 }
 
 .scores {

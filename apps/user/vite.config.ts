@@ -41,6 +41,7 @@ export default defineConfig({
       'vue',
       'vue-router',
       'pinia',
+      'echarts',
       'element-plus',
       '@element-plus/icons-vue',
       'element-plus/es',

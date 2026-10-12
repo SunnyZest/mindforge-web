@@ -10,20 +10,22 @@ import {
   Reading,
   User,
 } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, type Component } from 'vue'
+import * as echarts from 'echarts'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 
 import type { DashboardVO, UsageSummaryVO } from '@mindforge/shared'
-import { BizError } from '@mindforge/shared'
+import { BizError, formatCount } from '@mindforge/shared'
 
 import { alertApi } from '@/api/alert'
 import { dashboardApi } from '@/api/dashboard'
 import { usageApi } from '@/api/usage'
 import { useAuthStore } from '@/stores/auth'
-import { formatCount } from '@/utils/format'
+import { useThemeStore } from '@/stores/theme'
 
 const router = useRouter()
 const auth = useAuthStore()
+const theme = useThemeStore()
 
 const loading = ref(false)
 const stats = ref<DashboardVO | null>(null)
@@ -58,12 +60,6 @@ const metrics = computed(() =>
   })),
 )
 
-// ---------- AI 运行态势衍生指标 ----------
-const aiSuccessRate = computed(() => {
-  if (!usageSummary.value || usageSummary.value.requests === 0) return '-'
-  const rate = (usageSummary.value.successCount / usageSummary.value.requests) * 100
-  return `${rate.toFixed(1)}%`
-})
 
 const aiAvgLatency = computed(() => {
   if (!usageSummary.value?.avgDurationMs) return '-'
@@ -117,12 +113,103 @@ async function load(): Promise<void> {
     if (alertRes.status === 'fulfilled') {
       unreadAlertCount.value = alertRes.value
     }
+
+    void nextTick(() => renderGauge())
   } finally {
     loading.value = false
   }
 }
 
-onMounted(load)
+// ---------- AI 运行健康度半环仪表盘 ----------
+const aiGaugeRef = ref<HTMLDivElement | null>(null)
+let gaugeInstance: echarts.ECharts | null = null
+let gaugeResizeObserver: ResizeObserver | null = null
+
+function renderGauge(): void {
+  if (!aiGaugeRef.value) return
+  if (!gaugeInstance) {
+    gaugeInstance = echarts.init(aiGaugeRef.value)
+  }
+
+  const isDark = theme.isDark
+  const rawRate = usageSummary.value?.requests
+    ? (usageSummary.value.successCount / usageSummary.value.requests) * 100
+    : 100
+  const rateVal = Math.round(rawRate * 10) / 10
+
+  const option: echarts.EChartsOption = {
+    series: [
+      {
+        type: 'gauge',
+        startAngle: 180,
+        endAngle: 0,
+        center: ['50%', '76%'],
+        radius: '100%',
+        min: 0,
+        max: 100,
+        splitNumber: 5,
+        axisLine: {
+          lineStyle: {
+            width: 10,
+            color: [
+              [0.2, '#ff3b30'],
+              [0.8, '#ff9500'],
+              [1, '#34c759'],
+            ],
+          },
+        },
+        pointer: {
+          icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
+          length: '12%',
+          width: 6,
+          offsetCenter: [0, '-54%'],
+          itemStyle: {
+            color: isDark ? '#fff' : '#1d1d1f',
+          },
+        },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: { show: false },
+        title: {
+          offsetCenter: [0, '-15%'],
+          fontSize: 11,
+          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+        },
+        detail: {
+          fontSize: 22,
+          offsetCenter: [0, '-36%'],
+          valueAnimation: true,
+          formatter: (value: number) => `${value.toFixed(1)}%`,
+          color: isDark ? '#fff' : '#1d1d1f',
+          fontWeight: 'bold',
+        },
+        data: [{ value: rateVal, name: '调用成功率' }],
+      },
+    ],
+  }
+
+  gaugeInstance.setOption(option, true)
+}
+
+watch(
+  () => theme.isDark,
+  () => {
+    void nextTick(() => renderGauge())
+  },
+)
+
+onMounted(() => {
+  void load()
+  gaugeResizeObserver = new ResizeObserver(() => {
+    gaugeInstance?.resize()
+  })
+  if (aiGaugeRef.value) gaugeResizeObserver.observe(aiGaugeRef.value)
+})
+
+onUnmounted(() => {
+  gaugeResizeObserver?.disconnect()
+  gaugeInstance?.dispose()
+})
 </script>
 
 <template>
@@ -166,29 +253,24 @@ onMounted(load)
           </el-button>
         </div>
 
-        <div v-loading="loading" class="ai-stats">
-          <div class="ai-stat">
-            <span class="ai-stat__label">调用成功率</span>
-            <span class="ai-stat__value">{{ aiSuccessRate }}</span>
-            <span class="ai-stat__hint">
-              成功 {{ formatCount(usageSummary?.successCount ?? 0) }} /
-              失败 {{ formatCount(usageSummary?.failedCount ?? 0) }}
-            </span>
-          </div>
+        <div v-loading="loading" class="ai-body">
+          <div ref="aiGaugeRef" class="ai-gauge-box" />
 
-          <div class="ai-stat">
-            <span class="ai-stat__label">平均响应延迟</span>
-            <span class="ai-stat__value">{{ aiAvgLatency }}</span>
-            <span class="ai-stat__hint">模型平均生成耗时</span>
-          </div>
+          <div class="ai-stats-row">
+            <div class="ai-stat-mini">
+              <span class="ai-stat__label">平均响应延迟</span>
+              <span class="ai-stat__value">{{ aiAvgLatency }}</span>
+              <span class="ai-stat__hint">模型平均生成耗时</span>
+            </div>
 
-          <div class="ai-stat">
-            <span class="ai-stat__label">输入 / 输出 Token</span>
-            <span class="ai-stat__value">
-              {{ formatCount(usageSummary?.promptTokens ?? 0) }} /
-              {{ formatCount(usageSummary?.completionTokens ?? 0) }}
-            </span>
-            <span class="ai-stat__hint">提示词与生成文本分布</span>
+            <div class="ai-stat-mini">
+              <span class="ai-stat__label">输入 / 输出 Token</span>
+              <span class="ai-stat__value">
+                {{ formatCount(usageSummary?.promptTokens ?? 0) }} /
+                {{ formatCount(usageSummary?.completionTokens ?? 0) }}
+              </span>
+              <span class="ai-stat__hint">提示词与生成文本分布</span>
+            </div>
           </div>
         </div>
       </el-card>
@@ -309,13 +391,24 @@ onMounted(load)
   color: var(--mf-primary);
 }
 
-.ai-stats {
+.ai-body {
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-3);
 }
 
-.ai-stat {
+.ai-gauge-box {
+  width: 100%;
+  height: 155px;
+}
+
+.ai-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mf-space-2);
+}
+
+.ai-stat-mini {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -331,14 +424,14 @@ onMounted(load)
 }
 
 .ai-stat__value {
-  font-size: var(--mf-font-lg);
+  font-size: var(--mf-font-md);
   font-weight: var(--mf-weight-semibold);
   letter-spacing: -0.02em;
   color: var(--mf-text-primary);
 }
 
 .ai-stat__hint {
-  font-size: var(--mf-font-xs);
+  font-size: 11px;
   color: var(--mf-text-tertiary);
 }
 

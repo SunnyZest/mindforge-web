@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { Check, Clock, Cpu, DataLine, Refresh } from '@element-plus/icons-vue'
-import { computed, onMounted, ref } from 'vue'
+import { Check, Clock, Cpu, DataLine, PieChart, Refresh, TrendCharts } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import {
+  APPLE_PALETTE,
   BizError,
   formatCount,
+  getGlassTooltipOption,
+  getPieTooltipOption,
   type UsageByModelVO,
   type UsageDailyVO,
   type UsageSummaryVO,
 } from '@mindforge/shared'
 
 import { usageApi } from '@/api/usage'
+import { useThemeStore } from '@/stores/theme'
+
+const theme = useThemeStore()
 
 const loading = ref(false)
 const summary = ref<UsageSummaryVO | null>(null)
@@ -111,18 +118,12 @@ const chart = computed(() => {
   return out
 })
 
-const maxRequests = computed(() => Math.max(1, ...chart.value.map((d) => d.requests)))
-
 /** 成功率 —— 没有请求时返回 null（不是 0，0% 和「没数据」是两回事） */
 const successRate = computed(() => {
   const s = summary.value
   if (!s || !s.requests) return null
   return Math.round((s.successCount / s.requests) * 1000) / 10
 })
-
-function barHeight(d: UsageDailyVO): string {
-  return `${Math.max(d.requests ? 2 : 0, (d.requests / maxRequests.value) * 100)}%`
-}
 
 /**
  * el-table 插槽里的 `row` 是 `DefaultRow`（Element Plus 的泛型占位符），
@@ -142,7 +143,269 @@ function rowKey(m: UsageByModelVO, i: number): string {
   return `${m.scene}-${m.provider}-${m.modelName}-${i}`
 }
 
-onMounted(() => applyPreset(30))
+// ---------- ECharts 可视化挂载与自适应 ----------
+const trendChartRef = ref<HTMLDivElement | null>(null)
+const pieChartRef = ref<HTMLDivElement | null>(null)
+let trendChartInstance: echarts.ECharts | null = null
+let pieChartInstance: echarts.ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
+
+function renderTrendChart(): void {
+  if (!trendChartRef.value) return
+  if (!trendChartInstance) {
+    trendChartInstance = echarts.init(trendChartRef.value)
+  }
+
+  const isDark = theme.isDark
+  const dates = chart.value.map((d) => d.date.slice(5))
+  const requests = chart.value.map((d) => d.requests)
+  const tokens = chart.value.map((d) => d.totalTokens)
+
+  const option: echarts.EChartsOption = {
+    tooltip: {
+      ...getGlassTooltipOption(isDark),
+      formatter: (params: unknown) => {
+        const arr = params as Array<{
+          name: string
+          seriesName: string
+          value: number
+          color: string
+        }>
+        if (!Array.isArray(arr) || !arr.length) return ''
+        const date = arr[0].name
+        let html = `<div style="font-weight:600;margin-bottom:6px">${date} 日用量</div>`
+        arr.forEach((item) => {
+          const valStr = formatCount(item.value)
+          html += `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin:3px 0">
+              <span style="display:flex;align-items:center;gap:6px">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>
+                ${item.seriesName}
+              </span>
+              <span style="font-weight:600;font-variant-numeric:tabular-nums">${valStr}</span>
+            </div>`
+        })
+        return html
+      },
+    },
+    legend: {
+      data: ['请求次数', '消耗 Token'],
+      top: 0,
+      right: 10,
+      textStyle: {
+        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
+        fontSize: 12,
+      },
+    },
+    grid: {
+      left: '2%',
+      right: '3%',
+      top: '14%',
+      bottom: '6%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' } },
+      axisLabel: {
+        color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+        fontSize: 11,
+      },
+      axisTick: { show: false },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '请求 (次)',
+        nameTextStyle: {
+          color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+          fontSize: 11,
+        },
+        splitLine: {
+          lineStyle: {
+            color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+            type: 'dashed',
+          },
+        },
+        axisLabel: {
+          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+          fontSize: 11,
+        },
+      },
+      {
+        type: 'value',
+        name: 'Token 消耗',
+        nameTextStyle: {
+          color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+          fontSize: 11,
+        },
+        splitLine: { show: false },
+        axisLabel: {
+          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+          fontSize: 11,
+          formatter: (v: number) => formatCount(v),
+        },
+      },
+    ],
+    series: [
+      {
+        name: '请求次数',
+        type: 'line',
+        smooth: true,
+        data: requests,
+        yAxisIndex: 0,
+        showSymbol: false,
+        symbolSize: 6,
+        itemStyle: { color: '#007aff' },
+        lineStyle: { width: 2.5, color: '#007aff' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(0, 122, 255, 0.35)' },
+            { offset: 1, color: 'rgba(0, 122, 255, 0.01)' },
+          ]),
+        },
+      },
+      {
+        name: '消耗 Token',
+        type: 'line',
+        smooth: true,
+        data: tokens,
+        yAxisIndex: 1,
+        showSymbol: false,
+        symbolSize: 6,
+        itemStyle: { color: '#af52de' },
+        lineStyle: { width: 2, color: '#af52de' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(175, 82, 222, 0.25)' },
+            { offset: 1, color: 'rgba(175, 82, 222, 0.01)' },
+          ]),
+        },
+      },
+    ],
+  }
+
+  trendChartInstance.setOption(option, true)
+}
+
+function renderPieChart(): void {
+  if (!pieChartRef.value) return
+  if (!pieChartInstance) {
+    pieChartInstance = echarts.init(pieChartRef.value)
+  }
+
+  const isDark = theme.isDark
+
+  // 聚合各模型或场景的总 Token
+  const map = new Map<string, number>()
+  byModel.value.forEach((m) => {
+    const key = modelName(m)
+    map.set(key, (map.get(key) ?? 0) + m.totalTokens)
+  })
+
+  const pieData = Array.from(map.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+
+  const option: echarts.EChartsOption = {
+    color: APPLE_PALETTE,
+    tooltip: {
+      ...getPieTooltipOption(isDark),
+      formatter: (params: unknown) => {
+        const item = params as { name: string; value: number; percent: number; color: string }
+        return `
+          <div style="font-weight:600;margin-bottom:4px">${item.name}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span style="display:flex;align-items:center;gap:6px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>
+              消耗占比
+            </span>
+            <span style="font-weight:600">${item.percent.toFixed(1)}% (${formatCount(item.value)} Token)</span>
+          </div>`
+      },
+    },
+    legend: {
+      orient: 'vertical',
+      right: '2%',
+      top: 'middle',
+      textStyle: {
+        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
+        fontSize: 11,
+      },
+      itemWidth: 10,
+      itemHeight: 10,
+    },
+    series: [
+      {
+        name: '模型用量分布',
+        type: 'pie',
+        radius: ['45%', '70%'],
+        center: ['36%', '50%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 8,
+          borderColor: isDark ? '#1c1c1e' : '#ffffff',
+          borderWidth: 2,
+        },
+        label: { show: false },
+        emphasis: {
+          label: {
+            show: true,
+            fontSize: 12,
+            fontWeight: 'bold',
+            formatter: '{b}\n{d}%',
+            color: isDark ? '#fff' : '#1d1d1f',
+          },
+          itemStyle: {
+            shadowBlur: 14,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)',
+          },
+        },
+        data: pieData.length ? pieData : [{ name: '暂无数据', value: 0 }],
+      },
+    ],
+  }
+
+  pieChartInstance.setOption(option, true)
+}
+
+function updateAllCharts(): void {
+  void nextTick(() => {
+    renderTrendChart()
+    renderPieChart()
+  })
+}
+
+watch([chart, byModel], () => {
+  updateAllCharts()
+})
+
+watch(
+  () => theme.isDark,
+  () => {
+    updateAllCharts()
+  },
+)
+
+onMounted(() => {
+  applyPreset(30)
+  resizeObserver = new ResizeObserver(() => {
+    trendChartInstance?.resize()
+    pieChartInstance?.resize()
+  })
+  if (trendChartRef.value) resizeObserver.observe(trendChartRef.value)
+  if (pieChartRef.value) resizeObserver.observe(pieChartRef.value)
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  trendChartInstance?.dispose()
+  pieChartInstance?.dispose()
+})
+
 </script>
 
 <template>
@@ -227,60 +490,73 @@ onMounted(() => applyPreset(30))
       </div>
     </div>
 
-    <!-- ---------- 按天趋势 ---------- -->
-    <section class="pane">
-      <h2 class="pane__title">按天请求量</h2>
-      <p class="pane__note">
-        没有请求的日子补成了 0 —— 不补的话稀疏的日子会被挤在一起，看着像每天都很忙。
-      </p>
-
-      <div v-if="chart.length" class="chart">
-        <div
-          v-for="d in chart"
-          :key="d.date"
-          class="bar"
-          :title="`${d.date}：${d.requests} 次请求 · ${formatCount(d.totalTokens)} token`"
-        >
-          <div class="bar__fill" :style="{ height: barHeight(d) }" />
-          <!-- 只标首尾和峰值附近的日子，全标会糊成一片 -->
-          <span class="bar__label">{{ d.date.slice(5) }}</span>
+    <!-- ---------- 按天用量趋势 ---------- -->
+    <section class="pane mf-glass-card-interactive">
+      <div class="pane__head-row">
+        <div>
+          <h2 class="pane__title">
+            <el-icon class="title-icon"><TrendCharts /></el-icon>
+            AI 调用量与 Token 消耗趋势
+          </h2>
+          <p class="pane__note">每日 API 调用频次（左轴）与 Token 吞吐波动曲线（右轴）实时联动监控</p>
         </div>
       </div>
-      <el-empty v-else :image-size="70" description="这段时间没有记录" />
+
+      <div v-show="chart.length" ref="trendChartRef" class="echarts-box echarts-box--trend" />
+      <el-empty v-if="!chart.length" :image-size="70" description="这段时间没有记录" />
     </section>
 
-    <!-- ---------- 按模型 ---------- -->
-    <section class="pane">
-      <h2 class="pane__title">按场景 / 模型</h2>
+    <!-- ---------- 模型分布与场景明细 ---------- -->
+    <div class="model-section-grid">
+      <!-- 环形占比图 -->
+      <section class="pane mf-glass-card-interactive">
+        <h2 class="pane__title">
+          <el-icon class="title-icon"><PieChart /></el-icon>
+          模型消耗占比
+        </h2>
+        <p class="pane__note">各场景调用大模型的总 Token 消耗比重</p>
 
-      <el-table :data="byModel" border stripe :row-key="rowKey">
-        <el-table-column label="场景" min-width="140">
-          <template #default="{ row }">{{ row.scene }}</template>
-        </el-table-column>
-        <el-table-column label="模型" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ modelName(asModel(row)) }}</template>
-        </el-table-column>
-        <el-table-column label="请求" width="90" align="right">
-          <template #default="{ row }">{{ formatCount(row.requests) }}</template>
-        </el-table-column>
-        <el-table-column label="成功 / 失败" width="120" align="right">
-          <template #default="{ row }">
-            <span class="ok">{{ row.successCount }}</span> /
-            <span :class="{ bad: row.failedCount > 0 }">{{ row.failedCount }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="Token" width="110" align="right">
-          <template #default="{ row }">{{ formatCount(row.totalTokens) }}</template>
-        </el-table-column>
-        <el-table-column label="平均耗时" width="110" align="right">
-          <template #default="{ row }">
-            {{ row.avgDurationMs ? (row.avgDurationMs / 1000).toFixed(1) + 's' : '-' }}
-          </template>
-        </el-table-column>
-      </el-table>
+        <div v-show="byModel.length" ref="pieChartRef" class="echarts-box echarts-box--pie" />
+        <el-empty v-if="!byModel.length" :image-size="70" description="暂无分布数据" />
+      </section>
 
-      <el-empty v-if="!byModel.length" :image-size="70" description="这段时间没有记录" />
-    </section>
+      <!-- 场景/模型数据表 -->
+      <section class="pane mf-glass-card-interactive">
+        <h2 class="pane__title">
+          <el-icon class="title-icon"><Cpu /></el-icon>
+          场景与模型明细
+        </h2>
+        <p class="pane__note">细粒度请求、成功率与平均延迟数据留痕</p>
+
+        <el-table :data="byModel" border stripe size="small" :row-key="rowKey" max-height="290">
+          <el-table-column label="场景" min-width="110">
+            <template #default="{ row }">{{ row.scene }}</template>
+          </el-table-column>
+          <el-table-column label="模型" min-width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ modelName(asModel(row)) }}</template>
+          </el-table-column>
+          <el-table-column label="请求" width="75" align="right">
+            <template #default="{ row }">{{ formatCount(row.requests) }}</template>
+          </el-table-column>
+          <el-table-column label="成功/失败" width="95" align="right">
+            <template #default="{ row }">
+              <span class="ok">{{ row.successCount }}</span> /
+              <span :class="{ bad: row.failedCount > 0 }">{{ row.failedCount }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="Token" width="85" align="right">
+            <template #default="{ row }">{{ formatCount(row.totalTokens) }}</template>
+          </el-table-column>
+          <el-table-column label="耗时" width="75" align="right">
+            <template #default="{ row }">
+              {{ row.avgDurationMs ? (row.avgDurationMs / 1000).toFixed(1) + 's' : '-' }}
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-empty v-if="!byModel.length" :image-size="70" description="这段时间没有记录" />
+      </section>
+    </div>
   </div>
 </template>
 
@@ -422,52 +698,35 @@ onMounted(() => applyPreset(30))
   color: var(--mf-text-tertiary);
 }
 
-/* ---------- 柱状图 ---------- */
-.chart {
-  display: flex;
-  gap: 2px;
-  align-items: flex-end;
-  height: 180px;
-  padding-top: var(--mf-space-4);
-  overflow-x: auto;
+/* ---------- 图表容器 ---------- */
+.title-icon {
+  margin-right: 6px;
+  color: var(--mf-primary);
+  vertical-align: -2px;
 }
 
-.bar {
-  position: relative;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 6px;
-  height: 100%;
-}
-
-.bar__fill {
+.echarts-box {
   width: 100%;
-  min-height: 0;
-  background: linear-gradient(
-    180deg,
-    var(--mf-primary),
-    color-mix(in srgb, var(--mf-primary) 55%, transparent)
-  );
-  border-radius: 3px 3px 0 0;
-  transition: height var(--mf-duration-normal) var(--mf-ease-out);
 }
 
-.bar:hover .bar__fill {
-  filter: brightness(1.12);
+.echarts-box--trend {
+  height: 290px;
 }
 
-/* 日期标签旋转 45°，否则 30 根柱子下面会糊成一片 */
-.bar__label {
-  position: absolute;
-  bottom: -18px;
-  font-size: 10px;
-  color: var(--mf-text-tertiary);
-  white-space: nowrap;
-  transform: rotate(45deg);
-  transform-origin: left top;
+.echarts-box--pie {
+  height: 280px;
+}
+
+.model-section-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--mf-space-4);
+}
+
+@media (width <= 1024px) {
+  .model-section-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ok {

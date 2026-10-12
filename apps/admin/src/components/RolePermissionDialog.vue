@@ -173,7 +173,7 @@ async function submit(): Promise<void> {
           <el-checkbox
             :model-value="sideAllChecked(adminGroups)"
             :indeterminate="sidePartial(adminGroups)"
-            @change="(v) => toggleSide(adminGroups, Boolean(v))"
+            @change="toggleSide(adminGroups, Boolean($event))"
           >
             <span class="side__text">管理端</span>
           </el-checkbox>
@@ -185,7 +185,7 @@ async function submit(): Promise<void> {
             <el-checkbox
               :model-value="groupAllChecked(g)"
               :indeterminate="groupPartial(g)"
-              @change="(v) => toggleGroup(g, Boolean(v))"
+              @change="toggleGroup(g, Boolean($event))"
             >
               <span class="group__text">{{ g.label }}</span>
             </el-checkbox>
@@ -199,7 +199,7 @@ async function submit(): Promise<void> {
               v-for="p in g.items"
               :key="p.id"
               :model-value="isChecked(Number(p.id))"
-              @change="(v) => toggleOne(Number(p.id), Boolean(v))"
+              @change="toggleOne(Number(p.id), Boolean($event))"
             >
               <span class="item__name">{{ p.name }}</span>
               <code class="item__code">{{ p.code }}</code>
@@ -214,7 +214,7 @@ async function submit(): Promise<void> {
           <el-checkbox
             :model-value="sideAllChecked(appGroups)"
             :indeterminate="sidePartial(appGroups)"
-            @change="(v) => toggleSide(appGroups, Boolean(v))"
+            @change="toggleSide(appGroups, Boolean($event))"
           >
             <span class="side__text">用户端</span>
           </el-checkbox>
@@ -226,7 +226,7 @@ async function submit(): Promise<void> {
             <el-checkbox
               :model-value="groupAllChecked(g)"
               :indeterminate="groupPartial(g)"
-              @change="(v) => toggleGroup(g, Boolean(v))"
+              @change="toggleGroup(g, Boolean($event))"
             >
               <span class="group__text">{{ g.label }}</span>
             </el-checkbox>
@@ -240,7 +240,7 @@ async function submit(): Promise<void> {
               v-for="p in g.items"
               :key="p.id"
               :model-value="isChecked(Number(p.id))"
-              @change="(v) => toggleOne(Number(p.id), Boolean(v))"
+              @change="toggleOne(Number(p.id), Boolean($event))"
             >
               <span class="item__name">{{ p.name }}</span>
               <code class="item__code">{{ p.code }}</code>

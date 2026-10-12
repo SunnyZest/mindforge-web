@@ -162,3 +162,11 @@ export { startProgress, doneProgress } from './progress'
 // ---------- 动态环境背景与鼠标微交互 ----------
 export { setupAmbientBackground } from './ambient'
 
+// ---------- ECharts 液态玻璃主题辅助 ----------
+export {
+  APPLE_PALETTE,
+  getGlassTooltipOption,
+  getPieTooltipOption,
+  getCommonGrid,
+} from './echarts-theme'
+
