@@ -155,3 +155,7 @@ export type { ThemeMode } from './theme'
 
 // ---------- 展示用的格式化（纯函数，两端共用）----------
 export { formatDateTime, formatCount, formatBytes } from './format'
+
+// ---------- 路由加载进度条（两端共用）----------
+export { startProgress, doneProgress } from './progress'
+

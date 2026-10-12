@@ -37,6 +37,38 @@ export default defineConfig({
     }),
   ],
 
+  optimizeDeps: {
+    include: [
+      'vue',
+      'vue-router',
+      'pinia',
+      'axios',
+      'element-plus',
+      '@element-plus/icons-vue',
+      'element-plus/es',
+      'element-plus/es/components/message/style/css',
+      'element-plus/es/components/message-box/style/css',
+      'element-plus/es/components/notification/style/css',
+      'element-plus/es/components/loading/style/css',
+      'element-plus/es/components/button/style/css',
+      'element-plus/es/components/dropdown/style/css',
+      'element-plus/es/components/dropdown-menu/style/css',
+      'element-plus/es/components/dropdown-item/style/css',
+      'element-plus/es/components/tag/style/css',
+      'element-plus/es/components/table/style/css',
+      'element-plus/es/components/input/style/css',
+      'element-plus/es/components/form/style/css',
+      'element-plus/es/components/form-item/style/css',
+      'element-plus/es/components/dialog/style/css',
+      'element-plus/es/components/drawer/style/css',
+      'element-plus/es/components/upload/style/css',
+      'element-plus/es/components/empty/style/css',
+      'element-plus/es/components/date-picker/style/css',
+      'element-plus/es/components/pagination/style/css',
+      'element-plus/es/components/badge/style/css',
+    ],
+  },
+
   resolve: {
     // ⚠️ 这里必须用【正则精确匹配】，不能用字符串前缀：
     //    字符串别名会把 `@mindforge/shared/styles` 也吃掉，

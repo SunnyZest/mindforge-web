@@ -1,4 +1,4 @@
-import type { Permission } from '@mindforge/shared'
+import { doneProgress, startProgress, type Permission } from '@mindforge/shared'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { setSessionExpiredHandler, tokenStore } from '@/api'
@@ -140,7 +140,11 @@ setSessionExpiredHandler(() => {
   void router.replace({ name: 'login' })
 })
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
+  if (to.path !== from.path) {
+    startProgress()
+  }
+
   const auth = useAuthStore()
   const hasToken = tokenStore.getAccess() !== null
 
@@ -173,6 +177,21 @@ router.beforeEach(async (to) => {
   }
 
   return true
+})
+
+router.afterEach(() => {
+  doneProgress()
+})
+
+router.onError((error) => {
+  doneProgress()
+  // 动态导入分包在 dev 阶段被 Vite 依赖优化中断时自动重试刷新
+  if (
+    error?.message &&
+    /fetch dynamically imported module|Importing a module script failed/i.test(error.message)
+  ) {
+    window.location.reload()
+  }
 })
 
 export default router
