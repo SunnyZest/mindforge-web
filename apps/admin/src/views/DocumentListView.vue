@@ -552,10 +552,13 @@ onMounted(() => {
     <DocumentStatusDialog v-model="statusVisible" :doc="statusDoc" @saved="() => load()" />
 
     <!-- 上传文档弹窗 -->
+    <!-- ★ 在 el-card 里渲染的弹窗必须 append-to-body（backdrop-filter 与 overflow:hidden 会导致裁剪） -->
     <el-dialog
       v-model="uploadVisible"
       title="上传文档到知识库"
-      width="520px"
+      width="540px"
+      append-to-body
+      align-center
       destroy-on-close
     >
       <el-form label-position="top">
@@ -610,10 +613,13 @@ onMounted(() => {
     </el-dialog>
 
     <!-- 导入网页文章弹窗 -->
+    <!-- ★ 在 el-card 里渲染的弹窗必须 append-to-body（backdrop-filter 与 overflow:hidden 会导致裁剪） -->
     <el-dialog
       v-model="importUrlVisible"
       title="从网页 URL 一键导入文章"
-      width="540px"
+      width="560px"
+      append-to-body
+      align-center
       destroy-on-close
     >
       <el-form label-position="top">

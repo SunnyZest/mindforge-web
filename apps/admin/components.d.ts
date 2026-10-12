@@ -49,6 +49,7 @@ declare module 'vue' {
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
+    ElUpload: typeof import('element-plus/es')['ElUpload']
     PromptEditDialog: typeof import('./src/components/PromptEditDialog.vue')['default']
     RoleFormDialog: typeof import('./src/components/RoleFormDialog.vue')['default']
     RolePermissionDialog: typeof import('./src/components/RolePermissionDialog.vue')['default']

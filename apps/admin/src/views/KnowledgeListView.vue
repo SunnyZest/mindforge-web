@@ -259,10 +259,13 @@ onMounted(load)
     />
 
     <!-- 新建 / 编辑弹窗 -->
+    <!-- ★ 在 el-card 里渲染的弹窗必须 append-to-body（backdrop-filter 与 overflow:hidden 会裁切固定定位弹窗） -->
     <el-dialog
       v-model="dialogVisible"
       :title="dialogMode === 'create' ? '新建知识库（官方/管理端）' : '编辑知识库'"
-      width="480px"
+      width="520px"
+      append-to-body
+      align-center
       destroy-on-close
     >
       <el-form label-position="top">
