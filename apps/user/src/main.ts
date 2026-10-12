@@ -8,23 +8,35 @@ import './styles/index.css'
 
 import { setupAmbientBackground } from '@mindforge/shared'
 
+import { tokenStore } from './api'
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 
-setupAmbientBackground()
+async function bootstrap(): Promise<void> {
+  setupAmbientBackground()
 
-const app = createApp(App)
+  const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.use(router)
 
-// pinia 必须在 router 之前装 —— 路由守卫里会 useAuthStore()
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
+  useThemeStore(pinia)
 
-// 主题：store 一创建就把 data-theme 挂到 <html> 上（见 stores/theme.ts）。
-// index.html 的内联脚本只保证了首帧，这里是运行时的唯一真相。
-useThemeStore(pinia)
+  // 若本地存有 token，首屏提前预拉取用户信息与权限状态。
+  // 使后续所有页面交互与路由守卫纯同步 (0ms) 执行，从根源消除守卫异步等待与点击冲突。
+  const auth = useAuthStore(pinia)
+  if (tokenStore.getAccess()) {
+    try {
+      await auth.fetchMe()
+    } catch {
+      // 异常时交给路由守卫清理并重定向
+    }
+  }
 
-void router.isReady().then(() => {
+  await router.isReady()
   app.mount('#app')
-})
+}
+
+void bootstrap()

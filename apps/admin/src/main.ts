@@ -10,24 +10,33 @@ import './styles/index.css'
 
 import { setupAmbientBackground } from '@mindforge/shared'
 
+import { tokenStore } from './api'
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 
-setupAmbientBackground()
+async function bootstrap(): Promise<void> {
+  setupAmbientBackground()
 
-const app = createApp(App)
+  const app = createApp(App)
+  const pinia = createPinia()
+  app.use(pinia)
+  app.use(router)
 
-// ⚠️ 顺序有讲究：pinia 必须在 router 之前装上 ——
-// 路由守卫里会 `useAuthStore()`，pinia 没装的话那里会直接报错。
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
+  useThemeStore(pinia)
 
-// 主题：store 一创建就把 data-theme 挂到 <html> 上（见 stores/theme.ts）。
-// 显式把 pinia 传进去，不依赖「当前活跃实例」这种隐式状态。
-useThemeStore(pinia)
+  const auth = useAuthStore(pinia)
+  if (tokenStore.getAccess()) {
+    try {
+      await auth.fetchMe()
+    } catch {
+      // 异常时交给路由守卫清理并重定向
+    }
+  }
 
-void router.isReady().then(() => {
+  await router.isReady()
   app.mount('#app')
-})
+}
+
+void bootstrap()

@@ -136,6 +136,8 @@ setSessionExpiredHandler(() => {
   void router.replace({ name: 'login' })
 })
 
+let pendingFetchMe: Promise<void> | null = null
+
 router.beforeEach(async (to, from) => {
   if (to.path !== from.path) {
     startProgress()
@@ -153,11 +155,13 @@ router.beforeEach(async (to, from) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // 刷新页面后 Pinia 是空的 —— 补拉一次当前用户。
-  // 顺便也验证了 token 还有效（无效的话这里会 401 → 刷新 → 还失败 → 抛错）
+  // 刷新页面后 Pinia 是空的 —— 补拉一次当前用户（单飞保护，防并发竞态）。
   if (!auth.loaded) {
+    pendingFetchMe ??= auth.fetchMe().finally(() => {
+      pendingFetchMe = null
+    })
     try {
-      await auth.fetchMe()
+      await pendingFetchMe
     } catch {
       auth.reset()
       return { name: 'login', query: { redirect: to.fullPath } }
