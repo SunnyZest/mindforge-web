@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Refresh } from '@element-plus/icons-vue'
+import { Check, Clock, Cpu, DataLine, Refresh } from '@element-plus/icons-vue'
 import { computed, onMounted, ref } from 'vue'
 
 import {
@@ -181,37 +181,49 @@ onMounted(() => applyPreset(30))
 
     <!-- ---------- 总览 ---------- -->
     <div class="cards">
-      <div class="card">
-        <span class="card__n">{{ formatCount(summary?.requests ?? 0) }}</span>
-        <span class="card__t">请求数</span>
-        <span class="card__sub">
+      <div class="card mf-glass-card-interactive">
+        <div class="card__t">
+          <el-icon class="card__icon card__icon--primary"><DataLine /></el-icon>
+          <span>请求数</span>
+        </div>
+        <div class="card__n">{{ formatCount(summary?.requests ?? 0) }}</div>
+        <div class="card__sub">
           成功 {{ formatCount(summary?.successCount ?? 0) }} · 失败
           {{ formatCount(summary?.failedCount ?? 0) }}
-        </span>
+        </div>
       </div>
 
-      <div class="card">
+      <div class="card mf-glass-card-interactive">
+        <div class="card__t">
+          <el-icon class="card__icon card__icon--success"><Check /></el-icon>
+          <span>成功率</span>
+        </div>
         <!-- 没请求时显示「-」而不是 0% -->
-        <span class="card__n">{{ successRate === null ? '-' : successRate + '%' }}</span>
-        <span class="card__t">成功率</span>
-        <span class="card__sub">按请求数算</span>
+        <div class="card__n">{{ successRate === null ? '-' : successRate + '%' }}</div>
+        <div class="card__sub">按总请求量统计</div>
       </div>
 
-      <div class="card">
-        <span class="card__n">{{ formatCount(summary?.totalTokens ?? 0) }}</span>
-        <span class="card__t">消耗 Token</span>
-        <span class="card__sub">
-          输入 {{ formatCount(summary?.promptTokens ?? 0) }} · 输出
+      <div class="card mf-glass-card-interactive">
+        <div class="card__t">
+          <el-icon class="card__icon card__icon--purple"><Cpu /></el-icon>
+          <span>消耗 Token</span>
+        </div>
+        <div class="card__n">{{ formatCount(summary?.totalTokens ?? 0) }}</div>
+        <div class="card__sub">
+          入 {{ formatCount(summary?.promptTokens ?? 0) }} · 出
           {{ formatCount(summary?.completionTokens ?? 0) }}
-        </span>
+        </div>
       </div>
 
-      <div class="card">
-        <span class="card__n">
+      <div class="card mf-glass-card-interactive">
+        <div class="card__t">
+          <el-icon class="card__icon card__icon--warning"><Clock /></el-icon>
+          <span>平均耗时</span>
+        </div>
+        <div class="card__n">
           {{ summary?.avgDurationMs ? (summary.avgDurationMs / 1000).toFixed(1) + 's' : '-' }}
-        </span>
-        <span class="card__t">平均耗时</span>
-        <span class="card__sub">含 AI 生成时间</span>
+        </div>
+        <div class="card__sub">含端到端网络与生成</div>
       </div>
     </div>
 
@@ -327,28 +339,64 @@ onMounted(() => applyPreset(30))
 .card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--mf-space-5);
-  background-color: var(--mf-glass-card);
-  border: 1px solid var(--mf-glass-border-soft);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--mf-space-2);
+  padding: var(--mf-space-6) var(--mf-space-4);
   border-radius: var(--mf-radius-lg);
-}
-
-.card__n {
-  font-size: var(--mf-font-xl);
-  font-weight: var(--mf-weight-medium);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  min-height: 146px;
 }
 
 .card__t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--mf-font-sm);
+  font-weight: 500;
   color: var(--mf-text-secondary);
 }
 
+.card__icon {
+  font-size: 15px;
+}
+
+.card__icon--primary {
+  color: var(--mf-primary);
+}
+
+.card__icon--success {
+  color: var(--mf-success);
+}
+
+.card__icon--purple {
+  color: #af52de;
+}
+
+.card__icon--warning {
+  color: var(--mf-warning);
+}
+
+.card__n {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--mf-text-primary);
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0;
+}
+
 .card__sub {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
   font-size: var(--mf-font-xs);
   color: var(--mf-text-tertiary);
+  background-color: var(--mf-glass-tint-strong);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-pill);
+  backdrop-filter: blur(8px);
 }
 
 /* ---------- 面板 ---------- */
