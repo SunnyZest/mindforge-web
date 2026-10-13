@@ -42,10 +42,16 @@ const rules: FormRules<typeof form> = {
   ],
   companyName: [{ max: 255, message: '最长 255 个字符', trigger: 'blur' }],
   location: [{ max: 255, message: '最长 255 个字符', trigger: 'blur' }],
-  sourceUrl: [{ max: 1000, message: '最长 1000 个字符', trigger: 'blur' }],
+  sourceUrl: [
+    { max: 1000, message: '最长 1000 个字符', trigger: 'blur' },
+    { pattern: /^https?:\/\/.+/i, message: '来源链接必须以 http:// 或 https:// 开头', trigger: 'blur' },
+  ],
   experienceRequired: [{ max: 128, message: '最长 128 个字符', trigger: 'blur' }],
   educationRequired: [{ max: 128, message: '最长 128 个字符', trigger: 'blur' }],
-  jobDescription: [{ required: true, message: '请粘贴 JD 正文', trigger: 'blur' }],
+  jobDescription: [
+    { required: true, message: '请粘贴 JD 正文', trigger: 'blur' },
+    { max: 50000, message: '职位描述最长 50000 个字符', trigger: 'blur' },
+  ],
 }
 
 function reset(): void {

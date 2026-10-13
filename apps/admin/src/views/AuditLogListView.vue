@@ -127,12 +127,12 @@ function asLog(row: unknown): AuditLogVO {
 async function load(): Promise<void> {
   loading.value = true
   try {
-    // userId 是输入框里的字符串：空 → 不筛；非数字也别发给后端（NaN 会变成 "NaN"）
+    // userId 是输入框里的字符串：保持字符串透传以防 19 位雪花 ID 精度丢失
     const userId = query.userId.trim()
     const data = await auditLogApi.page({
       page: query.page,
       pageSize: query.pageSize,
-      userId: userId && Number.isFinite(Number(userId)) ? Number(userId) : undefined,
+      userId: /^\d+$/.test(userId) ? userId : undefined,
       action: query.action,
       resourceType: query.resourceType,
       result: query.result,
@@ -227,8 +227,9 @@ function exportToCsv(logs: AuditLogVO[], filename: string): void {
 
   const escapeCell = (val: unknown): string => {
     if (val === null || val === undefined) return '""'
-    const str = String(val).replace(/"/g, '""')
-    return `"${str}"`
+    const raw = String(val)
+    const safe = /^[=+\-@\t\r]/.test(raw.trimStart()) ? `'${raw}` : raw
+    return `"${safe.replace(/"/g, '""')}"`
   }
 
   const csvRows = [headers.map(escapeCell).join(',')]

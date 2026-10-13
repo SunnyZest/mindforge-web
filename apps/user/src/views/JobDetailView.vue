@@ -113,6 +113,11 @@ const softSkills = computed(
   () => detail.value?.structuredJson?.skills.filter((s) => !s.required) ?? [],
 )
 
+const safeSourceUrl = computed(() => {
+  const url = detail.value?.sourceUrl?.trim()
+  return url && /^https?:\/\//i.test(url) ? url : null
+})
+
 watch(id, () => {
   highlight.value = ''
   missNote.value = ''
@@ -160,9 +165,9 @@ onMounted(load)
         <h2 class="pane__title">
           JD 原文
           <a
-            v-if="detail?.sourceUrl"
+            v-if="safeSourceUrl"
             class="pane__link"
-            :href="detail.sourceUrl"
+            :href="safeSourceUrl"
             target="_blank"
             rel="noopener noreferrer"
           >

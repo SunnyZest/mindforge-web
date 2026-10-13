@@ -180,6 +180,14 @@ let trendChartInstance: echarts.ECharts | null = null
 let pieChartInstance: echarts.ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
 
+function escapeHtml(text: string): string {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 function renderTrendChart(): void {
   if (!trendChartRef.value) return
   if (!trendChartInstance) {
@@ -202,7 +210,7 @@ function renderTrendChart(): void {
           color: string
         }>
         if (!Array.isArray(arr) || !arr.length) return ''
-        const date = arr[0].name
+        const date = escapeHtml(arr[0].name)
         let html = `<div style="font-weight:600;margin-bottom:6px">${date} 日用量</div>`
         arr.forEach((item) => {
           const valStr = formatCount(item.value)
@@ -210,7 +218,7 @@ function renderTrendChart(): void {
             <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin:3px 0">
               <span style="display:flex;align-items:center;gap:6px">
                 <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>
-                ${item.seriesName}
+                ${escapeHtml(item.seriesName)}
               </span>
               <span style="font-weight:600;font-variant-numeric:tabular-nums">${valStr}</span>
             </div>`
@@ -356,7 +364,7 @@ function renderPieChart(): void {
       formatter: (params: unknown) => {
         const item = params as { name: string; value: number; percent: number; color: string }
         return `
-          <div style="font-weight:600;margin-bottom:4px">${item.name}</div>
+          <div style="font-weight:600;margin-bottom:4px">${escapeHtml(item.name)}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
             <span style="display:flex;align-items:center;gap:6px">
               <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>

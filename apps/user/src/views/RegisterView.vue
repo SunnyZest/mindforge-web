@@ -45,6 +45,7 @@ const rules: FormRules<typeof form> = {
 }
 
 async function onSubmit(): Promise<void> {
+  if (loading.value) return
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
@@ -120,7 +121,6 @@ async function onSubmit(): Promise<void> {
             placeholder="再输入一次"
             show-password
             autocomplete="new-password"
-            @keyup.enter="onSubmit"
           />
         </el-form-item>
 
