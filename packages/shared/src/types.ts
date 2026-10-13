@@ -146,13 +146,9 @@ export interface AdminUserCreateDTO {
   /** 昵称；不传则后端默认与用户名相同 */
   nickname?: string
   /**
-   * 角色 id 列表；不传或为空则只绑定默认角色 USER。
-   *
-   * ⚠️ 这里是 `number[]`，但 `RoleVO.id` 是 **string**（后端为了防 JS 精度丢失
-   * 把 id 序列化成了字符串）。所以从角色列表取 id 再回传时必须转一下：
-   * `roleIds: roles.map((r) => Number(r.id))`。两边类型不一致是后端的历史遗留。
+   * 角色 id 列表（雪花 ID 字符串）；不传或为空则只绑定默认角色 USER。
    */
-  roleIds?: number[]
+  roleIds?: Array<string | number>
 }
 
 export interface UserUpdateDTO {
@@ -168,8 +164,8 @@ export interface UserStatusDTO {
 }
 
 export interface AssignRolesDTO {
-  /** 传空数组 = 清空该用户所有角色（⚠️ 类型是 number[]，见 AdminUserCreateDTO 的说明） */
-  roleIds: number[]
+  /** 传空数组 = 清空该用户所有角色（雪花 ID 字符串数组） */
+  roleIds: Array<string | number>
 }
 
 /* ============================================================
@@ -220,8 +216,8 @@ export interface RoleUpdateDTO {
 }
 
 export interface AssignPermissionsDTO {
-  /** 传空数组 = 清空该角色所有权限 */
-  permissionIds: number[]
+  /** 传空数组 = 清空该角色所有权限（雪花 ID 字符串数组） */
+  permissionIds: Array<string | number>
 }
 
 /* ============================================================
@@ -247,7 +243,7 @@ export interface AdminKnowledgeBaseVO {
 
 export interface AdminKnowledgeBaseQuery extends PageQuery {
   status?: number
-  userId?: number
+  userId?: string | number
 }
 
 /** 文档处理流水线的三段状态 —— 后端各自独立推进，失败互不影响 */
@@ -278,8 +274,8 @@ export interface AdminDocumentVO {
 }
 
 export interface AdminDocumentQuery extends PageQuery {
-  knowledgeBaseId?: number
-  userId?: number
+  knowledgeBaseId?: string | number
+  userId?: string | number
   status?: string
 }
 
@@ -400,7 +396,7 @@ export interface AuditLogVO {
 }
 
 export interface AuditLogQuery extends PageQuery {
-  userId?: number
+  userId?: string | number
   action?: string
   resourceType?: string
   result?: string

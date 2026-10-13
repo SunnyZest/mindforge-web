@@ -30,7 +30,7 @@ const form = reactive({
   nickname: '',
   email: '',
   phone: '',
-  roleIds: [] as number[],
+  roleIds: [] as string[],
 })
 
 /**
@@ -92,7 +92,6 @@ async function submit(): Promise<void> {
         password: form.password,
         nickname: form.nickname.trim() || undefined,
         email: form.email.trim() || undefined,
-        // ⚠️ RoleVO.id 是 string，但这个 DTO 要 number[] —— 必须转
         roleIds: form.roleIds.length ? form.roleIds : undefined,
       }
       await userApi.create(dto)
@@ -152,7 +151,7 @@ async function submit(): Promise<void> {
             v-for="r in roles"
             :key="r.id"
             :label="r.name"
-            :value="Number(r.id)"
+            :value="r.id"
             :disabled="r.status !== 1"
           />
         </el-select>

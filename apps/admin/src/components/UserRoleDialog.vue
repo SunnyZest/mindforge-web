@@ -15,7 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [] }>()
 
-const selected = ref<number[]>([])
+const selected = ref<string[]>([])
 /** 打开时的角色数量 —— 用来判断这次保存是不是「清空」 */
 const originalCount = ref(0)
 const saving = ref(false)
@@ -26,7 +26,7 @@ const userName = computed(() => props.user?.nickname || props.user?.username || 
  * ★ 这个页面最容易踩的地方：
  *
  *   用户列表返回的 `roles` 是**角色 code 数组**（如 `['ADMIN']`），
- *   但分配角色的接口要的是 **id 数组**（`AssignRolesDTO.roleIds: number[]`）。
+ *   但分配角色的接口要的是 **id 数组**（`AssignRolesDTO.roleIds`）。
  *
  *   所以必须拿 code 去角色列表里查出对应的 id —— 不能把 `roles` 直接丢过去，
  *   那样类型对不上，运行时也会绑错。
@@ -34,7 +34,7 @@ const userName = computed(() => props.user?.nickname || props.user?.username || 
 watch(visible, (open) => {
   if (!open) return
   const codes = props.user?.roles ?? []
-  selected.value = props.roles.filter((r) => codes.includes(r.code)).map((r) => Number(r.id))
+  selected.value = props.roles.filter((r) => codes.includes(r.code)).map((r) => r.id)
   originalCount.value = selected.value.length
 })
 
@@ -86,7 +86,7 @@ async function submit(): Promise<void> {
       <!-- ⚠️ 外层用 div 不是 label：el-checkbox 自己会渲染一个 <label>，
            嵌套 label 是非法 HTML，浏览器会把点击行为搞得莫名其妙 -->
       <div v-for="r in props.roles" :key="r.id" class="role">
-        <el-checkbox :value="Number(r.id)" :disabled="r.status !== 1">
+        <el-checkbox :value="r.id" :disabled="r.status !== 1">
           <span class="role__name">{{ r.name }}</span>
           <code class="role__code">{{ r.code }}</code>
           <span class="role__meta">{{ r.permissionCount }} 项权限</span>

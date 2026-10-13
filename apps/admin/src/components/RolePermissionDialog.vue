@@ -21,8 +21,8 @@ const saving = ref(false)
 
 /** 权限字典（47 条）。基本不变，加载一次就缓存住 */
 const allPerms = ref<PermissionVO[]>([])
-/** 当前勾选的权限 id */
-const selected = ref<number[]>([])
+/** 当前勾选的权限 id（雪花 ID 字符串） */
+const selected = ref<string[]>([])
 /** 打开时的已选数量 —— 用来判断这次保存是不是「清空」 */
 const originalCount = ref(0)
 
@@ -35,26 +35,26 @@ const appGroups = computed(() => groupsOfSide(groups.value, 'app'))
 const roleName = computed(() => props.role?.name ?? '')
 
 // ---------- 勾选状态 ----------
-function idsOf(g: PermissionGroup): number[] {
-  return g.items.map((p) => Number(p.id))
+function idsOf(g: PermissionGroup): string[] {
+  return g.items.map((p) => p.id)
 }
 
-function isChecked(id: number): boolean {
+function isChecked(id: string): boolean {
   return selected.value.includes(id)
 }
 
-function toggleOne(id: number, on: boolean): void {
+function toggleOne(id: string, on: boolean): void {
   selected.value = on
     ? [...new Set([...selected.value, id])]
     : selected.value.filter((x) => x !== id)
 }
 
 function groupAllChecked(g: PermissionGroup): boolean {
-  return g.items.every((p) => isChecked(Number(p.id)))
+  return g.items.every((p) => isChecked(p.id))
 }
 
 function groupPartial(g: PermissionGroup): boolean {
-  const hit = g.items.filter((p) => isChecked(Number(p.id))).length
+  const hit = g.items.filter((p) => isChecked(p.id)).length
   return hit > 0 && hit < g.items.length
 }
 
@@ -65,7 +65,7 @@ function toggleGroup(g: PermissionGroup, on: boolean): void {
     : selected.value.filter((x) => !ids.includes(x))
 }
 
-function sideIds(gs: PermissionGroup[]): number[] {
+function sideIds(gs: PermissionGroup[]): string[] {
   return gs.flatMap(idsOf)
 }
 
@@ -88,7 +88,7 @@ function toggleSide(gs: PermissionGroup[], on: boolean): void {
 }
 
 function selectAll(): void {
-  selected.value = allPerms.value.map((p) => Number(p.id))
+  selected.value = allPerms.value.map((p) => p.id)
 }
 
 function clearAll(): void {
@@ -107,7 +107,7 @@ watch(visible, async (open) => {
     // ⚠️ listPermissions 返回的是该角色【已绑定】的权限，不是全集。
     //    全集在上面的 allPerms 里，这里只拿「哪些该勾上」。
     const assigned = await roleApi.listPermissions(props.role.id)
-    selected.value = assigned.map((p) => Number(p.id))
+    selected.value = assigned.map((p) => p.id)
     originalCount.value = selected.value.length
   } catch (e) {
     ElMessage.error(e instanceof BizError ? e.message : '权限加载失败')
@@ -190,7 +190,7 @@ async function submit(): Promise<void> {
               <span class="group__text">{{ g.label }}</span>
             </el-checkbox>
             <span class="group__count">
-              {{ g.items.filter((p) => isChecked(Number(p.id))).length }}/{{ g.items.length }}
+              {{ g.items.filter((p) => isChecked(p.id)).length }}/{{ g.items.length }}
             </span>
           </label>
 
@@ -198,8 +198,8 @@ async function submit(): Promise<void> {
             <el-checkbox
               v-for="p in g.items"
               :key="p.id"
-              :model-value="isChecked(Number(p.id))"
-              @change="toggleOne(Number(p.id), Boolean($event))"
+              :model-value="isChecked(p.id)"
+              @change="toggleOne(p.id, Boolean($event))"
             >
               <span class="item__name">{{ p.name }}</span>
               <code class="item__code">{{ p.code }}</code>
@@ -231,7 +231,7 @@ async function submit(): Promise<void> {
               <span class="group__text">{{ g.label }}</span>
             </el-checkbox>
             <span class="group__count">
-              {{ g.items.filter((p) => isChecked(Number(p.id))).length }}/{{ g.items.length }}
+              {{ g.items.filter((p) => isChecked(p.id)).length }}/{{ g.items.length }}
             </span>
           </label>
 
@@ -239,8 +239,8 @@ async function submit(): Promise<void> {
             <el-checkbox
               v-for="p in g.items"
               :key="p.id"
-              :model-value="isChecked(Number(p.id))"
-              @change="toggleOne(Number(p.id), Boolean($event))"
+              :model-value="isChecked(p.id)"
+              @change="toggleOne(p.id, Boolean($event))"
             >
               <span class="item__name">{{ p.name }}</span>
               <code class="item__code">{{ p.code }}</code>
