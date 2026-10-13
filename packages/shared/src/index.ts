@@ -78,6 +78,12 @@ export type {
   JobUpdateDTO,
   StructuredJob,
   JobSkill,
+  JobApplicationStage,
+  JobKanbanCardVO,
+  JobKanbanColumnVO,
+  JobKanbanStatsVO,
+  JobStageUpdateDTO,
+  JobCrmUpdateDTO,
   // 用户端：模拟面试
   InterviewType,
   InterviewDifficulty,

@@ -631,6 +631,17 @@ export interface StructuredJob {
   benefits: string[]
 }
 
+/** 职位投递阶段标准编码 */
+export type JobApplicationStage =
+  | 'WISHLIST'
+  | 'APPLIED'
+  | 'SCREENING'
+  | 'INTERVIEW_1'
+  | 'INTERVIEW_2'
+  | 'HR'
+  | 'OFFER'
+  | 'REJECTED'
+
 /** 职位列表行（Java 的 `JobVO`） */
 export interface JobVO {
   id: string
@@ -640,6 +651,11 @@ export interface JobVO {
   experienceRequired: string | null
   educationRequired: string | null
   parseStatus: ResumeParseStatus
+  applicationStage?: JobApplicationStage
+  linkedResumeId?: string | null
+  salaryOffer?: string | null
+  nextActionAt?: string | null
+  crmNotes?: string | null
   status: number
   createdAt: string | null
   updatedAt: string | null
@@ -658,6 +674,11 @@ export interface JobDetailVO {
   rawContent: string | null
   structuredJson: StructuredJob | null
   parseStatus: ResumeParseStatus
+  applicationStage?: JobApplicationStage
+  linkedResumeId?: string | null
+  salaryOffer?: string | null
+  nextActionAt?: string | null
+  crmNotes?: string | null
   errorMessage: string | null
   status: number
   createdAt: string | null
@@ -685,7 +706,7 @@ export interface JobCreateDTO {
 
 /**
  * 修改职位（Java 的 `JobUpdateDTO`）。
- * ⚠️ 和 Create 的区别：**没有必填项**，另外多了 `status`。
+ * ⚠️ 和 Create 的区别：**没有必填项**，另外多了 `status` 与求职 CRM 字段。
  *    后端是「传了才改」的语义。
  */
 export interface JobUpdateDTO {
@@ -696,16 +717,69 @@ export interface JobUpdateDTO {
   experienceRequired?: string
   educationRequired?: string
   jobDescription?: string
+  applicationStage?: JobApplicationStage
+  linkedResumeId?: string | null
+  salaryOffer?: string | null
+  nextActionAt?: string | null
+  crmNotes?: string | null
   status?: number
 }
 
-/**
- * 职位列表查询。
- * ⚠️ 用类型别名而不是 `interface JobQuery extends PageQuery {}` ——
- *    空接口继承会被 ESLint 的 no-empty-object-type 拦下，而且它确实没有意义。
- *    留这个别名是为了调用方能写 JobQuery，比裸用 PageQuery 语义清楚。
- */
+/** 职位列表查询 */
 export type JobQuery = PageQuery
+
+/** 求职投递看板卡片项（Java 的 `JobKanbanCardVO`） */
+export interface JobKanbanCardVO {
+  id: string
+  title: string
+  companyName: string | null
+  location: string | null
+  experienceRequired: string | null
+  educationRequired: string | null
+  parseStatus: ResumeParseStatus
+  applicationStage: JobApplicationStage
+  linkedResumeId: string | null
+  linkedResumeName: string | null
+  salaryOffer: string | null
+  nextActionAt: string | null
+  crmNotes: string | null
+  matchScore: number | null
+  interviewCount: number
+  bestInterviewScore: number | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 求职投递看板单列数据（Java 的 `JobKanbanColumnVO`） */
+export interface JobKanbanColumnVO {
+  stage: JobApplicationStage
+  title: string
+  count: number
+  cards: JobKanbanCardVO[]
+}
+
+/** 求职投递看板顶部统计概览（Java 的 `JobKanbanStatsVO`） */
+export interface JobKanbanStatsVO {
+  totalTracked: number
+  appliedCount: number
+  interviewingCount: number
+  offerCount: number
+  upcomingScheduleCount: number
+}
+
+/** 快速拖拽/变更职位投递阶段请求（Java 的 `JobStageUpdateDTO`） */
+export interface JobStageUpdateDTO {
+  stage: JobApplicationStage
+}
+
+/** 更新求职 CRM 信息请求（Java 的 `JobCrmUpdateDTO`） */
+export interface JobCrmUpdateDTO {
+  applicationStage?: JobApplicationStage
+  linkedResumeId?: string | null
+  salaryOffer?: string | null
+  nextActionAt?: string | null
+  crmNotes?: string | null
+}
 
 // ============================================================================
 //  用户端 —— 模拟面试

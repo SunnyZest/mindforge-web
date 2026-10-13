@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { MagicStick, Back, Edit, Link } from '@element-plus/icons-vue'
+import { MagicStick, Back, Edit, Link, Promotion } from '@element-plus/icons-vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { BizError, formatDateTime, type JobDetailVO } from '@mindforge/shared'
+import { BizError, formatDateTime, type JobApplicationStage, type JobDetailVO } from '@mindforge/shared'
 
 import { jobApi } from '@/api/job'
 import JobFormDialog from '@/components/JobFormDialog.vue'
+import JobCrmDialog from '@/components/JobCrmDialog.vue'
 import ResumeJobMatchPanel from '@/components/ResumeJobMatchPanel.vue'
 
 const route = useRoute()
@@ -15,7 +16,19 @@ const router = useRouter()
 const id = computed(() => String(route.params.id))
 const loading = ref(false)
 const parsing = ref(false)
+const crmDialogVisible = ref(false)
 const detail = ref<JobDetailVO | null>(null)
+
+const STAGE_LABELS: Record<JobApplicationStage, string> = {
+  WISHLIST: '心愿 / 待投递',
+  APPLIED: '已投递',
+  SCREENING: '初筛 / 笔试',
+  INTERVIEW_1: '技术一面',
+  INTERVIEW_2: '技术二面 / 终面',
+  HR: 'HR 面 / 谈薪',
+  OFFER: '已获 Offer 🎉',
+  REJECTED: '未通过 / 已归档',
+}
 
 /** 结构化里被点中的值 —— 点它就在左边原文里高亮 */
 const highlight = ref('')
@@ -143,6 +156,15 @@ onMounted(load)
       </div>
 
       <div class="head__actions">
+        <el-button
+          type="primary"
+          plain
+          :icon="Promotion"
+          :disabled="!detail"
+          @click="crmDialogVisible = true"
+        >
+          求职跟进 ({{ STAGE_LABELS[detail?.applicationStage ?? 'WISHLIST'] }})
+        </el-button>
         <el-button :icon="Edit" :disabled="!detail" @click="formVisible = true">编辑</el-button>
         <el-button :icon="MagicStick" :loading="parsing" :disabled="parsing" @click="onParse">
           {{ parsing ? '解析中' : detail?.parseStatus === 'SUCCESS' ? '重新解析' : '解析' }}
@@ -287,6 +309,9 @@ onMounted(load)
     <!-- 编辑弹窗。传 detail 就行 —— JobDetailVO 结构上包含 JobVO 的全部字段。
          保存后重新拉一次，让左边的原文和右边的结构化都跟着更新。 -->
     <JobFormDialog v-model="formVisible" :job="detail" @saved="load" />
+
+    <!-- 求职跟进 CRM 弹窗 -->
+    <JobCrmDialog v-model="crmDialogVisible" :job="detail" @saved="load" />
   </div>
 </template>
 

@@ -7,8 +7,12 @@ import { BizError, formatDateTime, type JobVO } from '@mindforge/shared'
 
 import { jobApi } from '@/api/job'
 import JobFormDialog from '@/components/JobFormDialog.vue'
+import JobKanbanBoard from '@/components/JobKanbanBoard.vue'
 
 const router = useRouter()
+
+const viewMode = ref<'grid' | 'kanban'>('kanban')
+const kanbanRef = ref<InstanceType<typeof JobKanbanBoard> | null>(null)
 
 const loading = ref(false)
 const rows = ref<JobVO[]>([])
@@ -57,8 +61,19 @@ async function load(): Promise<void> {
 }
 
 function onSearch(): void {
-  query.page = 1
-  void load()
+  if (viewMode.value === 'kanban') {
+    void kanbanRef.value?.refresh()
+  } else {
+    query.page = 1
+    void load()
+  }
+}
+
+async function onJobSaved(): Promise<void> {
+  await load()
+  if (viewMode.value === 'kanban') {
+    void kanbanRef.value?.refresh()
+  }
 }
 
 function onCreate(): void {
@@ -204,6 +219,10 @@ onMounted(load)
       </div>
 
       <div class="page__actions">
+        <el-radio-group v-model="viewMode" class="page__mode-switch">
+          <el-radio-button value="kanban">投递看板 CRM</el-radio-button>
+          <el-radio-button value="grid">卡片列表</el-radio-button>
+        </el-radio-group>
         <el-input
           v-model="query.keyword"
           placeholder="搜职位或公司"
@@ -212,31 +231,40 @@ onMounted(load)
           @keyup.enter="onSearch"
           @clear="onSearch"
         />
-        <el-button :type="batchMode ? 'primary' : 'default'" @click="toggleBatchMode">
+        <el-button
+          v-if="viewMode === 'grid'"
+          :type="batchMode ? 'primary' : 'default'"
+          @click="toggleBatchMode"
+        >
           {{ batchMode ? '退出批量' : '批量管理' }}
         </el-button>
         <el-button type="primary" :icon="Plus" @click="onCreate">添加职位</el-button>
       </div>
     </header>
 
-    <div v-if="batchMode" class="batch-bar">
-      <span class="batch-bar__tip">
-        已选择 <strong>{{ selectedIds.length }}</strong> / {{ rows.length }} 个职位
-      </span>
-      <div class="batch-bar__actions">
-        <el-button size="small" @click="selectAll">全选本页</el-button>
-        <el-button size="small" @click="clearSelection">清空已选</el-button>
-        <el-button
-          type="danger"
-          size="small"
-          :disabled="selectedIds.length === 0"
-          :loading="batchDeleting"
-          @click="onBatchDelete"
-        >
-          批量删除
-        </el-button>
+    <!-- ---------- 求职投递看板 CRM ---------- -->
+    <JobKanbanBoard v-if="viewMode === 'kanban'" ref="kanbanRef" :keyword="query.keyword" />
+
+    <!-- ---------- 传统卡片列表与批量操作 ---------- -->
+    <template v-else>
+      <div v-if="batchMode" class="batch-bar">
+        <span class="batch-bar__tip">
+          已选择 <strong>{{ selectedIds.length }}</strong> / {{ rows.length }} 个职位
+        </span>
+        <div class="batch-bar__actions">
+          <el-button size="small" @click="selectAll">全选本页</el-button>
+          <el-button size="small" @click="clearSelection">清空已选</el-button>
+          <el-button
+            type="danger"
+            size="small"
+            :disabled="selectedIds.length === 0"
+            :loading="batchDeleting"
+            @click="onBatchDelete"
+          >
+            批量删除
+          </el-button>
+        </div>
       </div>
-    </div>
 
     <div v-loading="loading" class="grid">
       <article
@@ -318,8 +346,9 @@ onMounted(load)
       class="page__pager"
       @change="() => load()"
     />
+    </template>
 
-    <JobFormDialog v-model="formVisible" :job="formJob" @saved="load" />
+    <JobFormDialog v-model="formVisible" :job="formJob" @saved="onJobSaved" />
   </div>
 </template>
 
@@ -328,7 +357,7 @@ onMounted(load)
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-5);
-  max-width: 1080px;
+  max-width: 1360px;
   margin: 0 auto;
 }
 

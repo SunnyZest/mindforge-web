@@ -1,6 +1,11 @@
 import type {
+  JobApplicationStage,
   JobCreateDTO,
+  JobCrmUpdateDTO,
   JobDetailVO,
+  JobKanbanCardVO,
+  JobKanbanColumnVO,
+  JobKanbanStatsVO,
   JobQuery,
   JobUpdateDTO,
   JobVO,
@@ -10,14 +15,7 @@ import type {
 import { http } from './index'
 
 /**
- * 用户端职位 JD。
- *
- * ⚠️ 解析（`/{id}/parse`）和简历那边**不一样**：
- *    · 简历 —— 异步。调完立刻返回，进度看 `parseStatus`，要轮询。
- *    · 职位 —— **同步**。接口会一直等到模型出结果，然后直接把 JobDetailVO 返回。
- *      后端注释也说了「同步接口，要等模型生成」。
- *   所以这里超时放宽，而且调完直接拿返回的详情，不用再拉一次。
- *   （解析期间 parseStatus 是 PARSING，想轮询也行，但没必要。）
+ * 用户端职位 JD 与求职投递看板 CRM。
  */
 export const jobApi = {
   page: (query: JobQuery) => http.get<PageResult<JobVO>>('/app/jobs', { params: query }),
@@ -26,21 +24,27 @@ export const jobApi = {
 
   create: (dto: JobCreateDTO) => http.post<JobVO>('/app/jobs', dto),
 
-  /**
-   * 修改。
-   * ⚠️ 后端是「传了才改」的语义 —— 不传的字段保持原样。
-   *    但 `jobDescription` 如果传了空串，会真的把 JD 正文清空。
-   */
   update: (id: string, dto: JobUpdateDTO) => http.put<JobVO>(`/app/jobs/${id}`, dto),
 
   remove: (id: string) => http.delete<void>(`/app/jobs/${id}`),
 
-  /**
-   * 触发解析（技能 / 经验 / 学历 / 职责）。
-   *
-   * ⚠️ **同步慢接口**，要等模型生成完才返回 —— 默认 30 秒超时可能不够，
-   *    放宽到 3 分钟。返回的就是解析后的完整详情。
-   */
   parse: (id: string) =>
     http.post<JobDetailVO>(`/app/jobs/${id}/parse`, undefined, { timeout: 3 * 60 * 1000 }),
+
+  /** 获取求职看板各阶段卡片列表 */
+  kanban: (keyword?: string) =>
+    http.get<JobKanbanColumnVO[]>('/app/jobs/kanban', {
+      params: keyword ? { keyword } : undefined,
+    }),
+
+  /** 获取求职看板顶部统计概览 */
+  kanbanStats: () => http.get<JobKanbanStatsVO>('/app/jobs/kanban/stats'),
+
+  /** 快速变更/拖拽投递阶段 */
+  updateStage: (id: string, stage: JobApplicationStage) =>
+    http.put<JobKanbanCardVO>(`/app/jobs/${id}/stage`, { stage }),
+
+  /** 更新求职 CRM 跟进元信息 */
+  updateCrm: (id: string, dto: JobCrmUpdateDTO) =>
+    http.put<JobKanbanCardVO>(`/app/jobs/${id}/crm`, dto),
 }
