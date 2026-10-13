@@ -8,6 +8,7 @@ import type {
   ResumeOptimizeVO,
   ResumeParsedVO,
   ResumeQuery,
+  ResumeUpdateDTO,
   ResumeVO,
 } from '@mindforge/shared'
 
@@ -64,6 +65,10 @@ export const resumeApi = {
    *   所以超时不用放宽，调完开始轮询就行。
    */
   parse: (id: string) => http.post<void>(`/app/resumes/${id}/parse`),
+
+  /** 在线精修或采纳 AI 改写建议后保存简历内容 */
+  update: (id: string, dto: ResumeUpdateDTO) =>
+    http.put<ResumeDetailVO>(`/app/resumes/${id}`, dto),
 
   remove: (id: string) => http.delete<void>(`/app/resumes/${id}`),
 

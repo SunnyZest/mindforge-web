@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MagicStick, CopyDocument, Warning } from '@element-plus/icons-vue'
+import { MagicStick, CopyDocument, Warning, Check } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 
 import {
@@ -18,7 +18,12 @@ const props = defineProps<{
   disabled: boolean
 }>()
 
+const emit = defineEmits<{
+  applyRewrite: [item: ResumeOptimizeItem]
+}>()
+
 const result = ref<ResumeOptimizeVO | null>(null)
+const appliedSet = ref<Set<number>>(new Set())
 
 /**
  * 慢接口的「运行中 + 秒表」。
@@ -74,12 +79,13 @@ async function run(): Promise<void> {
   if (!res) return
 
   result.value = res
+  appliedSet.value = new Set()
   if (res.truncated) {
     ElMessage.warning('简历较长，这次只分析了前面一段')
   }
 }
 
-/** 复制改写后的句子 —— 后端没有「应用建议」的接口，用户自己粘回去 */
+/** 复制改写后的句子 */
 async function copy(text: string | null): Promise<void> {
   if (!text) return
   try {
@@ -89,6 +95,13 @@ async function copy(text: string | null): Promise<void> {
     // 非 HTTPS 或没给剪贴板权限时会走到这里
     ElMessage.warning('复制失败，请手动选中文本')
   }
+}
+
+function onApply(item: ResumeOptimizeItem, idx: number): void {
+  emit('applyRewrite', item)
+  const next = new Set(appliedSet.value)
+  next.add(idx)
+  appliedSet.value = next
 }
 </script>
 
@@ -103,7 +116,7 @@ async function copy(text: string | null): Promise<void> {
           </span>
         </h2>
         <p class="opt__sub">
-          已接入 🌐 全站官方智库行业标杆参考。只给建议，不会改你的简历，满意的那条自己复制回去改。
+          已接入 🌐 全站官方智库行业标杆参考。满意的改写建议可点击「一键采纳到简历」直接替换并导出 PDF。
         </p>
       </div>
 
@@ -169,7 +182,7 @@ async function copy(text: string | null): Promise<void> {
           改写建议
           <span class="block__count">{{ rewrites.length }}</span>
         </h3>
-        <p class="block__note">事实没变，只是换个说法。可以直接复制替换。</p>
+        <p class="block__note">事实没变，只是换个说法。可点击「一键采纳到简历」自动替换原句。</p>
 
         <article v-for="(it, i) in rewrites" :key="i" class="item">
           <span class="item__where">{{ TARGET_LABEL[it.target ?? ''] ?? '整体' }}</span>
@@ -187,16 +200,26 @@ async function copy(text: string | null): Promise<void> {
           <div v-if="it.rewritten" class="item__field">
             <span class="item__key">改成</span>
             <p class="item__val item__val--new">{{ it.rewritten }}</p>
-            <el-button
-              class="item__copy"
-              size="small"
-              text
-              type="primary"
-              :icon="CopyDocument"
-              @click="copy(it.rewritten)"
-            >
-              复制
-            </el-button>
+            <div class="item__btns">
+              <el-button
+                size="small"
+                :type="appliedSet.has(i) ? 'success' : 'primary'"
+                :plain="appliedSet.has(i)"
+                :icon="Check"
+                @click="onApply(it, i)"
+              >
+                {{ appliedSet.has(i) ? '已采纳' : '一键采纳到简历' }}
+              </el-button>
+              <el-button
+                size="small"
+                text
+                type="primary"
+                :icon="CopyDocument"
+                @click="copy(it.rewritten)"
+              >
+                复制
+              </el-button>
+            </div>
           </div>
 
           <p v-if="it.suggestion" class="item__tip">{{ it.suggestion }}</p>
@@ -478,9 +501,12 @@ async function copy(text: string | null): Promise<void> {
   font-weight: var(--mf-weight-medium);
 }
 
-.item__copy {
-  align-self: flex-start;
-  margin-left: 54px;
+.item__btns {
+  display: inline-flex;
+  gap: var(--mf-space-2);
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .item__tip {

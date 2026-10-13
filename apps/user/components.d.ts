@@ -36,10 +36,12 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     InterviewAnalysisView: typeof import('./src/components/InterviewAnalysisView.vue')['default']
     InterviewCreateDialog: typeof import('./src/components/InterviewCreateDialog.vue')['default']
+    InterviewMistakeBook: typeof import('./src/components/InterviewMistakeBook.vue')['default']
     JobFormDialog: typeof import('./src/components/JobFormDialog.vue')['default']
     KnowledgeBaseDialog: typeof import('./src/components/KnowledgeBaseDialog.vue')['default']
     ResumeJobMatchPanel: typeof import('./src/components/ResumeJobMatchPanel.vue')['default']
     ResumeOptimizePanel: typeof import('./src/components/ResumeOptimizePanel.vue')['default']
+    ResumeStudioDialog: typeof import('./src/components/ResumeStudioDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
