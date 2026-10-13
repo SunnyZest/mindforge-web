@@ -3,25 +3,105 @@ import {
   Aim,
   ArrowRight,
   Briefcase,
+
   ChatDotRound,
   Check,
   CircleCheck,
   Collection,
   Cpu,
+  DataAnalysis,
   Document,
+  EditPen,
   Lightning,
   Lock,
   Microphone,
+  Promotion,
   Star,
+  TrendCharts,
+  Trophy,
   User,
 } from '@element-plus/icons-vue'
-import { computed, type Component } from 'vue'
+import { computed, onMounted, reactive, ref, type Component } from 'vue'
 
 import type { Permission } from '@mindforge/shared'
 
+import { interviewApi } from '@/api/interview'
+import { jobApi } from '@/api/job'
+import { resumeApi } from '@/api/resume'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+
+/* ========== 实时仪表盘 ========== */
+
+const statsLoading = ref(true)
+const stats = reactive({
+  resumeCount: 0,
+  totalTracked: 0,
+  appliedCount: 0,
+  interviewingCount: 0,
+  offerCount: 0,
+  upcomingScheduleCount: 0,
+  totalAnswered: 0,
+  weakCount: 0,
+  masteredCount: 0,
+  averageScore: null as number | null,
+})
+
+onMounted(async () => {
+  try {
+    const tasks: Promise<unknown>[] = [
+      auth.can('app:resume:read')
+        ? resumeApi.page({ page: 1, pageSize: 1 }).then((r) => {
+            stats.resumeCount = r.total
+          })
+        : Promise.resolve(),
+      auth.can('app:job:read')
+        ? jobApi.kanbanStats().then((r) => {
+            stats.totalTracked = r.totalTracked
+            stats.appliedCount = r.appliedCount
+            stats.interviewingCount = r.interviewingCount
+            stats.offerCount = r.offerCount
+            stats.upcomingScheduleCount = r.upcomingScheduleCount
+          })
+        : Promise.resolve(),
+      auth.can('app:interview:read')
+        ? interviewApi.mistakeStats().then((r) => {
+            stats.totalAnswered = r.totalAnswered
+            stats.weakCount = r.weakCount
+            stats.masteredCount = r.masteredCount
+            stats.averageScore = r.averageScore
+          })
+        : Promise.resolve(),
+    ]
+    await Promise.allSettled(tasks)
+  } catch {
+    /* 仪表盘统计为辅助信息，加载失败静默忽略 */
+  } finally {
+    statsLoading.value = false
+  }
+})
+
+interface MetricCard {
+  label: string
+  icon: Component
+  color: string
+  /** stats 中的 key */
+  key: keyof typeof stats
+  /** 附加单位 */
+  suffix?: string
+}
+
+const METRICS: MetricCard[] = [
+  { label: '我的简历', icon: Document, color: '#007aff', key: 'resumeCount' },
+  { label: '追踪职位', icon: Briefcase, color: '#5856d6', key: 'totalTracked' },
+  { label: '投递进行', icon: Promotion, color: '#30b0c7', key: 'appliedCount' },
+  { label: '面试进行', icon: Microphone, color: '#ff9500', key: 'interviewingCount' },
+  { label: '已获 Offer', icon: Trophy, color: '#34c759', key: 'offerCount' },
+  { label: '待攻克错题', icon: TrendCharts, color: '#ff2d55', key: 'weakCount' },
+]
+
+/* ========== 核心求职链路 ========== */
 
 interface FlowStep {
   step: string
@@ -34,6 +114,113 @@ interface FlowStep {
   permission?: Permission
   accentColor: string
 }
+
+const FLOW_STEPS: FlowStep[] = [
+  {
+    step: '01',
+    title: '简历中心',
+    tag: '基础底座 · AI 精修',
+    desc: '深度解析 PDF / Word 简历，AI 逐段精修建议一键采纳，支持 A4 排版 PDF 导出求职级简历。',
+    highlights: [
+      '结构化信息智能提取',
+      'AI 逐段量化改写建议',
+      '一键采纳实时更新',
+      'A4 排版 PDF 简历导出',
+    ],
+    icon: Document,
+    to: '/resumes',
+    permission: 'app:resume:read',
+    accentColor: 'linear-gradient(135deg, #007aff, #00c6ff)',
+  },
+  {
+    step: '02',
+    title: '目标职位 & 投递看板',
+    tag: '需求拆解 · CRM 追踪',
+    desc: '一键录入 JD 智能提炼考核画像，8 阶段全流程投递看板 CRM，日程提醒与跟进备注一应俱全。',
+    highlights: [
+      '硬技能权重提取 & 匹配诊断',
+      '8 阶段泳道看板 CRM',
+      '一键推进阶段流转',
+      '日程倒计时 & 跟进备注',
+    ],
+    icon: Briefcase,
+    to: '/jobs',
+    permission: 'app:job:read',
+    accentColor: 'linear-gradient(135deg, #5856d6, #af52de)',
+  },
+  {
+    step: '03',
+    title: '模拟面试 & 错题复盘',
+    tag: '实战演练 · 闭环复盘',
+    desc: '结合简历与 JD 交叉出题，多轮追问拟真压力面；面试错题智能归集，薄弱点单题重练直到掌握。',
+    highlights: [
+      '简历-JD 交叉真题命制',
+      '多轮动态深度追问',
+      '五维能力雷达评分报告',
+      '错题本薄弱点重练刷分',
+    ],
+    icon: Microphone,
+    to: '/interviews',
+    permission: 'app:interview:read',
+    accentColor: 'linear-gradient(135deg, #ff9500, #ff2d55)',
+  },
+]
+
+/* ========== 三大新功能亮点 ========== */
+
+interface FeatureSpotlight {
+  title: string
+  subtitle: string
+  desc: string
+  tags: string[]
+  icon: Component
+  to: string
+  permission?: Permission
+  accentColor: string
+  gradient: string
+}
+
+const FEATURE_SPOTLIGHTS: FeatureSpotlight[] = [
+  {
+    title: '简历 AI 精修工作室',
+    subtitle: '一键采纳 · PDF 导出',
+    desc: 'AI 逐段分析简历内容生成量化改写建议，一键采纳后实时更新预览，最终以 A4 专业排版导出求职级 PDF 简历。',
+    tags: ['AI 逐段精修', '一键采纳改写', '实时预览', 'A4 PDF 导出'],
+    icon: EditPen,
+    to: '/resumes',
+    permission: 'app:resume:read',
+    accentColor: '#007aff',
+    gradient: 'linear-gradient(135deg, #007aff, #00c6ff)',
+  },
+  {
+    title: '求职投递看板 CRM',
+    subtitle: '8 阶段全流程管控',
+    desc: '从心愿清单到 Offer 收割的 8 阶段泳道式看板，实时推进投递阶段、绑定简历匹配、日程倒计时与 CRM 跟进备注。',
+    tags: ['8 阶段泳道', '一键推进', '日程倒计时', 'CRM 跟进'],
+    icon: DataAnalysis,
+    to: '/jobs',
+    permission: 'app:job:read',
+    accentColor: '#5856d6',
+    gradient: 'linear-gradient(135deg, #5856d6, #af52de)',
+  },
+  {
+    title: '面试错题本 & 薄弱点重练',
+    subtitle: '闭环复盘 · 刷分进阶',
+    desc: 'AI 智能归集每场模拟面试的失分题，按知识领域标注薄弱分类，支持单题重练刷分直到完全掌握。',
+    tags: ['错题自动归集', '薄弱点分类', '单题重练', '刷分进阶'],
+    icon: TrendCharts,
+    to: '/interviews',
+    permission: 'app:interview:read',
+    accentColor: '#ff9500',
+    gradient: 'linear-gradient(135deg, #ff9500, #ff2d55)',
+  },
+]
+
+const visibleSpotlights = computed(() =>
+  FEATURE_SPOTLIGHTS.filter((f) => !f.permission || auth.can(f.permission)),
+)
+
+/* ========== 辅助中枢工具 ========== */
 
 interface ToolEntry {
   title: string
@@ -48,58 +235,11 @@ interface ToolEntry {
   actionText: string
 }
 
-interface Differentiator {
-  icon: Component
-  badge: string
-  title: string
-  vsTraditional: string
-  mindforgeAdvantage: string
-  accentColor: string
-}
-
-/** 核心求职链路：3 步闭环 */
-const FLOW_STEPS: FlowStep[] = [
-  {
-    step: '01',
-    title: '我的简历',
-    tag: '基础底座',
-    desc: '深度解析 PDF / Word 简历，智能结构化提炼经历，AI 针对性提供量化打磨建议。',
-    highlights: ['结构化信息提取', '逐段量化润色', '格式排版建议'],
-    icon: Document,
-    to: '/resumes',
-    permission: 'app:resume:read',
-    accentColor: 'linear-gradient(135deg, #007aff, #00c6ff)',
-  },
-  {
-    step: '02',
-    title: '目标职位',
-    tag: '需求拆解',
-    desc: '一键录入目标公司 JD，智能提炼硬技能考核点与工作职责画像，为面试指明方向。',
-    highlights: ['硬技能权重提取', '岗位画像建模', '匹配契合度诊断'],
-    icon: Briefcase,
-    to: '/jobs',
-    permission: 'app:job:read',
-    accentColor: 'linear-gradient(135deg, #5856d6, #af52de)',
-  },
-  {
-    step: '03',
-    title: '模拟面试',
-    tag: '实战演练',
-    desc: '结合你的简历与目标岗位交叉出题，拟真技术与 HR 专家追问，生成全景诊断复盘报告。',
-    highlights: ['简历-JD交叉真题', '多轮动态深度追问', '五维能力雷达评分'],
-    icon: Microphone,
-    to: '/interviews',
-    permission: 'app:interview:read',
-    accentColor: 'linear-gradient(135deg, #ff9500, #ff2d55)',
-  },
-]
-
-/** 辅助中枢工具 */
 const TOOLS: ToolEntry[] = [
   {
     title: '知识库中枢',
     tag: '私域资产',
-    desc: '上传专属技术笔记、面经真题与公司业务资料，毫秒级向量化切片沉淀。',
+    desc: '上传专属技术笔记、面经真题与公司业务资料，毫秒级向量化切片沉淀为私域知识图谱。',
     features: ['支持 PDF / DOCX / MD 批量入库', '智能文本语义分块与高维向量化'],
     icon: Collection,
     to: '/knowledge',
@@ -110,8 +250,8 @@ const TOOLS: ToolEntry[] = [
   {
     title: 'AI 智能问答',
     tag: 'RAG 溯源',
-    desc: '基于你的专属知识库发起对话，每一条回答精准溯源到原文段落与引用依据。',
-    features: ['融合混合向量与全文检索', '拒绝模型幻觉·段落级可信溯源'],
+    desc: '基于你的专属知识库发起对话，每一条回答精准溯源到原文段落与引用依据，拒绝幻觉。',
+    features: ['融合混合向量与全文检索', '拒绝模型幻觉 · 段落级可信溯源'],
     icon: ChatDotRound,
     to: '/chat',
     permission: 'app:rag:search',
@@ -130,15 +270,25 @@ const TOOLS: ToolEntry[] = [
   },
 ]
 
-/** 平台核心优势与差异化特点 */
+/* ========== 平台核心优势 ========== */
+
+interface Differentiator {
+  icon: Component
+  badge: string
+  title: string
+  vsTraditional: string
+  mindforgeAdvantage: string
+  accentColor: string
+}
+
 const DIFFERENTIATORS: Differentiator[] = [
   {
     icon: Lightning,
     badge: '闭环飞轮',
-    title: '从割裂准备到三步闭环',
+    title: '从割裂准备到全链路闭环',
     vsTraditional: '传统求职平台或普通改简历工具只做单点，简历、职位要求与面试题目完全脱节。',
     mindforgeAdvantage:
-      'MindForge 将简历优化、JD 解析与模拟面试紧密串联，以目标岗位为导向持续迭代简历，形成求职能力闭环飞轮。',
+      'MindForge 将简历优化、JD 解析、投递管控与模拟面试紧密串联，以目标岗位为导向持续迭代求职能力，形成闭环飞轮。',
     accentColor: '#007aff',
   },
   {
@@ -160,15 +310,35 @@ const DIFFERENTIATORS: Differentiator[] = [
     accentColor: '#30b0c7',
   },
   {
+    icon: TrendCharts,
+    badge: '闭环复盘',
+    title: '错题本驱动薄弱点精准攻克',
+    vsTraditional: '传统刷题平台千人一面推题，面试完没有错题归集，不知道哪里薄弱、无法精准补强。',
+    mindforgeAdvantage:
+      'AI 自动归集每场面试失分题，按知识分类标注薄弱点，支持单题重练并追踪刷分进阶轨迹，真正做到面试复盘闭环。',
+    accentColor: '#ff2d55',
+  },
+  {
+    icon: EditPen,
+    badge: '一键精修',
+    title: 'AI 简历精修 + 专业 PDF 导出',
+    vsTraditional: '自己改简历没方向，花钱找人改等几天才反馈一版，来回沟通效率极低且不可控。',
+    mindforgeAdvantage:
+      'AI 逐段生成量化改写建议，一键采纳实时更新，所见即所得预览后 A4 排版 PDF 一键导出，秒级完成简历精修全流程。',
+    accentColor: '#ff9500',
+  },
+  {
     icon: Lock,
     badge: '隐私沙箱',
     title: '求职资产私有隔离与数据零泄露',
     vsTraditional: '传统招聘工具或公开 AI 会将你的简历、经历沉淀为公开训练数据，求职意向存在向现公司或第三方泄露的风险。',
     mindforgeAdvantage:
       '个人简历、意向 JD 与问答面经全程处于专属隔离沙箱中，严格遵循企业级私有加密存储，绝不参与公网模型训练，坚决守护求职隐私。',
-    accentColor: '#ff9500',
+    accentColor: '#636366',
   },
 ]
+
+/* ========== 可见性过滤 ========== */
 
 const visibleFlowSteps = computed(() =>
   FLOW_STEPS.filter((s) => !s.permission || auth.can(s.permission)),
@@ -176,7 +346,8 @@ const visibleFlowSteps = computed(() =>
 
 const visibleTools = computed(() => TOOLS.filter((t) => !t.permission || auth.can(t.permission)))
 
-/** 按时间段问候 */
+/* ========== 问候语 ========== */
+
 const greeting = computed(() => {
   const h = new Date().getHours()
   if (h < 6) return '夜深了'
@@ -189,7 +360,7 @@ const greeting = computed(() => {
 
 <template>
   <div class="ws">
-    <!-- ---------- 顶部仪表控制台 ---------- -->
+    <!-- ========== 顶部仪表控制台 ========== -->
     <header class="ws__hero mf-glass-card-interactive">
       <div class="ws__hero-left">
         <div class="ws__badge-bar">
@@ -209,8 +380,8 @@ const greeting = computed(() => {
         <h1 class="ws__hello">{{ greeting }}，{{ auth.displayName || '求职探索者' }}</h1>
         <p class="ws__sub">
           欢迎使用 <strong>MindForge AI</strong> ——
-          新一代沉浸式 AI 求职备战中枢。告别死记硬背与盲目海投，构建「简历打磨 ➔ 职位对齐 ➔
-          真实模拟」的全链路求职能力壁垒。
+          新一代沉浸式 AI 求职备战中枢。从简历精修到投递管控、从模拟面试到错题复盘，构建「简历打磨 ➔
+          投递追踪 ➔ 实战模拟 ➔ 闭环复盘」的全链路求职能力壁垒。
         </p>
       </div>
 
@@ -221,13 +392,39 @@ const greeting = computed(() => {
             <span class="tip-card__title">高效通关建议</span>
           </div>
           <p class="tip-card__body">
-            建议先上传简历并录入目标 JD，AI 面试官将精准锚定二者的交集展开针对性出题。
+            建议先上传简历并录入目标 JD，AI
+            将自动完成匹配诊断并基于交集精准出题。面试后的错题会自动归入错题本，随时刷分攻克薄弱点。
           </p>
         </div>
       </div>
     </header>
 
-    <!-- ---------- 核心流程 3 步闭环 ---------- -->
+    <!-- ========== 实时数据仪表盘 ========== -->
+    <section class="ws__section">
+      <div class="section__header">
+        <div class="section__title-wrap">
+          <div class="section__tag-row">
+            <h2 class="section__title">数据总览</h2>
+            <span class="pipeline-badge">实时统计</span>
+          </div>
+          <span class="section__sub">你的求职进展一目了然，数据实时同步更新</span>
+        </div>
+      </div>
+
+      <div v-loading="statsLoading" class="metrics-grid">
+        <div v-for="m in METRICS" :key="m.key" class="metric-card mf-glass-card-interactive">
+          <div class="metric-card__icon" :style="{ background: m.color }">
+            <el-icon><component :is="m.icon" /></el-icon>
+          </div>
+          <div class="metric-card__body">
+            <span class="metric-card__value">{{ stats[m.key] ?? 0 }}</span>
+            <span class="metric-card__label">{{ m.label }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 核心流程 3 步闭环 ========== -->
     <section class="ws__section">
       <div class="section__header">
         <div class="section__title-wrap">
@@ -279,7 +476,54 @@ const greeting = computed(() => {
       </div>
     </section>
 
-    <!-- ---------- 辅助智囊与知识中枢 ---------- -->
+    <!-- ========== 三大新功能亮点 ========== -->
+    <section v-if="visibleSpotlights.length" class="ws__section">
+      <div class="section__header">
+        <div class="section__title-wrap">
+          <div class="section__tag-row">
+            <h2 class="section__title">新功能亮点</h2>
+            <span class="spotlight-badge">全新上线</span>
+          </div>
+          <span class="section__sub">
+            三大重磅能力，覆盖简历精修、投递管控与面试复盘全场景
+          </span>
+        </div>
+      </div>
+
+      <div class="spotlight-grid">
+        <router-link
+          v-for="f in visibleSpotlights"
+          :key="f.title"
+          :to="f.to"
+          class="spotlight-card mf-glass-card-interactive"
+        >
+          <div class="spotlight-card__left">
+            <div class="spotlight-card__icon-wrap" :style="{ background: f.gradient }">
+              <el-icon><component :is="f.icon" /></el-icon>
+            </div>
+          </div>
+
+          <div class="spotlight-card__body">
+            <div class="spotlight-card__head">
+              <h3 class="spotlight-card__title">{{ f.title }}</h3>
+              <span class="spotlight-card__subtitle">{{ f.subtitle }}</span>
+            </div>
+            <p class="spotlight-card__desc">{{ f.desc }}</p>
+            <div class="spotlight-card__tags">
+              <span v-for="t in f.tags" :key="t" class="spotlight-tag" :style="{ color: f.accentColor, borderColor: f.accentColor }">
+                {{ t }}
+              </span>
+            </div>
+          </div>
+
+          <div class="spotlight-card__arrow">
+            <el-icon><ArrowRight /></el-icon>
+          </div>
+        </router-link>
+      </div>
+    </section>
+
+    <!-- ========== 辅助智囊与知识中枢 ========== -->
     <section class="ws__section">
       <div class="section__header">
         <div class="section__title-wrap">
@@ -324,7 +568,7 @@ const greeting = computed(() => {
       </div>
     </section>
 
-    <!-- ---------- 平台特色与差异化展示（为什么选择 MindForge AI） ---------- -->
+    <!-- ========== 平台特色与差异化展示 ========== -->
     <section class="ws__section ws__section--features">
       <div class="section__header">
         <div class="section__title-wrap">
@@ -333,7 +577,7 @@ const greeting = computed(() => {
             <span class="differentiator-badge">核心技术与差异化优势</span>
           </div>
           <span class="section__sub">
-            对比传统求职招聘平台与泛通用 AI 助手，我们为技术求职者量身打造的四大专精能力
+            对比传统求职招聘平台与泛通用 AI 助手，我们为技术求职者量身打造的六大专精能力
           </span>
         </div>
       </div>
@@ -490,6 +734,73 @@ const greeting = computed(() => {
   color: var(--mf-text-secondary);
 }
 
+/* ---------- 实时数据仪表盘 ---------- */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  min-height: 80px;
+}
+
+@media (width <= 1040px) {
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (width <= 640px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--mf-radius-lg);
+}
+
+.metric-card__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  color: #fff;
+  border-radius: var(--mf-radius-md);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 12%);
+  transition: transform var(--mf-duration-fast) var(--mf-ease-spring);
+}
+
+.metric-card:hover .metric-card__icon {
+  transform: scale(1.08);
+}
+
+.metric-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metric-card__value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-family: var(--mf-font-mono, monospace);
+  color: var(--mf-text-primary);
+  line-height: 1.1;
+}
+
+.metric-card__label {
+  font-size: 11px;
+  color: var(--mf-text-tertiary);
+  white-space: nowrap;
+}
+
 /* ---------- 分区排版 ---------- */
 .ws__section {
   display: flex;
@@ -528,7 +839,8 @@ const greeting = computed(() => {
 }
 
 .pipeline-badge,
-.differentiator-badge {
+.differentiator-badge,
+.spotlight-badge {
   display: inline-flex;
   padding: 3px 12px;
   font-size: var(--mf-font-xs);
@@ -543,11 +855,16 @@ const greeting = computed(() => {
   background-color: rgb(175 82 222 / 12%);
 }
 
-/* ---------- 核心闭环 3 列卡片（增加缝隙与呼吸感） ---------- */
+.spotlight-badge {
+  color: #ff9500;
+  background-color: rgb(255 149 0 / 12%);
+}
+
+/* ---------- 核心闭环 3 列卡片 ---------- */
 .pipeline-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px; /* 彻底修复间距过挤问题，留出充足缝隙 */
+  gap: 24px;
 }
 
 @media (width <= 960px) {
@@ -563,7 +880,7 @@ const greeting = computed(() => {
   text-decoration: none;
   color: inherit;
   border-radius: var(--mf-radius-xl);
-  min-height: 310px;
+  min-height: 340px;
 }
 
 .step-card__top {
@@ -681,7 +998,120 @@ const greeting = computed(() => {
   color: var(--mf-primary-text);
 }
 
-/* ---------- 辅助工具网格（重构更精致） ---------- */
+/* ---------- 三大新功能亮点 ---------- */
+.spotlight-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spotlight-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 24px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--mf-radius-xl);
+  transition: transform var(--mf-duration-fast) var(--mf-ease-spring);
+}
+
+.spotlight-card:hover {
+  transform: translateY(-2px);
+}
+
+.spotlight-card__left {
+  flex: none;
+}
+
+.spotlight-card__icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+  color: #fff;
+  border-radius: var(--mf-radius-lg);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 15%);
+  transition: transform var(--mf-duration-fast) var(--mf-ease-spring);
+}
+
+.spotlight-card:hover .spotlight-card__icon-wrap {
+  transform: scale(1.08) rotate(3deg);
+}
+
+.spotlight-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.spotlight-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.spotlight-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.spotlight-card__subtitle {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mf-text-secondary);
+  background-color: var(--mf-glass-tint-strong);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-pill);
+}
+
+.spotlight-card__desc {
+  margin: 0 0 10px;
+  font-size: var(--mf-font-xs);
+  line-height: 1.55;
+  color: var(--mf-text-secondary);
+}
+
+.spotlight-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spotlight-tag {
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 500;
+  border: 1px solid;
+  border-radius: var(--mf-radius-pill);
+}
+
+.spotlight-card__arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  color: var(--mf-text-tertiary);
+  background-color: var(--mf-glass-tint-strong);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: 50%;
+  transition:
+    transform var(--mf-duration-fast) var(--mf-ease-spring),
+    color var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+.spotlight-card:hover .spotlight-card__arrow {
+  transform: translateX(4px);
+  color: var(--mf-primary-text);
+}
+
+/* ---------- 辅助工具网格 ---------- */
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -816,10 +1246,10 @@ const greeting = computed(() => {
   transform: translateX(4px);
 }
 
-/* ---------- 平台特色差异化网格（4 列横展） ---------- */
+/* ---------- 平台特色差异化网格（3x2 布局） ---------- */
 .diff-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
 
