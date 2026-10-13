@@ -16,6 +16,7 @@ import { interviewApi } from '@/api/interview'
 import InterviewAnalysisView from '@/components/InterviewAnalysisView.vue'
 import { useSlowTask } from '@/composables/useSlowTask'
 import { useThemeStore } from '@/stores/theme'
+import { renderMarkdown } from '@/utils/markdown'
 
 const theme = useThemeStore()
 
@@ -594,7 +595,11 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <p v-if="report.reportText" class="report__text">{{ report.reportText }}</p>
+              <div
+                v-if="report.reportText"
+                class="report__text md"
+                v-html="renderMarkdown(report.reportText)"
+              />
               <p class="report__time">评估生成于 {{ formatDateTime(report.createdAt) }}</p>
             </div>
 

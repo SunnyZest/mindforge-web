@@ -31,15 +31,15 @@ const query = reactive({
   page: 1,
   pageSize: 10,
   keyword: '',
-  knowledgeBaseId: undefined as number | undefined,
+  knowledgeBaseId: undefined as string | undefined,
   status: undefined as string | undefined,
   sortBy: undefined as string | undefined,
   sortOrder: undefined as 'asc' | 'desc' | undefined,
 })
 
-// 知识库页点「文档」跳过来会带 `?kbId=xxx` —— 进来就是筛好的
-const kbIdFromRoute = Number(route.query.kbId)
-if (Number.isFinite(kbIdFromRoute) && kbIdFromRoute > 0) {
+// 知识库页点「文档」跳过来会带 `?kbId=xxx` —— 保持字符串，防止 19 位雪花 ID 经 Number() 丢失精度
+const kbIdFromRoute = typeof route.query.kbId === 'string' ? route.query.kbId.trim() : ''
+if (/^\d+$/.test(kbIdFromRoute)) {
   query.knowledgeBaseId = kbIdFromRoute
 }
 
@@ -112,16 +112,12 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
   const { silent = false } = options
   if (!silent) loading.value = true
   try {
-    /**
-     * 知识库 ID 输入框绑的是 `v-model.number`，但**清空后运行时值是空串**不是 undefined
-     * （.number 对空串不做转换）。不挡一下的话会拼出 `knowledgeBaseId=` 发给后端。
-     */
-    const kbId = query.knowledgeBaseId
+    const kbId = typeof query.knowledgeBaseId === 'string' ? query.knowledgeBaseId.trim() : ''
     const data = await documentApi.page({
       page: query.page,
       pageSize: query.pageSize,
       keyword: query.keyword.trim() || undefined,
-      knowledgeBaseId: typeof kbId === 'number' && Number.isFinite(kbId) ? kbId : undefined,
+      knowledgeBaseId: /^\d+$/.test(kbId) ? kbId : undefined,
       status: query.status,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
@@ -217,6 +213,7 @@ async function onRetry(row: AdminDocumentVO): Promise<void> {
     await documentApi.retry(row.documentId)
     ElMessage.success('已重新提交处理')
     await load()
+    resume()
   } catch (e) {
     fail(e, '重试失败')
   }
@@ -261,6 +258,7 @@ async function onBatchRetry(): Promise<void> {
     ElMessage.success(`已重新提交 ${count} 篇文档进入处理流水线`)
     clearSelection()
     await load()
+    resume()
   } catch (e) {
     fail(e, '批量重试失败')
   }
@@ -327,6 +325,10 @@ async function submitUpload(): Promise<void> {
     ElMessage.warning('请选择要上传的文件')
     return
   }
+  if (uploadForm.file.size === 0) {
+    ElMessage.warning('不能上传空文件（0 字节）')
+    return
+  }
   uploadSubmitting.value = true
   try {
     await documentApi.upload(
@@ -337,6 +339,7 @@ async function submitUpload(): Promise<void> {
     ElMessage.success('上传成功，已提交异步解析向量化流水线')
     uploadVisible.value = false
     await load()
+    resume()
   } catch (e) {
     fail(e, '上传失败')
   } finally {
@@ -400,10 +403,12 @@ onMounted(() => {
         @clear="onSearch"
       />
       <el-input
-        v-model.number="query.knowledgeBaseId"
+        v-model="query.knowledgeBaseId"
         placeholder="知识库 ID"
+        clearable
         class="filters__kb"
         @keyup.enter="onSearch"
+        @clear="onSearch"
       />
       <el-select v-model="query.status" placeholder="总状态" clearable class="filters__select">
         <el-option v-for="(text, value) in STATUS_TEXT" :key="value" :label="text" :value="value" />

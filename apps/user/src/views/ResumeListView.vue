@@ -85,6 +85,10 @@ async function onFileChange(event: Event): Promise<void> {
   //    （浏览器认为值没变），用户会以为按钮坏了。
   input.value = ''
   if (!file) return
+  if (file.size === 0) {
+    ElMessage.warning('不能上传空文件（0 字节）')
+    return
+  }
 
   uploading.value = true
   try {
@@ -108,6 +112,7 @@ async function onParse(row: ResumeVO): Promise<void> {
     await resumeApi.parse(row.id)
     ElMessage.success('已提交解析，稍等片刻')
     await load()
+    resume()
   } catch (e) {
     fail(e, '提交解析失败')
   } finally {

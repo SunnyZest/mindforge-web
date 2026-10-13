@@ -143,14 +143,20 @@ async function onFileChange(event: Event): Promise<void> {
   input.value = ''
   if (!files.length) return
 
+  const validFiles = files.filter((f) => f.size > 0)
+  if (!validFiles.length) {
+    ElMessage.warning('不能上传空文件（0 字节）')
+    return
+  }
+
   uploading.value = true
   try {
-    if (files.length === 1) {
-      await knowledgeApi.uploadDocument(id.value, files[0])
+    if (validFiles.length === 1) {
+      await knowledgeApi.uploadDocument(id.value, validFiles[0])
       ElMessage.success('已上传，正在后台处理（解析 → 分块 → 向量）')
     } else {
       const results = await Promise.allSettled(
-        files.map((file) => knowledgeApi.uploadDocument(id.value, file)),
+        validFiles.map((file) => knowledgeApi.uploadDocument(id.value, file)),
       )
       const successCount = results.filter((r) => r.status === 'fulfilled').length
       const failCount = results.length - successCount
@@ -161,6 +167,7 @@ async function onFileChange(event: Event): Promise<void> {
       }
     }
     await load()
+    resume()
   } catch (e) {
     fail(e, '上传失败')
   } finally {
@@ -193,6 +200,7 @@ async function onBatchRetry(): Promise<void> {
     ElMessage.success(`已重新提交 ${successCount} 篇文档进入流水线处理`)
     clearSelection()
     await load()
+    resume()
   } catch (e) {
     fail(e, '批量重试失败')
   } finally {

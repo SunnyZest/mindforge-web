@@ -249,6 +249,17 @@ async function onSend(): Promise<void> {
         },
         onError: (e) => {
           ElMessage.error(e.message || '生成回答失败')
+          if (streamingText.value) {
+            messages.value.push({
+              messageId: `partial-${Date.now()}`,
+              role: 'ASSISTANT',
+              content: `${streamingText.value}\n\n（生成中断：${e.message || '服务异常'}）`,
+              modelName: null,
+              sources: streamingSources.value,
+              createdAt: new Date().toISOString(),
+            })
+            streamingText.value = ''
+          }
         },
       },
       abortController.signal,

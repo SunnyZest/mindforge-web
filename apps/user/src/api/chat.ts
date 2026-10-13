@@ -1,19 +1,20 @@
-import type {
-  ChatStreamDeltaEvent,
-  ChatStreamDoneEvent,
-  ChatStreamErrorEvent,
-  ChatStreamSourcesEvent,
-  ConversationDetailVO,
-  ConversationVO,
-  CreateConversationDTO,
-  PageQuery,
-  PageResult,
-  PromptOptionVO,
-  RagFeedbackDTO,
-  RagSearchDTO,
-  RagSearchResultVO,
-  SendMessageDTO,
-  SendMessageResultVO,
+import {
+  BizError,
+  type ChatStreamDeltaEvent,
+  type ChatStreamDoneEvent,
+  type ChatStreamErrorEvent,
+  type ChatStreamSourcesEvent,
+  type ConversationDetailVO,
+  type ConversationVO,
+  type CreateConversationDTO,
+  type PageQuery,
+  type PageResult,
+  type PromptOptionVO,
+  type RagFeedbackDTO,
+  type RagSearchDTO,
+  type RagSearchResultVO,
+  type SendMessageDTO,
+  type SendMessageResultVO,
 } from '@mindforge/shared'
 
 import { http, tokenStore } from './index'
@@ -105,12 +106,15 @@ export async function streamChat(
   }
 
   if (!res.ok || !res.body) {
-    throw new Error(`连接失败（HTTP ${res.status}）`)
+    const body = (await res.json().catch(() => null)) as { code?: number; message?: string } | null
+    throw new BizError(body?.code ?? res.status, body?.message || `连接失败（HTTP ${res.status}）`)
   }
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
+  let receivedDone = false
+  let receivedError = false
 
   /**
    * 解析一个 SSE 帧。
@@ -137,8 +141,13 @@ export async function streamChat(
       const payload = JSON.parse(data)
       if (event === 'sources') handlers.onSources?.(payload as ChatStreamSourcesEvent)
       else if (event === 'delta') handlers.onDelta?.(payload as ChatStreamDeltaEvent)
-      else if (event === 'done') handlers.onDone?.(payload as ChatStreamDoneEvent)
-      else if (event === 'error') handlers.onError?.(payload as ChatStreamErrorEvent)
+      else if (event === 'done') {
+        receivedDone = true
+        handlers.onDone?.(payload as ChatStreamDoneEvent)
+      } else if (event === 'error') {
+        receivedError = true
+        handlers.onError?.(payload as ChatStreamErrorEvent)
+      }
       // 其它事件名忽略 —— 后端将来加新事件时前端不至于崩
     } catch {
       // 单帧解析失败不该中断整条流（比如心跳帧、或者被截断的一帧）
@@ -162,6 +171,10 @@ export async function streamChat(
     }
     // 流结束了但缓冲区还有残留（最后一帧没有以空行结尾）
     if (buffer.trim()) handleFrame(buffer)
+
+    if (!receivedDone && !receivedError && !signal?.aborted) {
+      handlers.onError?.({ code: 50001, message: '流式连接意外中断，回答未完成', traceId: null })
+    }
   } finally {
     // 用户取消 / 出错时把连接释放掉，别留着
     reader.cancel().catch(() => {})
