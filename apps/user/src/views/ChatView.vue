@@ -351,7 +351,7 @@ onUnmounted(() => abortController?.abort())
           <div class="conv__main">
             <span class="conv__title">{{ c.title }}</span>
             <span class="conv__meta">
-              {{ c.knowledgeBaseId ? '📚 知识库' : '🤖 通用顾问' }} · {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
+              {{ c.knowledgeBaseId ? '📚 私域+🌐官方双路' : '🤖 通用顾问' }} · {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
             </span>
           </div>
           <el-button
@@ -433,7 +433,7 @@ onUnmounted(() => abortController?.abort())
               <!-- 检索阶段：还没吐字，先说明在干什么 -->
               <p v-if="retrieving && !streamingText" class="msg__thinking">
                 <el-icon class="is-loading"><Loading /></el-icon>
-                正在检索知识库…
+                {{ activeConv?.knowledgeBaseId ? '正在双路联合检索（个人知识库 + 全站官方智库）…' : '正在思考回答…' }}
               </p>
               <template v-else>
                 <div class="msg__text md">
@@ -555,6 +555,9 @@ onUnmounted(() => abortController?.abort())
               </div>
             </el-option>
           </el-select>
+          <p v-if="newForm.knowledgeBaseId" style="margin: 6px 0 0; font-size: 12px; color: var(--mf-text-tertiary); line-height: 1.5;">
+            🌐 双路检索已开启：提问时将同时检索当前所选知识库与全站官方智库，并经 Rerank 联合精排。
+          </p>
         </el-form-item>
 
         <el-form-item label="标题">

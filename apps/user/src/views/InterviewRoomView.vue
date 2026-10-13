@@ -348,7 +348,7 @@ onUnmounted(() => {
         <p class="head__meta">
           <template v-if="detail">
             {{ TYPE_TEXT[detail.interviewType] ?? detail.interviewType }} ·
-            {{ DIFF_TEXT[detail.difficulty] ?? detail.difficulty }}
+            {{ DIFF_TEXT[detail.difficulty] ?? detail.difficulty }} · 🌐 官方智库真题增强
             <template v-if="questions.length">
               · 已答 {{ answeredCount }}/{{ questions.length }}</template
             >
@@ -384,7 +384,7 @@ onUnmounted(() => {
         <p class="waiting__title">
           {{
             generateTask.running.value
-              ? `正在出题，已经等了 ${generateTask.elapsed.value} 秒`
+              ? `正在检索官方智库真题并定制考卷，已经等了 ${generateTask.elapsed.value} 秒`
               : answerTask.running.value
                 ? `正在评分，已经等了 ${answerTask.elapsed.value} 秒`
                 : `正在生成报告，已经等了 ${finishTask.elapsed.value} 秒`
@@ -425,7 +425,9 @@ onUnmounted(() => {
       </template>
 
       <template v-else>
-        <p class="pane__text">点下面的按钮让 AI 按你的简历和目标岗位出题。这一步要等一会儿。</p>
+        <p class="pane__text">
+          点下面的按钮让 AI 结合你的简历、目标岗位及 🌐 全站官方智库高频真题为你出题。这一步要等一会儿。
+        </p>
         <el-button
           type="primary"
           :icon="MagicStick"

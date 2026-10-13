@@ -186,7 +186,10 @@ async function onSubmit(): Promise<void> {
         「简历和 JD 至少要提供一个，否则出的题和候选人无关」——
         只建得出、出不了题就是死路，所以在这里先挡住。
       -->
-      <p class="hint hint--top">简历和职位至少选一个 —— 两个都不给的话 AI 没法出和你相关的题。</p>
+      <p class="hint hint--top">
+        简历和职位至少选一个 —— AI 将结合您的经历与目标岗位，并自动从
+        <strong>🌐 全站官方智库</strong> 检索匹配的大厂高频真题与考核标准为您定制考卷。
+      </p>
 
       <el-form-item label="面试类型">
         <el-radio-group v-model="form.interviewType">

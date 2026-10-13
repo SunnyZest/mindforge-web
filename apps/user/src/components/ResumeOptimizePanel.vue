@@ -102,7 +102,9 @@ async function copy(text: string | null): Promise<void> {
             有 {{ result.needsFactCount }} 处需要你补充事实
           </span>
         </h2>
-        <p class="opt__sub">只给建议，不会改你的简历。满意的那条自己复制回去改。</p>
+        <p class="opt__sub">
+          已接入 🌐 全站官方智库行业标杆参考。只给建议，不会改你的简历，满意的那条自己复制回去改。
+        </p>
       </div>
 
       <div class="opt__actions">
