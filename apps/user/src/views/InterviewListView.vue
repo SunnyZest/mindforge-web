@@ -1,14 +1,24 @@
 <script setup lang="ts">
-import { Plus, Delete, Microphone, Right } from '@element-plus/icons-vue'
+import { Plus, Delete, Microphone, Right, Notebook } from '@element-plus/icons-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { BizError, formatDateTime, type InterviewStatus, type InterviewVO } from '@mindforge/shared'
+import {
+  BizError,
+  formatDateTime,
+  type InterviewMistakeStatsVO,
+  type InterviewStatus,
+  type InterviewVO,
+} from '@mindforge/shared'
 
 import { interviewApi } from '@/api/interview'
 import InterviewCreateDialog from '@/components/InterviewCreateDialog.vue'
+import InterviewMistakeBook from '@/components/InterviewMistakeBook.vue'
 
 const router = useRouter()
+
+const activeView = ref<'interviews' | 'mistakes'>('interviews')
+const weakCountBadge = ref(0)
 
 const loading = ref(false)
 const rows = ref<InterviewVO[]>([])
@@ -182,136 +192,175 @@ const FILTERS: { label: string; value?: InterviewStatus }[] = [
   { label: '已完成', value: 'FINISHED' },
 ]
 
-onMounted(load)
+async function loadMistakeBadge(): Promise<void> {
+  try {
+    const s = await interviewApi.mistakeStats()
+    weakCountBadge.value = s.weakCount
+  } catch {
+    // 忽略统计角标错误
+  }
+}
+
+function onMistakeStatsLoaded(s: InterviewMistakeStatsVO): void {
+  weakCountBadge.value = s.weakCount
+}
+
+onMounted(() => {
+  void load()
+  void loadMistakeBadge()
+})
 </script>
 
 <template>
   <div class="page">
     <header class="page__head">
       <div>
-        <h1 class="page__title">模拟面试</h1>
-        <p class="page__sub">按你的简历和目标岗位出题，答完逐题点评 + 一份总报告</p>
+        <h1 class="page__title">模拟面试与错题特训</h1>
+        <p class="page__sub">
+          按你的简历和目标岗位出题，答完逐题点评 + 自动归集薄弱错题反复重练刷分
+        </p>
       </div>
 
       <div class="page__actions">
-        <el-button :type="batchMode ? 'primary' : 'default'" @click="toggleBatchMode">
+        <el-button
+          :type="activeView === 'mistakes' ? 'warning' : 'default'"
+          :icon="Notebook"
+          @click="activeView = activeView === 'mistakes' ? 'interviews' : 'mistakes'"
+        >
+          {{ activeView === 'mistakes' ? '返回面试列表' : '错题本与薄弱点重练' }}
+          <span v-if="weakCountBadge > 0 && activeView !== 'mistakes'" class="weak-pill">
+            {{ weakCountBadge }}
+          </span>
+        </el-button>
+        <el-button
+          v-if="activeView === 'interviews'"
+          :type="batchMode ? 'primary' : 'default'"
+          @click="toggleBatchMode"
+        >
           {{ batchMode ? '退出批量' : '批量管理' }}
         </el-button>
         <el-button type="primary" :icon="Plus" @click="createVisible = true">新建面试</el-button>
       </div>
     </header>
 
-    <div class="tabs">
-      <button
-        v-for="f in FILTERS"
-        :key="f.label"
-        type="button"
-        class="tabs__item"
-        :class="{ 'tabs__item--on': query.status === f.value }"
-        @click="onFilter(f.value)"
-      >
-        {{ f.label }}
-      </button>
-    </div>
+    <InterviewMistakeBook
+      v-if="activeView === 'mistakes'"
+      @stats-loaded="onMistakeStatsLoaded"
+    />
 
-    <div v-if="batchMode" class="batch-bar">
-      <span class="batch-bar__tip">
-        已选择 <strong>{{ selectedIds.length }}</strong> / {{ rows.length }} 场面试
-      </span>
-      <div class="batch-bar__actions">
-        <el-button size="small" @click="selectAll">全选本页</el-button>
-        <el-button size="small" @click="clearSelection">清空已选</el-button>
-        <el-button
-          type="danger"
-          size="small"
-          :disabled="selectedIds.length === 0"
-          :loading="batchDeleting"
-          @click="onBatchDelete"
+    <template v-else>
+      <div class="tabs">
+        <button
+          v-for="f in FILTERS"
+          :key="f.label"
+          type="button"
+          class="tabs__item"
+          :class="{ 'tabs__item--on': query.status === f.value }"
+          @click="onFilter(f.value)"
         >
-          批量删除
-        </el-button>
+          {{ f.label }}
+        </button>
       </div>
-    </div>
 
-    <div v-loading="loading" class="grid">
-      <article
-        v-for="it in rows"
-        :key="it.id"
-        class="card"
-        :class="{ 'card--selected': selectedIds.includes(it.id), 'card--selectable': batchMode }"
-        @click="batchMode ? toggleSelect(it.id) : undefined"
-      >
-        <div v-if="batchMode" class="card__select">
-          <el-checkbox
-            :model-value="selectedIds.includes(it.id)"
-            @click.stop
-            @change="(val: unknown) => onCardCheck(it.id, val)"
-          />
+      <div v-if="batchMode" class="batch-bar">
+        <span class="batch-bar__tip">
+          已选择 <strong>{{ selectedIds.length }}</strong> / {{ rows.length }} 场面试
+        </span>
+        <div class="batch-bar__actions">
+          <el-button size="small" @click="selectAll">全选本页</el-button>
+          <el-button size="small" @click="clearSelection">清空已选</el-button>
+          <el-button
+            type="danger"
+            size="small"
+            :disabled="selectedIds.length === 0"
+            :loading="batchDeleting"
+            @click="onBatchDelete"
+          >
+            批量删除
+          </el-button>
         </div>
-        <div class="card__head">
-          <el-icon class="card__icon"><Microphone /></el-icon>
-          <div class="card__main">
-            <button type="button" class="card__name" @click="openRoom(it)">{{ it.title }}</button>
-            <span class="card__meta">
-              {{ TYPE_TEXT[it.interviewType] ?? it.interviewType }} ·
-              {{ DIFF_TEXT[it.difficulty] ?? it.difficulty }}
-              <template v-if="it.questionCount"> · {{ it.questionCount }} 道题</template>
-            </span>
-          </div>
-          <span class="tag" :class="`tag--${STATUS_TONE[it.status]}`">
-            {{ STATUS_TEXT[it.status] ?? it.status }}
-          </span>
-        </div>
+      </div>
 
-        <!-- 进度条：进行中的面试最需要知道「还剩几题」 -->
-        <div v-if="it.status === 'IN_PROGRESS' && it.questionCount" class="progress">
-          <div class="progress__bar">
-            <div
-              class="progress__fill"
-              :style="{ width: ((it.answeredCount ?? 0) / it.questionCount) * 100 + '%' }"
+      <div v-loading="loading" class="grid">
+        <article
+          v-for="it in rows"
+          :key="it.id"
+          class="card"
+          :class="{ 'card--selected': selectedIds.includes(it.id), 'card--selectable': batchMode }"
+          @click="batchMode ? toggleSelect(it.id) : undefined"
+        >
+          <div v-if="batchMode" class="card__select">
+            <el-checkbox
+              :model-value="selectedIds.includes(it.id)"
+              @click.stop
+              @change="(val: unknown) => onCardCheck(it.id, val)"
             />
           </div>
-          <span class="progress__text">{{ it.answeredCount ?? 0 }} / {{ it.questionCount }}</span>
-        </div>
+          <div class="card__head">
+            <el-icon class="card__icon"><Microphone /></el-icon>
+            <div class="card__main">
+              <button type="button" class="card__name" @click="openRoom(it)">{{ it.title }}</button>
+              <span class="card__meta">
+                {{ TYPE_TEXT[it.interviewType] ?? it.interviewType }} ·
+                {{ DIFF_TEXT[it.difficulty] ?? it.difficulty }}
+                <template v-if="it.questionCount"> · {{ it.questionCount }} 道题</template>
+              </span>
+            </div>
+            <span class="tag" :class="`tag--${STATUS_TONE[it.status]}`">
+              {{ STATUS_TEXT[it.status] ?? it.status }}
+            </span>
+          </div>
 
-        <p class="card__foot-line">
-          <span v-if="it.averageScore !== null" class="card__score">
-            平均 {{ it.averageScore }} 分
-          </span>
-          <span class="card__time">{{ formatDateTime(it.createdAt) }}</span>
-        </p>
+          <!-- 进度条：进行中的面试最需要知道「还剩几题」 -->
+          <div v-if="it.status === 'IN_PROGRESS' && it.questionCount" class="progress">
+            <div class="progress__bar">
+              <div
+                class="progress__fill"
+                :style="{ width: ((it.answeredCount ?? 0) / it.questionCount) * 100 + '%' }"
+              />
+            </div>
+            <span class="progress__text">{{ it.answeredCount ?? 0 }} / {{ it.questionCount }}</span>
+          </div>
 
-        <div class="card__foot">
-          <el-button size="small" type="primary" :icon="Right" @click="openRoom(it)">
-            {{
-              it.status === 'FINISHED'
-                ? '看报告'
-                : it.status === 'IN_PROGRESS'
-                  ? '继续作答'
-                  : '开始'
-            }}
-          </el-button>
-          <el-button size="small" text type="danger" :icon="Delete" @click="onRemove(it)">
-            删除
-          </el-button>
-        </div>
-      </article>
-    </div>
+          <p class="card__foot-line">
+            <span v-if="it.averageScore !== null" class="card__score">
+              平均 {{ it.averageScore }} 分
+            </span>
+            <span class="card__time">{{ formatDateTime(it.createdAt) }}</span>
+          </p>
 
-    <el-empty v-if="empty" description="还没有面试，点右上角新建一场">
-      <el-button type="primary" :icon="Plus" @click="createVisible = true">新建面试</el-button>
-    </el-empty>
+          <div class="card__foot">
+            <el-button size="small" type="primary" :icon="Right" @click="openRoom(it)">
+              {{
+                it.status === 'FINISHED'
+                  ? '看报告'
+                  : it.status === 'IN_PROGRESS'
+                    ? '继续作答'
+                    : '开始'
+              }}
+            </el-button>
+            <el-button size="small" text type="danger" :icon="Delete" @click="onRemove(it)">
+              删除
+            </el-button>
+          </div>
+        </article>
+      </div>
 
-    <el-pagination
-      v-if="total > query.pageSize"
-      v-model:current-page="query.page"
-      v-model:page-size="query.pageSize"
-      :total="total"
-      :page-sizes="[12, 24, 48]"
-      layout="total, sizes, prev, pager, next"
-      class="page__pager"
-      @change="() => load()"
-    />
+      <el-empty v-if="empty" description="还没有面试，点右上角新建一场">
+        <el-button type="primary" :icon="Plus" @click="createVisible = true">新建面试</el-button>
+      </el-empty>
+
+      <el-pagination
+        v-if="total > query.pageSize"
+        v-model:current-page="query.page"
+        v-model:page-size="query.pageSize"
+        :total="total"
+        :page-sizes="[12, 24, 48]"
+        layout="total, sizes, prev, pager, next"
+        class="page__pager"
+        @change="() => load()"
+      />
+    </template>
 
     <InterviewCreateDialog v-model="createVisible" @created="onCreated" />
   </div>
@@ -582,5 +631,20 @@ onMounted(load)
 
 .page__pager {
   justify-content: flex-end;
+}
+
+.weak-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mf-warning-text);
+  background-color: var(--mf-warning-subtle);
+  border-radius: 999px;
 }
 </style>

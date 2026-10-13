@@ -69,6 +69,7 @@ export type {
   ResumeOptimizeDTO,
   ResumeOptimizeVO,
   ResumeOptimizeItem,
+  ResumeUpdateDTO,
   // 用户端：职位 JD
   JobVO,
   JobQuery,
@@ -91,6 +92,11 @@ export type {
   InterviewAnswerDTO,
   InterviewAnswerResultVO,
   InterviewReportVO,
+  MistakeMasteryStatus,
+  InterviewMistakeStatsVO,
+  InterviewMistakeVO,
+  InterviewMistakeQuery,
+  InterviewPracticeDTO,
   // 用户端：知识库 / 文档 / 分块
   KnowledgeBaseVO,
   KnowledgeBaseCreateDTO,

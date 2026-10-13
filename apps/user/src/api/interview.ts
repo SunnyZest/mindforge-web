@@ -3,6 +3,10 @@ import type {
   InterviewAnswerResultVO,
   InterviewCreateDTO,
   InterviewDetailVO,
+  InterviewMistakeQuery,
+  InterviewMistakeStatsVO,
+  InterviewMistakeVO,
+  InterviewPracticeDTO,
   InterviewQuery,
   InterviewReportVO,
   InterviewVO,
@@ -73,4 +77,17 @@ export const interviewApi = {
   report: (id: string) => http.get<InterviewReportVO>(`/app/interviews/${id}/report`),
 
   remove: (id: string) => http.delete<void>(`/app/interviews/${id}`),
+
+  /** 错题本统计概览 */
+  mistakeStats: () => http.get<InterviewMistakeStatsVO>('/app/interviews/mistakes/stats'),
+
+  /** 错题本与薄弱点分页列表 */
+  pageMistakes: (query: InterviewMistakeQuery) =>
+    http.get<PageResult<InterviewMistakeVO>>('/app/interviews/mistakes', { params: query }),
+
+  /** 错题本单题重练刷分（慢接口，调模型重评） */
+  practiceQuestion: (questionId: string, dto: InterviewPracticeDTO) =>
+    http.post<InterviewMistakeVO>(`/app/interviews/questions/${questionId}/practice`, dto, {
+      timeout: AI_TIMEOUT,
+    }),
 }

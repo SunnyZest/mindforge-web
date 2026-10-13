@@ -583,6 +583,15 @@ export interface ResumeQuery extends PageQuery {
   parseStatus?: ResumeParseStatus
 }
 
+/** 在线精修或采纳 AI 改写后更新简历（Java 的 `ResumeUpdateDTO`） */
+export interface ResumeUpdateDTO {
+  name?: string
+  targetPosition?: string
+  summary?: string
+  rawContent?: string
+  structuredJson?: StructuredResume | null
+}
+
 // ============================================================================
 //  用户端 —— 职位 JD
 //  同样是对着源码核过的：Java 的 pojo/vo/JobVO、JobDetailVO、
@@ -852,6 +861,47 @@ export interface InterviewReportVO {
 /** 面试列表查询 */
 export interface InterviewQuery extends PageQuery {
   status?: InterviewStatus
+}
+
+/** 错题本掌握状态过滤 */
+export type MistakeMasteryStatus = 'WEAK' | 'MASTERED' | 'ALL'
+
+/** 错题本统计概览（Java 的 `InterviewMistakeStatsVO`） */
+export interface InterviewMistakeStatsVO {
+  totalAnswered: number
+  weakCount: number
+  masteredCount: number
+  averageScore: number | null
+}
+
+/** 错题本单题记录（Java 的 `InterviewMistakeVO`） */
+export interface InterviewMistakeVO {
+  questionId: string
+  interviewId: string
+  interviewTitle: string
+  interviewType: InterviewType
+  questionNo: number
+  questionType: QuestionType | null
+  difficulty: InterviewDifficulty | null
+  question: string
+  userAnswer: string | null
+  score: number | null
+  mastered: boolean
+  aiAnalysis: InterviewAnalysis | null
+  expectedPoints: string[]
+  answeredAt: string | null
+}
+
+/** 错题本分页查询 */
+export interface InterviewMistakeQuery extends PageQuery {
+  masteryStatus?: MistakeMasteryStatus
+  questionType?: QuestionType
+  difficulty?: InterviewDifficulty
+}
+
+/** 错题本单题重练请求（Java 的 `InterviewPracticeDTO`） */
+export interface InterviewPracticeDTO {
+  answer: string
 }
 
 // ============================================================================
