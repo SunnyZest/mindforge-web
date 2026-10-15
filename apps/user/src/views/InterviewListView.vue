@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus, Delete, Microphone, Right, Notebook } from '@element-plus/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import {
   BizError,
@@ -16,8 +16,18 @@ import InterviewCreateDialog from '@/components/InterviewCreateDialog.vue'
 import InterviewMistakeBook from '@/components/InterviewMistakeBook.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-const activeView = ref<'interviews' | 'mistakes'>('interviews')
+/**
+ * 当前视图：面试列表 / 错题本。
+ *
+ * 初始值跟着 `?view=mistakes` 走 —— 工作台的「待攻克错题」卡片会带这个参数跳过来，
+ * 落地直接就是错题本，不用用户再点一次「错题本与薄弱点重练」。
+ * 非法值回落列表（和 JobListView 的 view 一个处理方式）。
+ */
+const activeView = ref<'interviews' | 'mistakes'>(
+  route.query.view === 'mistakes' ? 'mistakes' : 'interviews',
+)
 const weakCountBadge = ref(0)
 
 const loading = ref(false)
@@ -208,6 +218,11 @@ function onMistakeStatsLoaded(s: InterviewMistakeStatsVO): void {
 onMounted(() => {
   void load()
   void loadMistakeBadge()
+})
+
+/** 切视图时写进 query —— 刷新后还在错题本，链接也能分享 */
+watch(activeView, (view) => {
+  void router.replace({ query: { ...route.query, view } })
 })
 </script>
 

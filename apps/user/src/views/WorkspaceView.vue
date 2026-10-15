@@ -90,16 +90,84 @@ interface MetricCard {
   key: keyof typeof stats
   /** 附加单位 */
   suffix?: string
+  /**
+   * 点击卡片跳去哪（整卡是 router-link —— 和新手引导/流程卡片一个做法，
+   * 键盘导航、中键新标签页打开都是免费的）。
+   *
+   * ⚠️ 「已获 Offer」跳【看板】而不是 /offers：卡片数字来自看板 stats
+   *    （投递进度推进到 OFFER 阶段的职位数），跳 /offers 会和数字对不上。
+   *    /offers 的入口放在看板 OFFER 列的「去对比」按钮上（见 JobKanbanBoard）。
+   */
+  to: string
+  /** 没有这个权限就不渲染这张卡 —— 没权限时后端也没数据，亮一个 0 很误导 */
+  permission: Permission
 }
 
 const METRICS: MetricCard[] = [
-  { label: '我的简历', icon: Document, color: '#007aff', key: 'resumeCount' },
-  { label: '追踪职位', icon: Briefcase, color: '#5856d6', key: 'totalTracked' },
-  { label: '投递进行', icon: Promotion, color: '#30b0c7', key: 'appliedCount' },
-  { label: '面试进行', icon: Microphone, color: '#ff9500', key: 'interviewingCount' },
-  { label: '已获 Offer', icon: Trophy, color: '#34c759', key: 'offerCount' },
-  { label: '待攻克错题', icon: TrendCharts, color: '#ff2d55', key: 'weakCount' },
+  {
+    label: '我的简历',
+    icon: Document,
+    color: '#007aff',
+    key: 'resumeCount',
+    to: '/resumes',
+    permission: 'app:resume:read',
+  },
+  {
+    label: '追踪职位',
+    icon: Briefcase,
+    color: '#5856d6',
+    key: 'totalTracked',
+    to: '/jobs?view=kanban',
+    permission: 'app:job:read',
+  },
+  {
+    label: '投递进行',
+    icon: Promotion,
+    color: '#30b0c7',
+    key: 'appliedCount',
+    to: '/jobs?view=kanban',
+    permission: 'app:job:read',
+  },
+  {
+    label: '面试进行',
+    icon: Microphone,
+    color: '#ff9500',
+    key: 'interviewingCount',
+    to: '/interviews',
+    permission: 'app:interview:read',
+  },
+  {
+    label: '已获 Offer',
+    icon: Trophy,
+    color: '#34c759',
+    key: 'offerCount',
+    to: '/jobs?view=kanban',
+    permission: 'app:job:read',
+  },
+  {
+    // ★ 带 ?view=mistakes：InterviewListView 读到就直接展开错题本，
+    //   不用用户落地后再点一次「错题本与薄弱点重练」
+    label: '待攻克错题',
+    icon: TrendCharts,
+    color: '#ff2d55',
+    key: 'weakCount',
+    to: '/interviews?view=mistakes',
+    permission: 'app:interview:read',
+  },
 ]
+
+/** 按权限过滤后的卡片 —— 没权限的卡连渲染都不渲染 */
+const visibleMetrics = computed(() => METRICS.filter((m) => auth.can(m.permission)))
+
+/**
+ * 一个数据都没有（新用户）。
+ *
+ * ⚠️ 只按「有权限且统计为 0/null」判全空 —— 新用户进来看到一排 0 是浪费首屏，
+ * 换成引导卡给他一个明确的第一步。有一条数据就恢复正常网格。
+ */
+const isEmptyStats = computed(() =>
+  visibleMetrics.value.every((m) => !stats[m.key]),
+)
 
 /* ========== 核心求职链路 ========== */
 
@@ -399,6 +467,55 @@ const greeting = computed(() => {
       </div>
     </header>
 
+    <!-- ========== 平台特色与差异化展示 ========== -->
+    <section class="ws__section ws__section--features">
+      <div class="section__header">
+        <div class="section__title-wrap">
+          <div class="section__tag-row">
+            <h2 class="section__title">为什么选择 MindForge AI？</h2>
+            <span class="differentiator-badge">核心技术与差异化优势</span>
+          </div>
+          <span class="section__sub">
+            对比传统求职招聘平台与泛通用 AI 助手，我们为技术求职者量身打造的六大专精能力
+          </span>
+        </div>
+      </div>
+
+      <div class="diff-grid">
+        <div
+          v-for="d in DIFFERENTIATORS"
+          :key="d.title"
+          class="diff-card mf-glass-card-interactive"
+        >
+          <div class="diff-card__head">
+            <div class="diff-card__icon" :style="{ color: d.accentColor }">
+              <el-icon><component :is="d.icon" /></el-icon>
+            </div>
+            <span
+              class="diff-card__badge"
+              :style="{ color: d.accentColor, borderColor: d.accentColor }"
+            >
+              {{ d.badge }}
+            </span>
+          </div>
+
+          <h3 class="diff-card__title">{{ d.title }}</h3>
+
+          <div class="diff-card__block diff-card__block--vs">
+            <span class="diff-label diff-label--vs">传统工具 / 通用 AI 痛点</span>
+            <p class="diff-text diff-text--vs">{{ d.vsTraditional }}</p>
+          </div>
+
+          <div class="diff-card__block diff-card__block--pro">
+            <div class="diff-label diff-label--pro">
+              <el-icon><CircleCheck /></el-icon>
+              <span>MindForge 专属优势</span>
+            </div>
+            <p class="diff-text diff-text--pro">{{ d.mindforgeAdvantage }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
     <!-- ========== 实时数据仪表盘 ========== -->
     <section class="ws__section">
       <div class="section__header">
@@ -411,15 +528,49 @@ const greeting = computed(() => {
         </div>
       </div>
 
-      <div v-loading="statsLoading" class="metrics-grid">
-        <div v-for="m in METRICS" :key="m.key" class="metric-card mf-glass-card-interactive">
-          <div class="metric-card__icon" :style="{ background: m.color }">
-            <el-icon><component :is="m.icon" /></el-icon>
+      <!--
+        ★ 条件渲染：全 0（新用户）显示【引导卡】，否则显示数字卡网格。
+        新用户进来看到一排 0 是浪费首屏 —— 给他一个明确的第一步动作。
+      -->
+      <div v-loading="statsLoading" class="metrics-body">
+        <router-link
+          v-if="!statsLoading && isEmptyStats"
+          to="/resumes"
+          class="metrics-empty mf-glass-card-interactive"
+        >
+          <div class="metrics-empty__icon">
+            <el-icon><Document /></el-icon>
           </div>
-          <div class="metric-card__body">
-            <span class="metric-card__value">{{ stats[m.key] ?? 0 }}</span>
-            <span class="metric-card__label">{{ m.label }}</span>
+          <div class="metrics-empty__text">
+            <h3 class="metrics-empty__title">从第一份简历开始</h3>
+            <p class="metrics-empty__desc">
+              上传简历并录入目标 JD，AI 会自动完成匹配诊断、针对性出题 ——
+              之后这里的数字会跟着你的求职进展实时动起来。
+            </p>
           </div>
+          <el-button type="primary" round>去上传</el-button>
+          <el-icon class="metric-card__arrow"><ArrowRight /></el-icon>
+        </router-link>
+
+        <!--
+          ★ 有数据时用【统计条】而不是卡片网格：数字需要一眼扫过，横向紧凑条比
+          六张卡片轻得多，也能和后面几块卡片网格拉开形态差异（打破节奏重复）。
+        -->
+        <div v-else-if="!statsLoading" class="stats-strip">
+          <router-link
+            v-for="m in visibleMetrics"
+            :key="m.key"
+            :to="m.to"
+            class="stats-cell"
+          >
+            <span class="stats-cell__value" :style="{ color: m.color }">
+              {{ stats[m.key] ?? 0 }}<em v-if="m.suffix" class="metric-card__suffix">{{ m.suffix }}</em>
+            </span>
+            <span class="stats-cell__label">
+              <el-icon><component :is="m.icon" /></el-icon>
+              {{ m.label }}
+            </span>
+          </router-link>
         </div>
       </div>
     </section>
@@ -568,55 +719,6 @@ const greeting = computed(() => {
       </div>
     </section>
 
-    <!-- ========== 平台特色与差异化展示 ========== -->
-    <section class="ws__section ws__section--features">
-      <div class="section__header">
-        <div class="section__title-wrap">
-          <div class="section__tag-row">
-            <h2 class="section__title">为什么选择 MindForge AI？</h2>
-            <span class="differentiator-badge">核心技术与差异化优势</span>
-          </div>
-          <span class="section__sub">
-            对比传统求职招聘平台与泛通用 AI 助手，我们为技术求职者量身打造的六大专精能力
-          </span>
-        </div>
-      </div>
-
-      <div class="diff-grid">
-        <div
-          v-for="d in DIFFERENTIATORS"
-          :key="d.title"
-          class="diff-card mf-glass-card-interactive"
-        >
-          <div class="diff-card__head">
-            <div class="diff-card__icon" :style="{ color: d.accentColor }">
-              <el-icon><component :is="d.icon" /></el-icon>
-            </div>
-            <span
-              class="diff-card__badge"
-              :style="{ color: d.accentColor, borderColor: d.accentColor }"
-            >
-              {{ d.badge }}
-            </span>
-          </div>
-
-          <h3 class="diff-card__title">{{ d.title }}</h3>
-
-          <div class="diff-card__block diff-card__block--vs">
-            <span class="diff-label diff-label--vs">传统工具 / 通用 AI 痛点</span>
-            <p class="diff-text diff-text--vs">{{ d.vsTraditional }}</p>
-          </div>
-
-          <div class="diff-card__block diff-card__block--pro">
-            <div class="diff-label diff-label--pro">
-              <el-icon><CircleCheck /></el-icon>
-              <span>MindForge 专属优势</span>
-            </div>
-            <p class="diff-text diff-text--pro">{{ d.mindforgeAdvantage }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -734,71 +836,85 @@ const greeting = computed(() => {
   color: var(--mf-text-secondary);
 }
 
-/* ---------- 实时数据仪表盘 ---------- */
-.metrics-grid {
+/* ---------- 实时数据仪表盘（统计条） ---------- */
+.stats-strip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 16px;
-  min-height: 80px;
+  border-radius: var(--mf-radius-lg);
+  overflow: hidden;
 }
 
 @media (width <= 1040px) {
-  .metrics-grid {
+  .stats-strip {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (width <= 640px) {
-  .metrics-grid {
+  .stats-strip {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.metric-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: var(--mf-radius-lg);
-}
-
-.metric-card__icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  color: #fff;
-  border-radius: var(--mf-radius-md);
-  box-shadow: 0 6px 14px rgb(0 0 0 / 12%);
-  transition: transform var(--mf-duration-fast) var(--mf-ease-spring);
-}
-
-.metric-card:hover .metric-card__icon {
-  transform: scale(1.08);
-}
-
-.metric-card__body {
+.stats-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 10px;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  /* 相邻格子的分隔线 —— 窄屏下两列时最后一列会贴边，但视觉可接受 */
+  border-right: 1px solid var(--mf-glass-border-soft);
+  transition: background-color var(--mf-duration-fast) var(--mf-ease);
 }
 
-.metric-card__value {
-  font-size: 22px;
+.stats-cell:hover {
+  background-color: var(--mf-bg-subtle);
+}
+
+.stats-cell:nth-child(6n) {
+  border-right: none;
+}
+
+.stats-cell__value {
+  font-size: var(--mf-font-2xl);
   font-weight: 700;
   letter-spacing: -0.03em;
   font-family: var(--mf-font-mono, monospace);
-  color: var(--mf-text-primary);
   line-height: 1.1;
 }
 
-.metric-card__label {
-  font-size: 11px;
+.stats-cell__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--mf-font-xs);
   color: var(--mf-text-tertiary);
-  white-space: nowrap;
+}
+
+/* 「这张卡可以点」的暗示 */
+.metric-card__arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--mf-text-tertiary);
+  transition:
+    transform var(--mf-duration-fast) var(--mf-ease-spring),
+    color var(--mf-duration-fast) var(--mf-ease);
+}
+
+.metric-card:hover .metric-card__arrow {
+  transform: translateX(3px);
+  color: var(--mf-text-primary);
+}
+
+.metric-card__suffix {
+  font-style: normal;
+  font-size: var(--mf-font-xs);
+  font-weight: 400;
+  color: var(--mf-text-tertiary);
+  margin-left: 2px;
 }
 
 /* ---------- 分区排版 ---------- */
@@ -1114,8 +1230,15 @@ const greeting = computed(() => {
 /* ---------- 辅助工具网格 ---------- */
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 2 列：和优势区（3 列）、核心链路（3 卡）区分开 —— 全页都是 3 列网格会很单调 */
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
+}
+
+@media (width <= 1040px) {
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (width <= 960px) {
@@ -1336,6 +1459,12 @@ const greeting = computed(() => {
   margin: 0;
   font-size: 11px;
   line-height: 1.5;
+  /* 统一卡片高度：clamp 只限最大行数，短文案的卡还是矮 —— 再补一个 3 行的最小高度 */
+  min-height: calc(3 * 1.5em);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .diff-text--vs {

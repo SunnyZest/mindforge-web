@@ -212,6 +212,20 @@ onMounted(loadData)
             </span>
             <span class="column__badge">{{ col.count }}</span>
           </div>
+          <!--
+            ★ 已获 Offer 列专属入口：看板 stats 的「已获 Offer」数是【投递进度】，
+            而 /offers 是手动录入做五维对比的 —— 两套数据。所以这里给一个明确入口，
+            让「拿到 Offer 了 → 去对比该选哪家」这条路走得通。
+          -->
+          <router-link
+            v-if="col.stage === 'OFFER'"
+            to="/offers"
+            class="column__offer-link"
+            title="把拿到的 Offer 录进五维对比器，按你设的权重算该选哪家"
+          >
+            <el-icon><Trophy /></el-icon>
+            <span>去对比</span>
+          </router-link>
         </header>
 
         <!-- 卡片列表 -->
@@ -460,6 +474,25 @@ onMounted(loadData)
   color: var(--mf-text-secondary);
   background-color: var(--mf-glass-card);
   border-radius: var(--mf-radius-pill);
+}
+
+/* 已获 Offer 列头的「去对比」入口 */
+.column__offer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-size: var(--mf-font-xs);
+  font-weight: 500;
+  color: var(--mf-success);
+  text-decoration: none;
+  border: 1px solid var(--mf-success);
+  border-radius: var(--mf-radius-pill);
+  transition: background-color var(--mf-duration-fast) var(--mf-ease);
+}
+
+.column__offer-link:hover {
+  background-color: color-mix(in srgb, var(--mf-success) 14%, transparent);
 }
 
 .column__cards {

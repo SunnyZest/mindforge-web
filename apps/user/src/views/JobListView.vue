@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Plus, MagicStick, Edit, Delete, Briefcase } from '@element-plus/icons-vue'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import { BizError, formatDateTime, type JobVO } from '@mindforge/shared'
 
@@ -10,8 +10,18 @@ import JobFormDialog from '@/components/JobFormDialog.vue'
 import JobKanbanBoard from '@/components/JobKanbanBoard.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-const viewMode = ref<'grid' | 'kanban'>('kanban')
+/**
+ * 默认模式跟着 `?view=` 走（工作台的统计卡片会带这个参数跳过来）。
+ *
+ * ⚠️ 只认那两个合法值，其它值（含手敲的 /view=xxx）回落默认 kanban。
+ */
+function initialViewMode(): 'grid' | 'kanban' {
+  return route.query.view === 'grid' ? 'grid' : 'kanban'
+}
+
+const viewMode = ref<'grid' | 'kanban'>(initialViewMode())
 const kanbanRef = ref<InstanceType<typeof JobKanbanBoard> | null>(null)
 
 const loading = ref(false)
@@ -68,6 +78,11 @@ function onSearch(): void {
     void load()
   }
 }
+
+/** 手动切模式时把状态写进 query —— 刷新和分享链接都能保持 */
+watch(viewMode, (mode) => {
+  void router.replace({ query: { ...route.query, view: mode } })
+})
 
 async function onJobSaved(): Promise<void> {
   await load()
