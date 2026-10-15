@@ -107,7 +107,7 @@ async function onSubmit(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="doc ? `修正处理状态 · ${doc.fileName}` : '修正处理状态'"
-    width="520px"
+    width="min(520px, 92vw)"
     append-to-body
   >
     <p class="hint">

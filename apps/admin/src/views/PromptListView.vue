@@ -234,7 +234,7 @@ onMounted(load)
     <el-dialog
       v-model="viewVisible"
       :title="viewing ? `${viewing.scene} / ${viewing.name} · v${viewing.version}` : '查看'"
-      width="820px"
+      width="min(820px, 92vw)"
       append-to-body
     >
       <p v-if="viewing" class="view__meta">

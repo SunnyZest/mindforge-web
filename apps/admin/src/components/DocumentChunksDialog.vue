@@ -78,7 +78,7 @@ watch(visible, (open) => {
   <el-dialog
     v-model="visible"
     :title="doc ? `分块查看 · ${doc.fileName}` : '分块查看'"
-    width="760px"
+    width="min(760px, 92vw)"
     append-to-body
   >
     <div v-if="doc" class="meta">

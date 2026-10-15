@@ -152,7 +152,7 @@ async function submit(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="`分配权限 · ${roleName}`"
-    width="720px"
+    width="min(720px, 92vw)"
     :close-on-click-modal="false"
     append-to-body
   >

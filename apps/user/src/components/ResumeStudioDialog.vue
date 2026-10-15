@@ -417,7 +417,7 @@ function onExportPdf(): void {
   <el-dialog
     v-model="visible"
     title="简历在线精修与高清 A4 PDF 导出"
-    width="1180px"
+    width="min(1180px, 92vw)"
     top="4vh"
     :close-on-click-modal="false"
   >

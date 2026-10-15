@@ -272,7 +272,7 @@ onMounted(load)
     <el-dialog
       v-model="dialogVisible"
       :title="dialogMode === 'create' ? '新建知识库（官方/管理端）' : '编辑知识库'"
-      width="520px"
+      width="min(520px, 92vw)"
       append-to-body
       align-center
       destroy-on-close

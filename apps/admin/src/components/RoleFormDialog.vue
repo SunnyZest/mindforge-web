@@ -111,7 +111,7 @@ async function submit(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑角色' : '新增角色'"
-    width="460px"
+    width="min(460px, 92vw)"
     :close-on-click-modal="false"
     append-to-body
   >

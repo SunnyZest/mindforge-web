@@ -137,7 +137,7 @@ async function onSubmit(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑模型配置' : '新增模型配置'"
-    width="560px"
+    width="min(560px, 92vw)"
     append-to-body
   >
     <el-form label-width="100px">

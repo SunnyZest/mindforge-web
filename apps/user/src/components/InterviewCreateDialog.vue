@@ -133,7 +133,7 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <!-- ⚠️ append-to-body 不能少（卡片有 backdrop-filter + overflow:hidden，不加会被裁） -->
-  <el-dialog v-model="visible" title="新建模拟面试" width="600px" append-to-body destroy-on-close>
+  <el-dialog v-model="visible" title="新建模拟面试" width="min(600px, 92vw)" append-to-body destroy-on-close>
     <el-form
       ref="formRef"
       v-loading="loadingRefs"

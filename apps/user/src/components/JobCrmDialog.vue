@@ -113,7 +113,7 @@ async function onSave(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="`求职投递跟进 · ${props.job?.companyName || ''} ${props.job?.title || ''}`"
-    width="560px"
+    width="min(560px, 92vw)"
     destroy-on-close
     append-to-body
   >

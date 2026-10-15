@@ -561,7 +561,7 @@ onMounted(() => {
     <el-dialog
       v-model="uploadVisible"
       title="上传文档到知识库"
-      width="540px"
+      width="min(540px, 92vw)"
       append-to-body
       align-center
       destroy-on-close
@@ -622,7 +622,7 @@ onMounted(() => {
     <el-dialog
       v-model="importUrlVisible"
       title="从网页 URL 一键导入文章"
-      width="560px"
+      width="min(560px, 92vw)"
       append-to-body
       align-center
       destroy-on-close

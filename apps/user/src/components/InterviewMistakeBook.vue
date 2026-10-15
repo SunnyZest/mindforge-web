@@ -401,7 +401,7 @@ onMounted(refreshAll)
     <el-dialog
       v-model="practiceVisible"
       title="错题针对性重练与 AI 重新评分"
-      width="680px"
+      width="min(680px, 92vw)"
       :close-on-click-modal="!practiceSubmitting"
       :close-on-press-escape="!practiceSubmitting"
       :show-close="!practiceSubmitting"

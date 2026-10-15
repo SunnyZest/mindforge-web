@@ -78,7 +78,7 @@ async function onSubmit(): Promise<void> {
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑知识库' : '新建知识库'"
-    width="520px"
+    width="min(520px, 92vw)"
     append-to-body
     destroy-on-close
   >

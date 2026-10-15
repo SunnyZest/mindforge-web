@@ -74,7 +74,7 @@ async function submit(): Promise<void> {
   <el-dialog
     v-model="visible"
     title="分配角色"
-    width="440px"
+    width="min(440px, 92vw)"
     :close-on-click-modal="false"
     append-to-body
   >

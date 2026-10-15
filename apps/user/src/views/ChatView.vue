@@ -524,7 +524,7 @@ onUnmounted(() => abortController?.abort())
     </section>
 
     <!-- ---------- 原文片段 ---------- -->
-    <el-dialog v-model="chunkVisible" title="原文片段" width="640px" append-to-body>
+    <el-dialog v-model="chunkVisible" title="原文片段" width="min(640px, 92vw)" append-to-body>
       <div v-loading="chunkLoading" class="chunk">
         <template v-if="chunk">
           <p class="chunk__meta">
@@ -540,7 +540,7 @@ onUnmounted(() => abortController?.abort())
     </el-dialog>
 
     <!-- ---------- 新建对话 ---------- -->
-    <el-dialog v-model="newVisible" title="新建对话" width="480px" append-to-body>
+    <el-dialog v-model="newVisible" title="新建对话" width="min(480px, 92vw)" append-to-body>
       <el-form label-position="top" @submit.prevent="onCreateConversation">
         <el-form-item label="知识库（可选）">
           <el-select

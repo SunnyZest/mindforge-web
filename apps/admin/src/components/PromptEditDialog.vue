@@ -118,7 +118,7 @@ async function onSubmit(): Promise<void> {
     :title="
       isEdit ? `编辑 v${version?.version}` : group ? `给「${group.name}」加新版本` : '新建变体'
     "
-    width="820px"
+    width="min(820px, 92vw)"
     append-to-body
     destroy-on-close
   >
