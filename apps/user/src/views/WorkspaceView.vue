@@ -548,8 +548,15 @@ const greeting = computed(() => {
               之后这里的数字会跟着你的求职进展实时动起来。
             </p>
           </div>
-          <el-button type="primary" round>去上传</el-button>
-          <el-icon class="metric-card__arrow"><ArrowRight /></el-icon>
+          <!--
+            整张卡就是链接，这里只是「可以点」的视觉信号。
+            刻意不放真 button —— <a> 里嵌 <button> 是非法嵌套，
+            键盘 Tab 和读屏会把它当成两个独立焦点，重复播报。
+          -->
+          <span class="metrics-empty__cta">
+            上传第一份简历
+            <el-icon><ArrowRight /></el-icon>
+          </span>
         </router-link>
 
         <!--
@@ -836,10 +843,99 @@ const greeting = computed(() => {
   color: var(--mf-text-secondary);
 }
 
+/* ---------- 实时数据仪表盘 ---------- */
+.metrics-body {
+  /* 固定最小高度：加载态与内容态之间不跳动 */
+  min-height: 84px;
+}
+
+/*
+  ★ 空态引导卡（新用户全 0 时）。
+  之前只有模板没有样式，几个块级元素直接裸堆在一起 —— 卡片形同没写。
+*/
+.metrics-empty {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 20px 24px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.metrics-empty__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  font-size: 24px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mf-primary), #5856d6);
+  border-radius: var(--mf-radius-md);
+  box-shadow: 0 6px 16px rgb(0 122 255 / 28%);
+}
+
+.metrics-empty__text {
+  /* min-width: 0 让长文案在 flex 里换行，而不是把右侧 CTA 挤出卡片 */
+  min-width: 0;
+}
+
+.metrics-empty__title {
+  margin: 0 0 4px;
+  font-size: var(--mf-font-lg);
+  font-weight: 600;
+  color: var(--mf-text-primary);
+}
+
+.metrics-empty__desc {
+  margin: 0;
+  font-size: var(--mf-font-sm);
+  line-height: 1.55;
+  color: var(--mf-text-secondary);
+}
+
+.metrics-empty__cta {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+  padding: 9px 18px;
+  font-size: var(--mf-font-sm);
+  font-weight: 500;
+  color: #fff;
+  background: var(--mf-primary);
+  border-radius: var(--mf-radius-pill);
+  transition:
+    background-color var(--mf-duration-fast) var(--mf-ease-out),
+    transform var(--mf-duration-fast) var(--mf-ease-spring);
+}
+
+.metrics-empty:hover .metrics-empty__cta {
+  transform: translateX(2px);
+  background: var(--mf-primary-hover);
+}
+
+/* 窄屏：文字与 CTA 竖排，CTA 撑满一行（手指点得到） */
+@media (width <= 720px) {
+  .metrics-empty {
+    flex-wrap: wrap;
+    padding: 18px;
+  }
+
+  .metrics-empty__cta {
+    justify-content: center;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 /* ---------- 实时数据仪表盘（统计条） ---------- */
 .stats-strip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
+  background-color: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
   border-radius: var(--mf-radius-lg);
   overflow: hidden;
 }
@@ -867,7 +963,7 @@ const greeting = computed(() => {
   color: inherit;
   /* 相邻格子的分隔线 —— 窄屏下两列时最后一列会贴边，但视觉可接受 */
   border-right: 1px solid var(--mf-glass-border-soft);
-  transition: background-color var(--mf-duration-fast) var(--mf-ease);
+  transition: background-color var(--mf-duration-fast) var(--mf-ease-out);
 }
 
 .stats-cell:hover {
@@ -879,7 +975,7 @@ const greeting = computed(() => {
 }
 
 .stats-cell__value {
-  font-size: var(--mf-font-2xl);
+  font-size: var(--mf-font-xl);
   font-weight: 700;
   letter-spacing: -0.03em;
   font-family: var(--mf-font-mono, monospace);
@@ -901,7 +997,7 @@ const greeting = computed(() => {
   color: var(--mf-text-tertiary);
   transition:
     transform var(--mf-duration-fast) var(--mf-ease-spring),
-    color var(--mf-duration-fast) var(--mf-ease);
+    color var(--mf-duration-fast) var(--mf-ease-out);
 }
 
 .metric-card:hover .metric-card__arrow {
