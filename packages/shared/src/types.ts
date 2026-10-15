@@ -1411,3 +1411,170 @@ export interface ResumeJobAnalysisQuery {
   jobId: string
 }
 
+
+// ---------- 用户端：ATS 关键词跑分 ----------
+
+/**
+ * ATS 跑分里的一个关键词。
+ *
+ * ⚠️ 和「简历-JD 匹配分析」是两回事：这个只算「JD 里的关键词在简历里出现了没有」，
+ * 纯本地计算、毫秒级、不烧 token、同一输入永远同一分。
+ */
+export interface AtsKeywordVO {
+  keyword: string
+  /** 技能类型，如 LANGUAGE / FRAMEWORK / TOOL，可空 */
+  skillType: string | null
+  /** 是否 JD 明确要求的必须项（必须项在算分时权重翻倍） */
+  required: boolean
+  /** 简历里是否命中 */
+  hit: boolean
+  /** 命中来源：SKILL = 简历技能表里有；TEXT = 只在正文里出现；null = 未命中 */
+  hitSource: 'SKILL' | 'TEXT' | null
+  /** 简历里标注的熟练度（结构化命中时才有） */
+  proficiency: string | null
+  /** 在简历原文里出现的次数 */
+  occurrences: number
+}
+
+export interface AtsScoreVO {
+  resumeId: string
+  jobId: string
+  /** 加权覆盖率得分 0-100（必须项 2 倍权重） */
+  score: number
+  /** 档位：≥80 HIGH / ≥60 MEDIUM / 其他 LOW，前端用它决定配色 */
+  level: 'HIGH' | 'MEDIUM' | 'LOW'
+  totalKeywords: number
+  matchedKeywords: number
+  requiredTotal: number
+  requiredMatched: number
+  /** 一句话结论，可直接展示 */
+  summary: string
+  /** 全部关键词及命中情况（渲染成标签墙） */
+  keywords: AtsKeywordVO[]
+  /** 缺失的必须项 —— 最该先处理的 */
+  missingRequired: AtsKeywordVO[]
+  advice: string[]
+  /** 固定免责说明：本分数只反映关键词是否出现，不代表能力匹配度。建议原样展示 */
+  disclaimer: string
+}
+
+// ---------- 用户端：Offer 对比（五维打分表）----------
+
+/** Offer 状态：考虑中 / 已接受 / 已拒绝 */
+export type OfferStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED'
+
+/** 五个维度的 key（后端刻意用英文短名，中文标签由前端映射） */
+export type OfferDimension = 'salary' | 'tech' | 'brand' | 'wlb' | 'commute'
+
+export interface OfferVO {
+  id: string
+  /** 关联的职位 id（从投递看板导入时带上），可空 */
+  jobId: string | null
+  companyName: string
+  positionName: string | null
+  /** 年薪（万元）。只用于展示参考，不参与算分 */
+  salaryAnnual: number | null
+  salaryScore: number
+  techScore: number
+  brandScore: number
+  /** 加班强度评分，分越高越轻松 */
+  wlbScore: number
+  /** 通勤距离评分，分越高越方便 */
+  commuteScore: number
+  /** 各维度打分的理由（JSON 字符串，前端自行 parse） */
+  dimensionNotes: string | null
+  status: OfferStatus
+  createdAt: string
+  updatedAt: string
+}
+
+/** 五个维度的评分，1~10。创建时必填，修改时可只传要改的维度 */
+export interface OfferScoreInput {
+  salaryScore: number
+  techScore: number
+  brandScore: number
+  wlbScore: number
+  commuteScore: number
+}
+
+export interface OfferCreateDTO extends OfferScoreInput {
+  /** 可空（从投递看板导入时带上） */
+  jobId?: string
+  companyName: string
+  positionName?: string
+  salaryAnnual?: number
+  dimensionNotes?: string
+}
+
+export interface OfferUpdateDTO {
+  companyName?: string
+  positionName?: string
+  salaryAnnual?: number
+  /** 只传要改的维度，未传的保持不变 */
+  salaryScore?: number
+  techScore?: number
+  brandScore?: number
+  wlbScore?: number
+  commuteScore?: number
+  dimensionNotes?: string
+}
+
+export interface OfferStatusDTO {
+  status: OfferStatus
+}
+
+export interface OfferCompareDTO {
+  /** 要比对的 Offer id，2~5 个 */
+  offerIds: string[]
+  /**
+   * 五个维度的权重，0-100（前端滑块直接用这个量纲）。
+   * 全不传 = 五维等权；传了部分就按传的算（未传的按 0）；全 0 会 40001。
+   */
+  salaryWeight?: number
+  techWeight?: number
+  brandWeight?: number
+  wlbWeight?: number
+  commuteWeight?: number
+}
+
+export interface OfferCompareItemVO {
+  offerId: string
+  companyName: string
+  positionName: string | null
+  salaryAnnual: number | null
+  status: OfferStatus
+  salaryScore: number
+  techScore: number
+  brandScore: number
+  wlbScore: number
+  commuteScore: number
+  /** 加权总分，0-10 */
+  totalScore: number
+  /** 排名，从 1 开始（同分并列同名次） */
+  rank: number
+  /** 这家在哪些维度并列最优（维度英文名列表） */
+  bestDimensions: OfferDimension[]
+}
+
+export interface OfferCompareVO {
+  offerIds: string[]
+  /** 归一化后的权重（五个加起来 = 1），可直接展示占比 */
+  weights: Record<OfferDimension, number>
+  /** 已按加权总分从高到低排好序 */
+  offers: OfferCompareItemVO[]
+  /** 各维度的最优 Offer（并列时多个），key 是维度英文名 */
+  bestByDimension: Record<OfferDimension, string[]>
+  /** 一句话决策建议，可直接展示 */
+  recommendation: string
+}
+
+export interface OfferQuery {
+  page?: number
+  pageSize?: number
+  /** 匹配公司名 / 岗位名 */
+  keyword?: string
+  status?: OfferStatus
+  /** 排序字段白名单：companyName | salaryAnnual | createdAt | updatedAt */
+  sortBy?: 'companyName' | 'salaryAnnual' | 'createdAt' | 'updatedAt'
+  sortOrder?: 'asc' | 'desc'
+}

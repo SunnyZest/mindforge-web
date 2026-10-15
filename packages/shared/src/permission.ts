@@ -83,6 +83,9 @@ export type AppPermission =
   | 'app:interview:report'
   | 'app:interview:read'
   | 'app:interview:write'
+  /** Offer 对比（五维打分表）：查看与对比 / 录入与管理 */
+  | 'app:offer:read'
+  | 'app:offer:write'
 
 export type Permission = AdminPermission | AppPermission
 

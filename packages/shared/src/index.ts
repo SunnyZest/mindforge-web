@@ -148,6 +148,21 @@ export type {
   ResumeJobAnalysisVO,
   ResumeJobAnalysisDTO,
   ResumeJobAnalysisQuery,
+  // ATS 关键词跑分
+  AtsKeywordVO,
+  AtsScoreVO,
+  // Offer 对比（五维打分表）
+  OfferStatus,
+  OfferDimension,
+  OfferVO,
+  OfferScoreInput,
+  OfferCreateDTO,
+  OfferUpdateDTO,
+  OfferStatusDTO,
+  OfferCompareDTO,
+  OfferCompareItemVO,
+  OfferCompareVO,
+  OfferQuery,
 } from './types'
 
 // ---------- HTTP 客户端 ----------
