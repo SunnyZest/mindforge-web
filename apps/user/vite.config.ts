@@ -119,4 +119,20 @@ export default defineConfig({
       },
     },
   },
+
+  /**
+   * preview 也挂同一份代理。
+   *
+   * `vite preview` 只服务构建产物、没有后端，页面里的 `/api/**` 会直接 404 ——
+   * 想拿「构建产物」做联调（比如助手环境跑不了 dev server 时）就必须在这里再配一次。
+   */
+  preview: {
+    port: 5176,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
 })

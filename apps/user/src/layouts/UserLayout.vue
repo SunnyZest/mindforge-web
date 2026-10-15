@@ -9,6 +9,7 @@ import {
   Microphone,
   Moon,
   Sunny,
+  Trophy,
   User,
 } from '@element-plus/icons-vue'
 import { computed, type Component } from 'vue'
@@ -38,6 +39,7 @@ const ICONS: Record<string, Component> = {
   Collection,
   ChatDotRound,
   User,
+  Trophy,
 }
 
 /**

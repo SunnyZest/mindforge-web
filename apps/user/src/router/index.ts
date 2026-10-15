@@ -120,6 +120,13 @@ const router = createRouter({
           meta: { title: 'AI 问答', icon: 'ChatDotRound', order: 6, permission: 'app:rag:search' },
         },
         {
+          // 五维打分对比。order 4.5 让它排在「模拟面试」和「知识库」之间
+          path: 'offers',
+          name: 'offers',
+          component: lazyView(() => import('@/views/OffersView.vue')),
+          meta: { title: 'Offer 对比', icon: 'Trophy', order: 4.5, permission: 'app:offer:read' },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: lazyView(() => import('@/views/ProfileView.vue')),
