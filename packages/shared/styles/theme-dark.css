@@ -24,6 +24,7 @@
   --mf-bg-surface: #14161c;
   --mf-bg-subtle: #1b1e26;
   --mf-bg-hover: #22252e;
+  --mf-bg-elevated: #1f232c; /* 浮在页面上的小色块、chip */
 
   /* ---------- 文字 ----------
      ⚠️ 也不要纯白（#fff）—— 用 94% 的白，柔一点。
@@ -36,6 +37,7 @@
   /* ---------- 边框 ---------- */
   --mf-border: rgb(255 255 255 / 10%);
   --mf-border-strong: rgb(255 255 255 / 20%);
+  --mf-border-soft: rgb(255 255 255 / 8%); /* 更轻的分隔线（卡片内部） */
 
   /* ---------- 品牌色（Apple 系统蓝 · 深色变体）---------- */
   --mf-primary: #0a84ff;
@@ -94,4 +96,5 @@
 
   --mf-shadow-popover: var(--mf-glass-shadow);
   --mf-shadow-modal: 0 24px 60px rgb(0 0 0 / 65%);
+  --mf-shadow-xs: 0 2px 6px rgb(0 0 0 / 30%);
 }

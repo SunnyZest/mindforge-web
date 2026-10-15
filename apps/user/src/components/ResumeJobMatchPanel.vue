@@ -553,7 +553,7 @@ onMounted(async () => {
 }
 
 .score-num {
-  font-size: var(--mf-font-2xl);
+  font-size: var(--mf-font-xl);
   font-weight: var(--mf-weight-bold);
   color: var(--mf-primary);
   line-height: 1;

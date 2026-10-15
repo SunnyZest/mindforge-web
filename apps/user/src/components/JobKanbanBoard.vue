@@ -488,7 +488,7 @@ onMounted(loadData)
   text-decoration: none;
   border: 1px solid var(--mf-success);
   border-radius: var(--mf-radius-pill);
-  transition: background-color var(--mf-duration-fast) var(--mf-ease);
+  transition: background-color var(--mf-duration-fast) var(--mf-ease-out);
 }
 
 .column__offer-link:hover {

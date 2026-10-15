@@ -24,6 +24,7 @@
   --mf-bg-surface: #ffffff;
   --mf-bg-subtle: #f4f6fa;
   --mf-bg-hover: #e9edf5;
+  --mf-bg-elevated: #ffffff; /* 浮在页面上的小色块、chip */
 
   /* ---------- 文字 ----------
      Apple 的灰阶：主文字接近纯黑但不纯黑；次级用带透明度的灰 ——
@@ -36,6 +37,7 @@
   /* ---------- 边框 ---------- */
   --mf-border: rgb(28 40 68 / 10%);
   --mf-border-strong: rgb(28 40 68 / 20%);
+  --mf-border-soft: rgb(28 40 68 / 8%); /* 更轻的分隔线（卡片内部） */
 
   /* ---------- 品牌色（Apple 系统蓝）----------
      一个主色就够 —— 不要「主色 + 辅色 + 强调色」三件套，
@@ -114,4 +116,5 @@
   /* 浮层 / 弹窗的投影直接用玻璃那套 */
   --mf-shadow-popover: var(--mf-glass-shadow);
   --mf-shadow-modal: 0 24px 60px rgb(31 38 58 / 22%);
+  --mf-shadow-xs: 0 1px 3px rgb(31 38 58 / 8%);
 }

@@ -278,7 +278,7 @@ onMounted(loadJobs)
 }
 
 .ats__score-num {
-  font-size: var(--mf-font-2xl, 28px);
+  font-size: var(--mf-font-xl);
   font-weight: 500;
   line-height: 1;
   min-width: 96px;

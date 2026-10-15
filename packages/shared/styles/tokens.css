@@ -37,10 +37,13 @@
   --mf-font-md: 14px; /* 需要强调的正文、按钮 */
   --mf-font-lg: 20px; /* 区块标题 */
   --mf-font-xl: 28px; /* 页面标题 */
+  --mf-font-size-sm: var(--mf-font-sm); /* 旧名别名，兼容历史写法 */
 
   --mf-leading: 1.6;
   --mf-weight-normal: 400;
   --mf-weight-medium: 500;
+  --mf-weight-semibold: 600;
+  --mf-weight-bold: 700;
 
   /* ---------- 动效 ----------
      ★ Liquid Glass 重构：原来统一 150ms ease，对玻璃材质太生硬。
@@ -50,6 +53,7 @@
   --mf-ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
   --mf-duration-fast: 160ms;
   --mf-duration: 280ms;
+  --mf-duration-normal: var(--mf-duration); /* 旧名别名 */
   --mf-transition: var(--mf-duration-fast) var(--mf-ease-out); /* 保留旧名，兼容已有写法 */
 
   /* ---------- 玻璃材质 ----------
