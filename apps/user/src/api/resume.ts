@@ -1,4 +1,5 @@
 import type {
+  AtsScoreVO,
   PageResult,
   ResumeDetailVO,
   ResumeJobAnalysisDTO,
@@ -108,5 +109,19 @@ export const resumeApi = {
    */
   getMatch: (query: ResumeJobAnalysisQuery) =>
     http.get<ResumeJobAnalysisVO>('/app/resume-job-analysis', { params: query }),
+
+  /**
+   * ATS 关键词跑分：JD 里的关键词在简历里出现了没有。
+   *
+   * ★ 纯**本地算法**：不调模型、毫秒级、0 token、同一输入永远同一分。
+   *   和 `match()`（匹配分析）是两回事 —— 那个是「能力够不够」的人的视角，
+   *   这个是「机器筛简历」的视角。页面上两个入口分开，别混成一句话说。
+   *
+   * 失败分支：
+   *   40001 该职位还没解析出技能项（提示先解析 JD）
+   *   40409 简历不存在或不是你的
+   */
+  atsScore: (id: string, jobId: string) =>
+    http.get<AtsScoreVO>(`/app/resumes/${id}/ats-score`, { params: { jobId } }),
 }
 

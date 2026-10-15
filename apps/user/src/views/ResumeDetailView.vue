@@ -14,6 +14,7 @@ import {
 
 import { resumeApi } from '@/api/resume'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
+import ResumeAtsPanel from '@/components/ResumeAtsPanel.vue'
 import ResumeOptimizePanel from '@/components/ResumeOptimizePanel.vue'
 import ResumeStudioDialog from '@/components/ResumeStudioDialog.vue'
 
@@ -417,6 +418,9 @@ onMounted(load)
       :disabled="detail?.parseStatus !== 'SUCCESS'"
       @apply-rewrite="onApplyRewrite"
     />
+
+    <!-- ---------- ATS 关键词跑分（机器初筛视角，和上面的「能力评估」是两回事）---------- -->
+    <ResumeAtsPanel v-if="detail?.parseStatus === 'SUCCESS'" :resume-id="id" />
 
     <!-- ---------- 在线精修与 A4 PDF 导出工作台 ---------- -->
     <ResumeStudioDialog
