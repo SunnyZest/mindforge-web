@@ -114,6 +114,14 @@ const router = createRouter({
           meta: { permission: 'app:knowledge:read' },
         },
         {
+          // 语义检索（只查不生成）。order 5.5 让它紧挨着「知识库」——
+          // 它搜的就是知识库里的内容，放一起用户才找得到
+          path: 'search',
+          name: 'knowledge-search',
+          component: lazyView(() => import('@/views/KnowledgeSearchView.vue')),
+          meta: { title: '知识搜索', icon: 'Search', order: 5.5, permission: 'app:rag:search' },
+        },
+        {
           path: 'chat',
           name: 'chat',
           component: lazyView(() => import('@/views/ChatView.vue')),

@@ -8,6 +8,7 @@ import {
   HomeFilled,
   Microphone,
   Moon,
+  Search,
   Sunny,
   Trophy,
   User,
@@ -38,6 +39,7 @@ const ICONS: Record<string, Component> = {
   Microphone,
   Collection,
   ChatDotRound,
+  Search,
   User,
   Trophy,
 }
