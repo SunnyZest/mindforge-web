@@ -122,6 +122,7 @@ export type {
   SendMessageResultVO,
   RagSearchDTO,
   RagSearchResultVO,
+  SearchHitVO,
   RagFeedbackDTO,
   ChatStreamSourcesEvent,
   ChatStreamDeltaEvent,
@@ -168,6 +169,7 @@ export type {
   JobEventType,
   JobEventMode,
   JobEventStatus,
+  ConfirmTokenVO,
   AiEngineStatus,
   AiStatusVO,
 } from './types'

@@ -1135,18 +1135,50 @@ export interface SendMessageResultVO {
 
 /** RAG 检索（Java 的 `RagSearchDTO`）—— 只检索不生成 */
 export interface RagSearchDTO {
-  knowledgeBaseId: string
+  /**
+   * 知识库 id。**可以不传** —— 不传 = 搜「我的全部知识库 + 官方智库」。
+   * 这是搜索页的主用法：用户不该为了搜一句话先想清楚内容在哪个库。
+   * 传了就必须是我有权访问的库，否则 404。
+   */
+  knowledgeBaseId?: string
   query: string
   /** 1~50，默认 8 */
   topK?: number
   enableRerank?: boolean
 }
 
-/** RAG 检索返回（契约变更：2026-10-11，支持 rerank 标记） */
+/**
+ * 语义检索命中的片段。
+ *
+ * ⚠️ 和聊天引用（`SourceVO`）不是一回事：那个只给文件名+页码用于溯源，
+ * **不带正文**；搜索页的结果主体就是正文，所以另有此类型。
+ */
+export interface SearchHitVO {
+  documentId: string
+  documentName: string
+  /** 来源知识库 id / 名 —— 跨库检索时用来标明「这条来自哪个库」 */
+  knowledgeBaseId: string | null
+  knowledgeBaseName: string | null
+  /** 是否来自官方智库 */
+  fromSystemKb: boolean
+  /** 分块 id —— 取完整原文用 */
+  chunkId: string
+  chunkIndex: number | null
+  /** 页码（当前与 chunkIndex 同值，PDF 才有意义） */
+  pageNo: number | null
+  /** ★ 片段正文 */
+  content: string | null
+  /** 相关度 0~1（开启重排时是 rerank 分数，量纲不同但同样落在 0~1） */
+  score: number | null
+}
+
+/** RAG 检索返回（2026-10-16 起 results 带正文，并新增 searchedKbCount） */
 export interface RagSearchResultVO {
-  results: SourceVO[]
+  results: SearchHitVO[]
   /** 本次结果是否真的经过 rerank 精排（enableRerank=true 但未配精排模型或降级时为 false） */
   reranked: boolean
+  /** 本次实际覆盖的知识库数量 */
+  searchedKbCount: number
 }
 
 /** 给回答打分（Java 的 `RagFeedbackDTO`） */
@@ -1678,4 +1710,22 @@ export interface AiStatusVO {
   status: AiEngineStatus
   /** AI 模型密钥是否已配置（配合 status 排查用） */
   llmConfigured: boolean
+}
+
+// ---------- 管理端：高危操作二次确认 ----------
+
+/**
+ * 二次确认临时凭证。
+ *
+ * 后端对「删用户 / 批量删用户 / 删角色」这类不可逆操作要求带凭据：
+ * 优先 `X-Confirm-Token`（本凭证，Redis 存 5 分钟、用过即核销），
+ * 备选 `X-Confirm-Password`（直接带密码）。
+ *
+ * 前端走前者 —— 密码只在换凭证时发一次，不在每个请求里重复传。
+ */
+export interface ConfirmTokenVO {
+  /** 放进 `X-Confirm-Token` 请求头 */
+  confirmToken: string
+  /** 有效时长（秒） */
+  expiresInSeconds: number
 }
