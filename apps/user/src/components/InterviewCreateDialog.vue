@@ -188,7 +188,7 @@ async function onSubmit(): Promise<void> {
       -->
       <p class="hint hint--top">
         简历和职位至少选一个 —— AI 将结合您的经历与目标岗位，并自动从
-        <strong>🌐 全站官方智库</strong> 检索匹配的大厂高频真题与考核标准为您定制考卷。
+        <strong>全站官方智库</strong> 检索匹配的大厂高频真题与考核标准为您定制考卷。
       </p>
 
       <el-form-item label="面试类型">

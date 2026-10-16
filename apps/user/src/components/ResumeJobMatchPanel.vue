@@ -381,7 +381,7 @@ onMounted(async () => {
             </button>
           </div>
           <p class="tabs-note">
-            💡 优先处理<strong>真实缺口</strong>与<strong>表达缺口</strong>，可显著提升简历通过率。
+            优先处理<strong>真实缺口</strong>与<strong>表达缺口</strong>，可显著提升简历通过率。
           </p>
         </div>
 
@@ -426,7 +426,7 @@ onMounted(async () => {
 
       <!-- 宏观提升建议 -->
       <section v-if="analysis.suggestions.length" class="suggestions-box">
-        <h4 class="suggestions-title">💡 针对本岗位的投递建议</h4>
+        <h4 class="suggestions-title">针对本岗位的投递建议</h4>
         <ul class="suggestions-list">
           <li v-for="(s, i) in analysis.suggestions" :key="i">{{ s }}</li>
         </ul>

@@ -349,13 +349,13 @@ onMounted(refreshAll)
 
           <!-- 面试官追问预演 -->
           <div v-if="item.aiAnalysis?.followUp" class="followup-box">
-            <span class="followup-box__label">💡 面试官深度追问预演：</span>
+            <span class="followup-box__label">面试官深度追问预演：</span>
             <p class="followup-box__text">{{ item.aiAnalysis.followUp }}</p>
           </div>
 
           <!-- 折叠/展开标准参考答案要点 -->
           <div v-if="item.expectedPoints?.length && revealedIds.has(item.questionId)" class="expected-box">
-            <span class="expected-box__label">🎯 标准参考答案核心要点：</span>
+            <span class="expected-box__label">标准参考答案核心要点：</span>
             <ul class="expected-box__list">
               <li v-for="(ep, idx) in item.expectedPoints" :key="idx">{{ ep }}</li>
             </ul>
@@ -415,7 +415,7 @@ onMounted(refreshAll)
         </div>
 
         <div v-if="practicingItem.aiAnalysis?.missingPoints?.length" class="practice-modal__hint">
-          <strong>💡 上次漏答要点提示：</strong>
+          <strong>上次漏答要点提示：</strong>
           <ul>
             <li v-for="(mp, idx) in practicingItem.aiAnalysis.missingPoints" :key="idx">
               {{ mp }}

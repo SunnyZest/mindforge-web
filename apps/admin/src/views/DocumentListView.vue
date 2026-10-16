@@ -416,7 +416,7 @@ onMounted(() => {
       <el-button type="primary" @click="onSearch">查询</el-button>
       <el-button @click="onReset">重置</el-button>
       <el-button type="success" @click="openUploadDialog">+ 上传文档</el-button>
-      <el-button type="primary" plain @click="openImportUrlDialog">🌐 导入网页</el-button>
+      <el-button type="primary" plain @click="openImportUrlDialog">导入网页</el-button>
 
       <!--
         自动刷新开关。
@@ -650,7 +650,7 @@ onMounted(() => {
             clearable
           />
           <div class="import-tip">
-            💡 系统将调用原生网页提取引擎，自动去除广告、导航等干扰，精准提取正文并转换为 Markdown 入库。
+            系统将调用原生网页提取引擎，自动去除广告、导航等干扰，精准提取正文并转换为 Markdown 入库。
           </div>
         </el-form-item>
       </el-form>

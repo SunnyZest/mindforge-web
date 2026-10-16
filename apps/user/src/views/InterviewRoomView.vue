@@ -349,7 +349,7 @@ onUnmounted(() => {
         <p class="head__meta">
           <template v-if="detail">
             {{ TYPE_TEXT[detail.interviewType] ?? detail.interviewType }} ·
-            {{ DIFF_TEXT[detail.difficulty] ?? detail.difficulty }} · 🌐 官方智库真题增强
+            {{ DIFF_TEXT[detail.difficulty] ?? detail.difficulty }} · 官方智库真题增强
             <template v-if="questions.length">
               · 已答 {{ answeredCount }}/{{ questions.length }}</template
             >
@@ -427,7 +427,7 @@ onUnmounted(() => {
 
       <template v-else>
         <p class="pane__text">
-          点下面的按钮让 AI 结合你的简历、目标岗位及 🌐 全站官方智库高频真题为你出题。这一步要等一会儿。
+          点下面的按钮让 AI 结合你的简历、目标岗位及 全站官方智库高频真题为你出题。这一步要等一会儿。
         </p>
         <el-button
           type="primary"

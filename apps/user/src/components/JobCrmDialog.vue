@@ -36,7 +36,7 @@ const STAGE_OPTIONS: Array<{ label: string; value: JobApplicationStage }> = [
   { label: '技术一面', value: 'INTERVIEW_1' },
   { label: '技术二面 / 终面', value: 'INTERVIEW_2' },
   { label: 'HR 面 / 谈薪', value: 'HR' },
-  { label: '已获 Offer 🎉', value: 'OFFER' },
+  { label: '已获 Offer', value: 'OFFER' },
   { label: '未通过 / 已归档', value: 'REJECTED' },
 ]
 

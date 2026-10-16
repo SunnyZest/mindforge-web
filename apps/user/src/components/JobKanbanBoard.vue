@@ -49,7 +49,7 @@ const STAGE_OPTIONS: Array<{ label: string; value: JobApplicationStage }> = [
   { label: '技术一面', value: 'INTERVIEW_1' },
   { label: '技术二面 / 终面', value: 'INTERVIEW_2' },
   { label: 'HR 面 / 谈薪', value: 'HR' },
-  { label: '已获 Offer 🎉', value: 'OFFER' },
+  { label: '已获 Offer', value: 'OFFER' },
   { label: '未通过 / 已归档', value: 'REJECTED' },
 ]
 
@@ -177,7 +177,7 @@ onMounted(loadData)
           <el-icon><Trophy /></el-icon>
         </div>
         <div class="stat-card__body">
-          <span class="stat-card__label">已获 Offer 🎉</span>
+          <span class="stat-card__label">已获 Offer</span>
           <strong class="stat-card__val stat-card__val--green">{{ stats.offerCount }}</strong>
         </div>
       </div>
@@ -278,22 +278,22 @@ onMounted(loadData)
                   'pill--match-mid': card.matchScore >= 60 && card.matchScore < 80,
                 }"
               >
-                🎯 匹配度 {{ Math.round(card.matchScore) }}分
+                匹配度 {{ Math.round(card.matchScore) }}分
               </span>
 
               <span v-if="card.interviewCount > 0" class="pill pill--iv">
-                🎤 模拟面 {{ card.interviewCount }} 场
+                模拟面 {{ card.interviewCount }} 场
                 <template v-if="card.bestInterviewScore !== null">
                   · {{ Math.round(card.bestInterviewScore) }}分
                 </template>
               </span>
 
               <span v-if="card.linkedResumeName" class="pill pill--resume" :title="card.linkedResumeName">
-                📄 {{ card.linkedResumeName }}
+                {{ card.linkedResumeName }}
               </span>
 
               <span v-if="card.salaryOffer" class="pill pill--salary">
-                💰 {{ card.salaryOffer }}
+                {{ card.salaryOffer }}
               </span>
             </div>
 
@@ -309,7 +309,7 @@ onMounted(loadData)
 
             <!-- 备忘笔记预览 -->
             <p v-if="card.crmNotes" class="k-card__notes" :title="card.crmNotes">
-              📌 {{ card.crmNotes }}
+              {{ card.crmNotes }}
             </p>
 
             <!-- 卡片底部快捷动作 -->

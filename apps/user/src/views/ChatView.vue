@@ -362,7 +362,7 @@ onUnmounted(() => abortController?.abort())
           <div class="conv__main">
             <span class="conv__title">{{ c.title }}</span>
             <span class="conv__meta">
-              {{ c.knowledgeBaseId ? '📚 私域+🌐官方双路' : '🤖 通用顾问' }} · {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
+              {{ c.knowledgeBaseId ? '私域+官方双路' : '通用顾问' }} · {{ c.messageCount ?? 0 }} 条 · {{ formatDateTime(c.updatedAt) }}
             </span>
           </div>
           <el-button
@@ -548,11 +548,11 @@ onUnmounted(() => abortController?.abort())
             placeholder="选择知识库，不选为通用顾问"
             clearable
           >
-            <el-option label="🤖 MindForge AI 通用顾问（无需知识库）" value="" />
+            <el-option label="MindForge AI 通用顾问（无需知识库）" value="" />
             <el-option
               v-for="k in kbs"
               :key="k.id"
-              :label="k.isSystem === 1 ? `🌐 ${k.name}（官方智库）` : k.name"
+              :label="k.isSystem === 1 ? `${k.name}（官方智库）` : k.name"
               :value="k.id"
             >
               <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
@@ -567,7 +567,7 @@ onUnmounted(() => abortController?.abort())
             </el-option>
           </el-select>
           <p v-if="newForm.knowledgeBaseId" style="margin: 6px 0 0; font-size: 12px; color: var(--mf-text-tertiary); line-height: 1.5;">
-            🌐 双路检索已开启：提问时将同时检索当前所选知识库与全站官方智库，并经 Rerank 联合精排。
+            双路检索已开启：提问时将同时检索当前所选知识库与全站官方智库，并经 Rerank 联合精排。
           </p>
         </el-form-item>
 

@@ -116,7 +116,7 @@ function onApply(item: ResumeOptimizeItem, idx: number): void {
           </span>
         </h2>
         <p class="opt__sub">
-          已接入 🌐 全站官方智库行业标杆参考。满意的改写建议可点击「一键采纳到简历」直接替换并导出 PDF。
+          已接入 全站官方智库行业标杆参考。满意的改写建议可点击「一键采纳到简历」直接替换并导出 PDF。
         </p>
       </div>
 

@@ -717,7 +717,7 @@ function onExportPdf(): void {
     <template #footer>
       <div class="studio-foot">
         <span class="studio-foot__tip">
-          💡 提示：点击「导出高清 A4 PDF」将在打印预览中生成文字可选中、支持大厂 ATS 解析的标准 A4 简历
+          提示：点击「导出高清 A4 PDF」将在打印预览中生成文字可选中、支持大厂 ATS 解析的标准 A4 简历
         </span>
         <div class="studio-foot__btns">
           <el-button @click="visible = false">关闭</el-button>
