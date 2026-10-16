@@ -10,10 +10,15 @@ import StatusTag from '@/components/StatusTag.vue'
 import UserDetailDrawer from '@/components/UserDetailDrawer.vue'
 import UserFormDialog from '@/components/UserFormDialog.vue'
 import UserRoleDialog from '@/components/UserRoleDialog.vue'
+import { useSecondaryConfirm } from '@/composables/useSecondaryConfirm'
+
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
 
 const auth = useAuthStore()
+
+/** 高危操作（删用户/删角色）的二次确认 —— 后端强制要求凭据，本地 confirm 过不了 */
+const { runConfirm } = useSecondaryConfirm()
 
 const loading = ref(false)
 const rows = ref<UserSummaryVO[]>([])
@@ -183,15 +188,16 @@ async function onToggleStatus(row: UserSummaryVO): Promise<void> {
 }
 
 async function onDelete(row: UserSummaryVO): Promise<void> {
-  const ok = await ElMessageBox.confirm(
-    `删除后不可恢复，确定删除用户「${row.username}」吗？`,
-    '删除确认',
-    { type: 'warning', confirmButtonText: '删除' },
-  ).catch(() => false)
-  if (!ok) return
-
   try {
-    await userApi.remove(row.id)
+    // 后端强制要求二次确认凭据，光弹本地 confirm 是不够的（会被 CONFIRM_REQUIRED 拒掉）。
+    // 这一步把「确认」和「输密码换凭证」合成一个弹框，不再叠加一次确认。
+    const res = await runConfirm({
+      message: `删除后不可恢复，确定删除用户「${row.username}」吗？请输入你的登录密码确认。`,
+      title: '删除用户',
+      action: (token) => userApi.remove(row.id, token),
+    })
+    if (!res.ok) return
+
     ElMessage.success('已删除')
     // 删掉当前页最后一条时要往前退一页，否则会停在一张空页上
     if (rows.value.length === 1 && query.page > 1) query.page -= 1
@@ -250,16 +256,16 @@ async function onBatchDisable(): Promise<void> {
 async function onBatchDelete(): Promise<void> {
   if (!selectedRows.value.length) return
   const ids = selectedRows.value.map((r) => r.id)
-  const ok = await ElMessageBox.confirm(
-    `删除后不可恢复，确定批量删除选中的 ${ids.length} 个用户账号吗？`,
-    '高危操作确认',
-    { type: 'warning', confirmButtonText: '删除' },
-  ).catch(() => false)
-  if (!ok) return
-
   try {
-    const count = await userApi.batchRemove({ ids })
-    ElMessage.success(`已批量删除 ${count} 个账号`)
+    // 批量删除同样在高危保护范围内，必须带确认凭据
+    const res = await runConfirm({
+      message: `删除后不可恢复，确定批量删除选中的 ${ids.length} 个用户账号吗？请输入你的登录密码确认。`,
+      title: '批量删除用户',
+      action: (token) => userApi.batchRemove({ ids }, token),
+    })
+    if (!res.ok) return
+
+    ElMessage.success(`已批量删除 ${res.value} 个账号`)
     clearSelection()
     await load()
   } catch (e) {

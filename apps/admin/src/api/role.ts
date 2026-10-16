@@ -25,8 +25,11 @@ export const roleApi = {
    * 删除角色。
    * ⚠️ 内置角色（`RoleVO.builtin === true`）后端会拒绝 —— 前端应该先把按钮禁掉，
    * 别等用户点了才报错。
+   * ⚠️ 且**强制要求二次确认凭据**（`X-Confirm-Token`）：不传会返回 `CONFIRM_REQUIRED`。
+   * 用 `useSecondaryConfirm()` 拿到 token 再传进来。
    */
-  remove: (id: string) => http.delete<void>(`/admin/roles/${id}`),
+  remove: (id: string, confirmToken?: string) =>
+    http.delete<void>(`/admin/roles/${id}`, confirmToken ? { headers: { 'X-Confirm-Token': confirmToken } } : undefined),
 
   /**
    * 该角色**已绑定**的权限（不是全部权限）。

@@ -39,7 +39,14 @@ export const userApi = {
    */
   assignRoles: (id: string, dto: AssignRolesDTO) => http.put<void>(`/admin/users/${id}/roles`, dto),
 
-  remove: (id: string) => http.delete<void>(`/admin/users/${id}`),
+  /**
+   * 删除用户。
+   *
+   * ⚠️ 后端**强制要求二次确认凭据**（`X-Confirm-Token` / `X-Confirm-Password`），
+   * 不传会返回 `CONFIRM_REQUIRED`。用 `useSecondaryConfirm()` 拿到 token 再传进来。
+   */
+  remove: (id: string, confirmToken?: string) =>
+    http.delete<void>(`/admin/users/${id}`, confirmToken ? { headers: { 'X-Confirm-Token': confirmToken } } : undefined),
 
   /** 批量启用 / 禁用 */
   batchUpdateStatus: (dto: { ids: (string | number)[]; status: number }) =>
@@ -49,7 +56,14 @@ export const userApi = {
   batchAssignRoles: (dto: { ids: (string | number)[]; roleIds: (string | number)[] }) =>
     http.put<number>('/admin/users/batch-roles', dto),
 
-  /** 批量删除（高危操作，二次确认） */
-  batchRemove: (dto: { ids: (string | number)[] }) =>
-    http.delete<number>('/admin/users/batch', { data: dto }),
+  /**
+   * 批量删除。
+   *
+   * ⚠️ 同为高危操作、**强制要有二次确认凭据**（理由见 {@link remove}）。
+   */
+  batchRemove: (dto: { ids: (string | number)[] }, confirmToken?: string) =>
+    http.delete<number>('/admin/users/batch', {
+      data: dto,
+      ...(confirmToken ? { headers: { 'X-Confirm-Token': confirmToken } } : {}),
+    }),
 }

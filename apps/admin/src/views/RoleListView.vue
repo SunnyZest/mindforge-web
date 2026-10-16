@@ -8,10 +8,15 @@ import { roleApi } from '@/api/role'
 import RoleFormDialog from '@/components/RoleFormDialog.vue'
 import RolePermissionDialog from '@/components/RolePermissionDialog.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import { useSecondaryConfirm } from '@/composables/useSecondaryConfirm'
+
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
 
 const auth = useAuthStore()
+
+/** 高危操作（删用户/删角色）的二次确认 —— 后端强制要求凭据，本地 confirm 过不了 */
+const { runConfirm } = useSecondaryConfirm()
 
 const loading = ref(false)
 const rows = ref<RoleVO[]>([])
@@ -72,15 +77,15 @@ async function onDelete(row: RoleVO): Promise<void> {
     return
   }
 
-  const ok = await ElMessageBox.confirm(
-    `删除角色「${row.name}」后，绑定了它的用户会失去对应权限。确定删除吗？`,
-    '删除确认',
-    { type: 'warning', confirmButtonText: '删除' },
-  ).catch(() => false)
-  if (!ok) return
-
   try {
-    await roleApi.remove(row.id)
+    // 删角色同样是高危操作：后端强制要确认凭据，本地 confirm 过不了
+    const res = await runConfirm({
+      message: `删除角色「${row.name}」后，绑定了它的用户会失去对应权限，且不可恢复。请输入你的登录密码确认。`,
+      title: '删除角色',
+      action: (token) => roleApi.remove(row.id, token),
+    })
+    if (!res.ok) return
+
     ElMessage.success('已删除')
     await load()
   } catch (e) {
