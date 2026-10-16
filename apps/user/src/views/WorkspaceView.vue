@@ -23,14 +23,39 @@ import {
 } from '@element-plus/icons-vue'
 import { computed, onMounted, reactive, ref, type Component } from 'vue'
 
-import type { Permission } from '@mindforge/shared'
+import type { AiEngineStatus, Permission } from '@mindforge/shared'
 
 import { interviewApi } from '@/api/interview'
 import { jobApi } from '@/api/job'
 import { resumeApi } from '@/api/resume'
+import { systemApi } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+
+/* ========== AI 引擎状态（hero 徽章）========== */
+
+/**
+ * CHECKING 是前端自己的「加载中」态 —— 后端只返回 READY / DEGRADED / OFFLINE。
+ * 请求失败也停在 CHECKING（算「未知」），不要瞎猜成「离线」，那会冤枉一个只是
+ * 探测超时的服务。
+ */
+const aiStatus = ref<AiEngineStatus | 'CHECKING'>('CHECKING')
+
+/**
+ * 状态 → 徽章外观。
+ *
+ * ⚠️ 文案不写具体模型名：模型会换、会降级，写死了反而稳定；
+ *    而且把内部选型摊在首页对用户没有任何价值。
+ */
+const AI_STATUS_META: Record<AiEngineStatus | 'CHECKING', { tone: string; label: string }> = {
+  CHECKING: { tone: 'neutral', label: '正在检测 AI 引擎…' },
+  READY: { tone: 'success', label: 'AI 核心引擎就绪' },
+  DEGRADED: { tone: 'warning', label: 'AI 引擎未配置完成' },
+  OFFLINE: { tone: 'danger', label: 'AI 引擎暂时不可用' },
+}
+
+const aiBadge = computed(() => AI_STATUS_META[aiStatus.value])
 
 /* ========== 实时仪表盘 ========== */
 
@@ -73,6 +98,15 @@ onMounted(async () => {
             stats.averageScore = r.averageScore
           })
         : Promise.resolve(),
+      // AI 引擎状态：不挂权限（任何登录用户都能看），失败不影响首页
+      systemApi
+        .aiStatus()
+        .then((r) => {
+          aiStatus.value = r.status
+        })
+        .catch(() => {
+          /* 保持 CHECKING（未知），不误报成离线 */
+        }),
     ]
     await Promise.allSettled(tasks)
   } catch {
@@ -367,7 +401,7 @@ const DIFFERENTIATORS: Differentiator[] = [
     title: '双核大模型深度交叉命题',
     vsTraditional: '通用 AI 问答只能生成泛泛而谈的网推八股文，无法结合求职者真实经历展开深度压力面。',
     mindforgeAdvantage:
-      '整合 DeepSeek-V3 强逻辑推理与阿里 Qwen 实战工程经验，基于求职者项目经历与目标 JD 针对性提问与深挖。',
+      '两套大模型交叉命题 —— 一套从逻辑与原理深挖，一套从工程与实战视角挑刺，再结合你的项目经历与目标 JD 生成追问，单一模型的思维盲区会被另一套补上。',
     accentColor: '#af52de',
   },
   {
@@ -434,13 +468,14 @@ const greeting = computed(() => {
     <header class="ws__hero mf-glass-card-interactive">
       <div class="ws__hero-left">
         <div class="ws__badge-bar">
-          <span class="ws__pill ws__pill--success">
+          <!-- 状态由 /app/ai/status 真实探测，不再是永远绿的装饰点 -->
+          <span class="ws__pill" :class="`ws__pill--${aiBadge.tone}`">
             <span class="ws__dot" />
-            AI 核心引擎就绪
+            {{ aiBadge.label }}
           </span>
           <span class="ws__pill">
             <el-icon><Cpu /></el-icon>
-            DeepSeek-V3 / Qwen 双核驱动
+            双核大模型驱动
           </span>
           <span class="ws__pill">
             <el-icon><Lightning /></el-icon>
@@ -781,14 +816,41 @@ const greeting = computed(() => {
   color: var(--mf-success-text);
   background-color: var(--mf-success-subtle);
   border-color: transparent;
+
+  --tone: var(--mf-success);
+}
+
+.ws__pill--warning {
+  color: var(--mf-warning-text);
+  background-color: var(--mf-warning-subtle);
+  border-color: transparent;
+
+  --tone: var(--mf-warning);
+}
+
+.ws__pill--danger {
+  color: var(--mf-danger-text);
+  background-color: var(--mf-danger-subtle);
+  border-color: transparent;
+
+  --tone: var(--mf-danger);
+}
+
+/* 「检测中 / 状态未知」用中性灰 —— 别用状态色，那会误导用户以为已经出结果了 */
+.ws__pill--neutral {
+  color: var(--mf-text-tertiary);
+  background-color: var(--mf-bg-subtle);
+  border-color: transparent;
+
+  --tone: var(--mf-text-tertiary);
 }
 
 .ws__dot {
   width: 6px;
   height: 6px;
-  background-color: var(--mf-success);
+  background-color: var(--tone, var(--mf-success));
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--mf-success);
+  box-shadow: 0 0 8px var(--tone, var(--mf-success));
 }
 
 .ws__hello {

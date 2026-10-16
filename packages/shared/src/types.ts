@@ -1657,3 +1657,25 @@ export const JOB_EVENT_MODE_LABELS: Record<JobEventMode, string> = {
   ONLINE: '线上',
   PHONE: '电话',
 }
+
+// ---------- 用户端：AI 能力状态 ----------
+
+/**
+ * AI 引擎状态。前端据此决定首页徽章的颜色与文案。
+ *
+ * ⚠️ 后端刻意**不返回模型名** —— 只回答「能不能用」。模型会换、会降级，
+ * 把它摊到用户端没有好处。
+ */
+export type AiEngineStatus =
+  /** 服务连得上、模型密钥也配好了 */
+  | 'READY'
+  /** 服务活着但模型没配全（缺 key）—— AI 功能会全部报「未配置模型」 */
+  | 'DEGRADED'
+  /** 服务连不上或探测超时 */
+  | 'OFFLINE'
+
+export interface AiStatusVO {
+  status: AiEngineStatus
+  /** AI 模型密钥是否已配置（配合 status 排查用） */
+  llmConfigured: boolean
+}
