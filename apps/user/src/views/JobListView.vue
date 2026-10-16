@@ -6,23 +6,29 @@ import { useRoute, useRouter } from 'vue-router'
 import { BizError, formatDateTime, type JobVO } from '@mindforge/shared'
 
 import { jobApi } from '@/api/job'
+import JobCalendarBoard from '@/components/JobCalendarBoard.vue'
 import JobFormDialog from '@/components/JobFormDialog.vue'
 import JobKanbanBoard from '@/components/JobKanbanBoard.vue'
 
 const router = useRouter()
 const route = useRoute()
 
+/** 三种视图：投递看板 / 面试日历 / 卡片列表 */
+type ViewMode = 'kanban' | 'calendar' | 'grid'
+
 /**
  * 默认模式跟着 `?view=` 走（工作台的统计卡片会带这个参数跳过来）。
  *
- * ⚠️ 只认那两个合法值，其它值（含手敲的 /view=xxx）回落默认 kanban。
+ * ⚠️ 只认那三个合法值，其它值（含手敲的 /view=xxx）回落默认 kanban。
  */
-function initialViewMode(): 'grid' | 'kanban' {
-  return route.query.view === 'grid' ? 'grid' : 'kanban'
+function initialViewMode(): ViewMode {
+  const v = route.query.view
+  return v === 'grid' || v === 'calendar' ? v : 'kanban'
 }
 
-const viewMode = ref<'grid' | 'kanban'>(initialViewMode())
+const viewMode = ref<ViewMode>(initialViewMode())
 const kanbanRef = ref<InstanceType<typeof JobKanbanBoard> | null>(null)
+const calendarRef = ref<InstanceType<typeof JobCalendarBoard> | null>(null)
 
 const loading = ref(false)
 const rows = ref<JobVO[]>([])
@@ -73,6 +79,9 @@ async function load(): Promise<void> {
 function onSearch(): void {
   if (viewMode.value === 'kanban') {
     void kanbanRef.value?.refresh()
+  } else if (viewMode.value === 'calendar') {
+    // 日历是本地按关键词过滤，不用重新请求
+    void calendarRef.value?.refresh()
   } else {
     query.page = 1
     void load()
@@ -88,6 +97,9 @@ async function onJobSaved(): Promise<void> {
   await load()
   if (viewMode.value === 'kanban') {
     void kanbanRef.value?.refresh()
+  } else if (viewMode.value === 'calendar') {
+    // 职位改了公司名/标题，日程卡片上的显示也要跟着变
+    void calendarRef.value?.refresh()
   }
 }
 
@@ -236,6 +248,7 @@ onMounted(load)
       <div class="page__actions">
         <el-radio-group v-model="viewMode" class="page__mode-switch">
           <el-radio-button value="kanban">投递看板 CRM</el-radio-button>
+          <el-radio-button value="calendar">面试日历</el-radio-button>
           <el-radio-button value="grid">卡片列表</el-radio-button>
         </el-radio-group>
         <el-input
@@ -259,6 +272,13 @@ onMounted(load)
 
     <!-- ---------- 求职投递看板 CRM ---------- -->
     <JobKanbanBoard v-if="viewMode === 'kanban'" ref="kanbanRef" :keyword="query.keyword" />
+
+    <!-- ---------- 面试日历（笔试/面试时间节点） ---------- -->
+    <JobCalendarBoard
+      v-else-if="viewMode === 'calendar'"
+      ref="calendarRef"
+      :keyword="query.keyword"
+    />
 
     <!-- ---------- 传统卡片列表与批量操作 ---------- -->
     <template v-else>

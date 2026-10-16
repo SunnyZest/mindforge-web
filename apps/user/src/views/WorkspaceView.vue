@@ -133,8 +133,10 @@ const METRICS: MetricCard[] = [
     icon: Microphone,
     color: '#ff9500',
     key: 'interviewingCount',
-    to: '/interviews',
-    permission: 'app:interview:read',
+    // 这个数字来自职位阶段（INTERVIEW_* / HR），不是模拟面试场次 ——
+    // 所以指向「面试日历」而不是模拟面试列表，点进去正好看到接下来的面试安排
+    to: '/jobs?view=calendar',
+    permission: 'app:job:read',
   },
   {
     label: '已获 Offer',

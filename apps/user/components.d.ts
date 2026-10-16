@@ -39,6 +39,7 @@ declare module 'vue' {
     InterviewAnalysisView: typeof import('./src/components/InterviewAnalysisView.vue')['default']
     InterviewCreateDialog: typeof import('./src/components/InterviewCreateDialog.vue')['default']
     InterviewMistakeBook: typeof import('./src/components/InterviewMistakeBook.vue')['default']
+    JobCalendarBoard: typeof import('./src/components/JobCalendarBoard.vue')['default']
     JobCrmDialog: typeof import('./src/components/JobCrmDialog.vue')['default']
     JobFormDialog: typeof import('./src/components/JobFormDialog.vue')['default']
     JobKanbanBoard: typeof import('./src/components/JobKanbanBoard.vue')['default']

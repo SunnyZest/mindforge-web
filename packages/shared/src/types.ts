@@ -1578,3 +1578,82 @@ export interface OfferQuery {
   sortBy?: 'companyName' | 'salaryAnnual' | 'createdAt' | 'updatedAt'
   sortOrder?: 'asc' | 'desc'
 }
+
+// ---------- 用户端：面试日历（求职日程）----------
+
+/**
+ * 日程类型。后端用英文短名，中文标签由前端映射。
+ */
+export type JobEventType =
+  | 'WRITTEN_TEST'
+  | 'INTERVIEW_1'
+  | 'INTERVIEW_2'
+  | 'HR'
+  | 'OFFER_TALK'
+  | 'OTHER'
+
+/** 面试形式：现场 / 线上 / 电话 */
+export type JobEventMode = 'ONSITE' | 'ONLINE' | 'PHONE'
+
+/** 日程状态：待进行 / 已完成 / 已取消 */
+export type JobEventStatus = 'PENDING' | 'DONE' | 'CANCELLED'
+
+export interface JobEventVO {
+  id: string
+  /** 关联职位 id —— 每条日程必挂一个职位 */
+  jobId: string
+  /** 关联职位名称（职位被删时为 null） */
+  jobTitle: string | null
+  companyName: string | null
+  /** 该职位的投递阶段，日历上用来着色/分组 */
+  applicationStage: string | null
+  eventType: JobEventType
+  title: string
+  /** ISO 本地时间字符串 */
+  eventAt: string
+  /** = eventAt + durationMinutes，未填时长时为 null */
+  endAt: string | null
+  durationMinutes: number | null
+  eventMode: JobEventMode | null
+  location: string | null
+  note: string | null
+  status: JobEventStatus
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * 新建 / 修改日程。
+ *
+ * ⚠️ 后端新建和修改共用同一个 DTO（字段与校验完全一致，修改是整体覆盖），
+ * 所以这里也只有一个类型。
+ */
+export interface JobEventSaveDTO {
+  jobId: string
+  eventType: JobEventType
+  title: string
+  /** ISO 本地时间字符串，如 2026-10-20T14:00:00 */
+  eventAt: string
+  durationMinutes?: number | null
+  eventMode?: JobEventMode | null
+  location?: string | null
+  note?: string | null
+  status?: JobEventStatus
+}
+
+/** 日程类型 → 中文标签（日历、标签墙共用） */
+export const JOB_EVENT_TYPE_LABELS: Record<JobEventType, string> = {
+  WRITTEN_TEST: '笔试',
+  INTERVIEW_1: '一面',
+  INTERVIEW_2: '二面',
+  HR: 'HR 面',
+  OFFER_TALK: '谈薪',
+  OTHER: '其他',
+}
+
+/** 面试形式 → 中文标签 */
+export const JOB_EVENT_MODE_LABELS: Record<JobEventMode, string> = {
+  ONSITE: '现场',
+  ONLINE: '线上',
+  PHONE: '电话',
+}
