@@ -43,6 +43,8 @@ const loading = ref(false)
 
 const selectedIds = ref<string[]>([])
 const selectionLimit = 5
+/** 超出上限时要把勾选框退回未选中，得拿到 el-table 实例（类型跟随仓库既有写法） */
+const tableRef = ref()
 
 const formVisible = ref(false)
 const editing = ref<OfferVO | null>(null)
@@ -94,12 +96,16 @@ function onPageChange(page: number): void {
 /**
  * 多选变化。
  *
- * ⚠️ 后端一次最多对比 5 个，超出时**拦下来并撤销这次勾选** ——
- * 静默丢弃会让用户以为是 bug（明明勾了却没反应），静默保留则超限后必报错。
+ * 后端一次最多对比 5 个。超出时拦下**并把这次勾的复选框退回未选中** ——
+ * 只弹提示不改勾选态的话，用户看到的是「明明勾上了、对比却少一个」，
+ * 反而更像 bug；静默丢弃同理。
  */
 function onSelectionChange(rows_: OfferVO[]): void {
   if (rows_.length > selectionLimit) {
     ElMessage.warning(`一次最多对比 ${selectionLimit} 个 Offer，请先取消一些`)
+    // 最后勾的那个就是超限的那个，把它退回未选中
+    const overflow = rows_[rows_.length - 1]
+    if (overflow) tableRef.value?.toggleRowSelection(overflow, false)
     return
   }
   selectedIds.value = rows_.map((r) => r.id)
@@ -193,6 +199,7 @@ onMounted(load)
       </div>
 
       <el-table
+        ref="tableRef"
         :data="rows"
         v-loading="loading"
         @selection-change="onSelectionChange"
