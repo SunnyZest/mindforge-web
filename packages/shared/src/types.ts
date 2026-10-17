@@ -1729,3 +1729,73 @@ export interface ConfirmTokenVO {
   /** 有效时长（秒） */
   expiresInSeconds: number
 }
+
+// ---------- 用户端：薪酬估算 ----------
+
+/**
+ * 薪酬估算入参。
+ *
+ * ★ 刻意不要求绑简历：绑了就得先上传、先解析，门槛比收益还高。
+ * 只要城市、岗位、年限三个必填，其余都是微调项。
+ */
+export interface SalaryEstimateDTO {
+  city: string
+  position: string
+  yearsOfExperience: number
+  /** 大专 / 本科 / 硕士 / 博士 */
+  education?: string
+  /** 大厂 / 中厂 / 创业 / 国企 / 外企 */
+  companyType?: string
+  /** 技术栈，最多 20 个 */
+  skills?: string[]
+  /** 当前年包（元），填了可以给涨幅参考 */
+  currentAnnualSalary?: number
+}
+
+/**
+ * 估算结果的置信度。
+ *
+ * ⚠️ 这是**服务端按规则钳制后**的值，不是模型自评 ——
+ * 城市 / 岗位 / 年限不在常见组合里时会被降档。
+ */
+export type SalaryConfidence = 'LOW' | 'MEDIUM' | 'HIGH'
+
+/**
+ * 薪酬估算结果。
+ *
+ * ★ 金额单位是**元**（不是 K、也不是万），展示时前端自己换算 ——
+ * 后端存一个明确的数，比存「25.5」再靠约定猜单位可靠。
+ *
+ * ★ 这是 AI 估算，不是市场行情：所以没有「样本量 / 数据来源」这类字段，
+ * 并且一定带 `caveat`（免责声明）。
+ */
+export interface SalaryEstimateVO {
+  id: string
+  city: string
+  position: string
+  yearsOfExperience: number
+  education: string | null
+  companyType: string | null
+  skills: string[]
+  currentAnnualSalary: number | null
+  /** 月薪 P50 / P75 / P90（元） */
+  monthlyP50: number | null
+  monthlyP75: number | null
+  monthlyP90: number | null
+  /** 年包 P50 / P75 / P90（元） */
+  annualP50: number | null
+  annualP75: number | null
+  annualP90: number | null
+  /** 一年发几个月（12~16），模型没给出时为空 */
+  monthsPerYear: number | null
+  confidence: SalaryConfidence | null
+  /** 估算依据，2~4 条 */
+  basis: string[]
+  /** 加减分项，0~4 条 */
+  factors: string[]
+  /** 免责声明（服务端固定文案，不要在前端改写或隐藏） */
+  caveat: string | null
+  /** 是否命中 7 天缓存（同参数直接复用上次结果） */
+  cached: boolean
+  createdAt: string
+}

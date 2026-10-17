@@ -172,6 +172,10 @@ export type {
   ConfirmTokenVO,
   AiEngineStatus,
   AiStatusVO,
+  // 用户端：薪酬估算
+  SalaryEstimateDTO,
+  SalaryEstimateVO,
+  SalaryConfidence,
 } from './types'
 
 // ⚠️ 这两个是【运行时值】（const 映射表，模板里直接要用），不能放进上面的 export type 块

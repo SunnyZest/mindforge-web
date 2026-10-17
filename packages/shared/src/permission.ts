@@ -55,7 +55,7 @@ export type AdminPermission =
   | 'admin:prompt:manage'
   | 'admin:alert:list'
 
-/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 25 条） */
+/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 27 条） */
 export type AppPermission =
   | 'app:knowledge:read'
   | 'app:knowledge:write'
@@ -86,6 +86,9 @@ export type AppPermission =
   /** Offer 对比（五维打分表）：查看与对比 / 录入与管理 */
   | 'app:offer:read'
   | 'app:offer:write'
+  /** 薪酬估算（AI 参考区间）：查看历史 / 发起估算 */
+  | 'app:salary:read'
+  | 'app:salary:write'
 
 export type Permission = AdminPermission | AppPermission
 
