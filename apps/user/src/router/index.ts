@@ -135,6 +135,18 @@ const router = createRouter({
           meta: { title: 'Offer 对比', icon: 'Trophy', order: 4.5, permission: 'app:offer:read' },
         },
         {
+          // 薪酬测算（AI 参考区间）。紧挨 Offer 对比 —— 两者都是「谈钱」的场景
+          path: 'salary',
+          name: 'salary',
+          component: lazyView(() => import('@/views/SalaryView.vue')),
+          meta: {
+            title: '薪酬测算',
+            icon: 'TrendCharts',
+            order: 4.7,
+            permission: 'app:salary:read',
+          },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: lazyView(() => import('@/views/ProfileView.vue')),
