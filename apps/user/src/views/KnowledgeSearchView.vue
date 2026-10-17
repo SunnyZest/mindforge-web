@@ -148,7 +148,7 @@ onMounted(loadKbs)
     </header>
 
     <!-- ---------- 搜索条件 ---------- -->
-    <section class="search mf-glass-card">
+    <section class="search mf-glass">
       <div class="search__row">
         <el-input
           v-model="query"
@@ -209,7 +209,7 @@ onMounted(loadKbs)
         <el-empty v-if="!hasResults" description="没有找到相关内容，换个说法试试" />
 
         <ul v-else class="hits">
-          <li v-for="hit in hits" :key="hit.chunkId" class="hit mf-glass-card">
+          <li v-for="hit in hits" :key="hit.chunkId" class="hit mf-glass-card-interactive">
             <div class="hit__head">
               <div class="hit__source">
                 <span class="hit__doc">{{ hit.documentName }}</span>
