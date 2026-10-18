@@ -100,6 +100,10 @@ async function onSubmit(): Promise<void> {
         还没有账号？
         <router-link class="auth__link" :to="{ name: 'register' }">注册一个</router-link>
       </p>
+
+      <p class="auth__foot auth__foot--secondary">
+        <router-link class="auth__link" :to="{ name: 'forgot-password' }">忘记密码？</router-link>
+      </p>
     </el-card>
   </div>
 </template>
@@ -161,6 +165,11 @@ async function onSubmit(): Promise<void> {
   font-size: var(--mf-font-sm);
   color: var(--mf-text-tertiary);
   text-align: center;
+}
+
+/* 「忘记密码」单独一行，和上面那句拉开一点距离 */
+.auth__foot--secondary {
+  margin-top: var(--mf-space-2);
 }
 
 .auth__link {

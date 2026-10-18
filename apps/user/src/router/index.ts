@@ -41,6 +41,12 @@ const router = createRouter({
       component: lazyView(() => import('@/views/RegisterView.vue')),
     },
     {
+      // 找回密码：未登录可用（靠邮箱验证码认人）
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: lazyView(() => import('@/views/ForgotPasswordView.vue')),
+    },
+    {
       path: '/forbidden',
       name: 'forbidden',
       component: lazyView(() => import('@/views/ForbiddenView.vue')),
@@ -178,8 +184,9 @@ router.beforeEach(async (to, from) => {
   const auth = useAuthStore()
   const hasToken = tokenStore.getAccess() !== null
 
-  // 登录 / 注册页：已登录的话别让用户再看它
-  if (to.name === 'login' || to.name === 'register') {
+  // 登录 / 注册 / 找回密码：这三个都是「还没登录」才能用的页面。
+  // 已登录的话别让用户再看它们（尤其是找回密码，会让人以为账号出问题了）。
+  if (to.name === 'login' || to.name === 'register' || to.name === 'forgot-password') {
     return hasToken ? { name: 'workspace' } : true
   }
 

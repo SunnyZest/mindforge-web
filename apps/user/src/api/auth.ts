@@ -3,6 +3,8 @@ import type {
   LoginDTO,
   LoginVO,
   RegisterDTO,
+  ResetPasswordDTO,
+  SendVerificationCodeDTO,
   UserInfoVO,
   UserProfileUpdateDTO,
   UserProfileVO,
@@ -28,6 +30,25 @@ export const authApi = {
 
   /** 注册。注册完不会自动登录 —— 后端只返回结果，要再调一次 login */
   register: (dto: RegisterDTO) => http.post<void>('/app/auth/register', dto, { skipRefresh: true }),
+
+  /**
+   * 发送邮箱验证码。
+   *
+   * ⚠️ 这个接口是公开的，服务端有三层闸门：60 秒冷却、每日 10 条、最多试错 5 次。
+   *    前端**必须**做 60 秒倒计时 —— 不做的话用户连点几次就撞 42904，
+   *    看起来像「点了没反应」。
+   */
+  sendVerificationCode: (dto: SendVerificationCodeDTO) =>
+    http.post<void>('/app/auth/verification-code', dto, { skipRefresh: true }),
+
+  /**
+   * 找回密码（未登录）。
+   *
+   * ⚠️ 邮箱没注册过也返回成功 —— 后端刻意这样，避免这个接口被拿来探测
+   *    「某个邮箱有没有注册」。所以前端别提示「该邮箱不存在」。
+   */
+  resetPassword: (dto: ResetPasswordDTO) =>
+    http.post<void>('/app/auth/reset-password', dto, { skipRefresh: true }),
 
   /** 当前登录用户（含 roles / permissions）—— 刷新页面后靠它恢复状态 */
   me: () => http.get<UserInfoVO>('/app/auth/me'),

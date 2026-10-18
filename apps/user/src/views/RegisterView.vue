@@ -7,13 +7,18 @@ import { useRouter } from 'vue-router'
 import { BizError } from '@mindforge/shared'
 
 import { authApi } from '@/api/auth'
+import { useCodeCountdown } from '@/composables/useCodeCountdown'
 
 const router = useRouter()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const sending = ref(false)
 
-const form = reactive({ username: '', email: '', password: '', confirm: '' })
+/** 60 秒倒计时：和后端冷却保持一致，见 useCodeCountdown 的说明 */
+const { remaining, counting, start } = useCodeCountdown()
+
+const form = reactive({ username: '', email: '', code: '', password: '', confirm: '' })
 
 /**
  * ⚠️ 长度约束照抄后端 `RegisterDTO` 上的 `@Size`（username 3~32、password 6~64）。
@@ -25,7 +30,14 @@ const rules: FormRules<typeof form> = {
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 3, max: 32, message: '用户名 3~32 位', trigger: 'blur' },
   ],
-  email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
+  ],
+  code: [
+    { required: true, message: '请输入邮箱验证码', trigger: 'blur' },
+    { len: 6, message: '验证码是 6 位数字', trigger: 'blur' },
+  ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 64, message: '密码 6~64 位', trigger: 'blur' },
@@ -44,6 +56,37 @@ const rules: FormRules<typeof form> = {
   ],
 }
 
+/**
+ * 发验证码。
+ *
+ * 只校验邮箱这一项 —— 用户名/密码还没填完也允许先收码，
+ * 否则用户得先填完整个表单才能拿码，来回折腾。
+ */
+async function onSendCode(): Promise<void> {
+  if (sending.value || counting.value) return
+
+  const emailOk = await formRef.value
+    ?.validateField('email')
+    .then(() => true)
+    .catch(() => false)
+  if (!emailOk) return
+
+  sending.value = true
+  try {
+    await authApi.sendVerificationCode({
+      channel: 'EMAIL',
+      target: form.email.trim(),
+      scene: 'REGISTER',
+    })
+    start()
+    ElMessage.success('验证码已发送，请查收邮箱（没收到就看下垃圾箱）')
+  } catch (e) {
+    ElMessage.error(e instanceof BizError ? e.message : '发送失败，请稍后重试')
+  } finally {
+    sending.value = false
+  }
+}
+
 async function onSubmit(): Promise<void> {
   if (loading.value) return
   const valid = await formRef.value?.validate().catch(() => false)
@@ -53,9 +96,8 @@ async function onSubmit(): Promise<void> {
   try {
     await authApi.register({
       username: form.username,
-      // 邮箱可空 —— 后端 required 里没有它。空串要转成 undefined，
-      // 否则会带着一个空字符串发过去（后端可能当成「改了邮箱」）
-      email: form.email.trim() || undefined,
+      email: form.email.trim(),
+      code: form.code.trim(),
       password: form.password,
     })
 
@@ -93,13 +135,32 @@ async function onSubmit(): Promise<void> {
           />
         </el-form-item>
 
-        <el-form-item label="邮箱（可选）" prop="email">
+        <el-form-item label="邮箱" prop="email">
           <el-input
             v-model="form.email"
             :prefix-icon="Message"
-            placeholder="用于找回账号"
+            placeholder="需要接收验证码"
             autocomplete="email"
           />
+        </el-form-item>
+
+        <el-form-item label="邮箱验证码" prop="code">
+          <div class="auth__code-row">
+            <el-input
+              v-model="form.code"
+              placeholder="6 位数字"
+              maxlength="6"
+              autocomplete="one-time-code"
+            />
+            <el-button
+              class="auth__code-btn"
+              :loading="sending"
+              :disabled="counting || sending"
+              @click="onSendCode"
+            >
+              {{ counting ? `${remaining} 秒后重发` : '获取验证码' }}
+            </el-button>
+          </div>
         </el-form-item>
 
         <el-form-item label="密码" prop="password">
@@ -170,6 +231,17 @@ async function onSubmit(): Promise<void> {
   font-size: var(--mf-font-sm);
   color: var(--mf-text-tertiary);
   text-align: center;
+}
+
+.auth__code-row {
+  display: flex;
+  gap: var(--mf-space-2);
+  width: 100%;
+}
+
+.auth__code-btn {
+  flex: none;
+  min-width: 108px;
 }
 
 .auth__submit {
