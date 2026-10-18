@@ -30,10 +30,11 @@
   - [3. 启动开发服务](#3-启动开发服务)
   - [4. 编译打包与类型检查](#4-编译打包与类型检查)
 - [五、 核心工程设计与避坑规约](#五-核心工程设计与避坑规约)
-  - [1. 单飞 (Single-Flight) 无感 Token 刷新机制](#1-单飞-single-flight-无感-token-刷新机制)
-  - [2. 同源部署 LocalStorage 前缀严格隔离](#2-同源部署-localstorage-前缀严格隔离)
-  - [3. 64 位雪花 Long ID 精度防截断](#3-64-位雪花-long-id-精度防截断)
-  - [4. HTML5 History 路由与 Nginx 分流部署](#4-html5-history-路由与-nginx-分流部署)
+  - [1. 邮箱验证码与找回密码](#1-邮箱验证码与找回密码)
+  - [2. 单飞 (Single-Flight) 无感 Token 刷新机制](#2-单飞-single-flight-无感-token-刷新机制)
+  - [3. 同源部署 LocalStorage 前缀严格隔离](#3-同源部署-localstorage-前缀严格隔离)
+  - [4. 64 位雪花 Long ID 精度防截断](#4-64-位雪花-long-id-精度防截断)
+  - [5. HTML5 History 路由与 Nginx 分流部署](#5-html5-history-路由与-nginx-分流部署)
 - [六、 未来演进路线图](#六-未来演进路线图)
 
 ---
@@ -83,6 +84,10 @@ mindforge-web/
   - **面试错题本**：薄弱点归档 + 单题 AI 重练。
 - **Offer 对比 (`/offers`)**：五维（薪资包/技术栈/平台背书/加班强度/通勤距离）加权决策，
   权重滑块拖一下排名实时重算。
+- **AI 薪酬测算 (`/salary`)**：按城市/岗位/年限/学历/技能生成年薪区间（P25/P50/P75）与
+  年终月数建议，带「AI 估算而非市场行情」的常驻免责说明。★ 置信度由**服务端按规则钳制**
+  （城市不在常见表 / 岗位不命中关键词 / 年限越界都只降不升），不采信模型自评；
+  同参数 7 天内命中 Redis 缓存，不重复烧 token。
 - **AI 智能助手与知识库问答 (`/chat`)**：
   - 支持个人私域知识库关联问答；
   - **零门槛对话**：用户无需强制绑定知识库，默认调用通用模型；
@@ -111,7 +116,10 @@ mindforge-web/
 
 ### 3. 共享基座 (`packages/shared`)
 - **API 通信契约**：封装全部 HTTP 方法与标准化响应解析；
-- **权限安全钩子**：封装 `useAuth`、`hasPermission` 与路由白名单守卫。
+- **权限安全钩子**：封装 `useAuth`、`hasPermission` 与路由白名单守卫；
+- **类型与权限码单一来源**：DTO/VO 类型与 54 个权限码只在这里定义一份，两端 import。
+  邮箱验证码的 `SendVerificationCodeDTO` / `ResetPasswordDTO` / `VerificationScene` 也在其中 ——
+  前端类型就是后端 `@NotBlank` 校验的镜子，对不上要到运行期才报错。
 
 ---
 
@@ -185,27 +193,37 @@ pnpm format
 
 ## 五、 核心工程设计与避坑规约
 
-### 1. 单飞 (Single-Flight) 无感 Token 刷新机制
+### 1. 邮箱验证码与找回密码
+- **注册**：`email` 与 `code` 都是必填（2026-10-18 起的破坏性变更），
+  流程是「获取验证码 → 填写 → 提交」；发码按钮带 60 秒倒计时，**这不是装饰** ——
+  后端有 60 秒冷却，不挡按钮用户连点几次全撞 `42904`，看起来像「点了没反应」。
+- **找回密码 (`/forgot-password`)**：公开路由，未登录可用。提示文案是
+  「如果该邮箱已注册，验证码会送达」—— 后端对未注册邮箱**也返回成功**（不便透露注册状态），
+  前端不能替它说漏嘴。
+- **登录后的「修改密码」不加验证码**：那条路径只验原密码 + 撤销 refreshToken。
+- 发送通道做了抽象（`VerificationCodeSender`），短信以后加一个实现类即可，前端复用同一套类型。
+
+### 2. 单飞 (Single-Flight) 无感 Token 刷新机制
 - **痛点**：当页面多个组件并发请求且 Access Token 过期时，如果并发发起多个 `/auth/refresh` 请求，由于后端采用了长效 Token 轮转机制（Rotation），后续请求会被后端防御机制判定为“Token 重放攻击”而强制踢用户下线。
 - **解决方案**：在 `packages/shared/src/http.ts` 中维护刷新锁与挂起队列：
   - 仅由首个 401 请求发起 `refresh`；
   - 其余并发请求压入等待队列 `requestsQueue`；
   - 刷新成功后统一更新 Token 并重放队列中的请求，用户全程无感知。
 
-### 2. 同源部署 LocalStorage 前缀严格隔离
+### 3. 同源部署 LocalStorage 前缀严格隔离
 - 当用户端与管理端打包部署在同一域名/IP 下时，浏览器的 `localStorage` 是完全共享的。
 - **规约**：
   - 用户端所有存储键强制加前缀：`mf_user_access_token`、`mf_user_refresh_token`；
   - 管理端所有存储键强制加前缀：`mf_admin_access_token`、`mf_admin_refresh_token`；
   - 彻底避免在同一浏览器窗口中交替登录导致的串号与顶号问题。
 
-### 3. 64 位雪花 Long ID 精度防截断
+### 4. 64 位雪花 Long ID 精度防截断
 - 后端主键采用 64 位雪花算法（如 `1843928174829104821`），超过 JavaScript 的安全整数上限（`2^53 - 1 = 9007199254740991`）。
 - **规约**：
   - 前端 TypeScript 类型定义中所有 ID 一律声明为 `string`；
   - 后端 Jackson 序列化输出统一转为字符串，禁止在前端参与数字数学运算。
 
-### 4. HTML5 History 路由与 Nginx 分流部署
+### 5. HTML5 History 路由与 Nginx 分流部署
 由于应用均采用 History 模式且管理端包含 `/admin/` base 路径，生产部署时 Nginx 必须按前缀分流并配置 `try_files` 兜底：
 
 ```nginx
