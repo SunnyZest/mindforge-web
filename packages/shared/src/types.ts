@@ -78,10 +78,47 @@ export interface LoginDTO {
 export interface RegisterDTO {
   /** 3~32 位 */
   username: string
-  /** 可空 —— 后端 required 里没有 email */
-  email?: string
+  /**
+   * 必填。
+   *
+   * ★ 2026-10-18 起注册必须先证明「你拥有这个邮箱」：
+   * 先调 `sendVerificationCode({ scene: 'REGISTER' })`，用户收信后把码一起提交。
+   */
+  email: string
+  /** 邮箱验证码（scene = REGISTER），6 位 */
+  code: string
   /** 6~64 位 */
   password: string
+}
+
+/** 验证码通道。短信还没开通，后端会明确报「通道尚未开通」 */
+export type VerificationChannel = 'EMAIL' | 'SMS'
+
+/**
+ * 验证码场景。
+ *
+ * - REGISTER：注册
+ * - RESET_PASSWORD：忘记密码（找回）
+ *
+ * ⚠️ 登录后的「修改密码」不需要验证码 —— 那条路径只验原密码。
+ */
+export type VerificationScene = 'REGISTER' | 'RESET_PASSWORD'
+
+/** 发送验证码（Java 的 `SendVerificationCodeDTO`） */
+export interface SendVerificationCodeDTO {
+  channel: VerificationChannel
+  /** 邮箱地址（SMS 时是手机号） */
+  target: string
+  scene: VerificationScene
+}
+
+/** 找回密码（Java 的 `ResetPasswordDTO`）—— 未登录可用 */
+export interface ResetPasswordDTO {
+  email: string
+  /** 邮箱验证码（scene = RESET_PASSWORD） */
+  code: string
+  /** 6~64 位 */
+  newPassword: string
 }
 
 /** 修改密码（Java 的 `ChangePasswordDTO`）—— 用户端和管理端共用这个形状 */

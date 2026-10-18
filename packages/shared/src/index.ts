@@ -20,6 +20,11 @@ export type {
   // 用户端：注册 / 改密 / 个人资料
   RegisterDTO,
   ChangePasswordDTO,
+  // 用户端：邮箱验证码（注册 / 忘记密码）
+  VerificationChannel,
+  VerificationScene,
+  SendVerificationCodeDTO,
+  ResetPasswordDTO,
   UserProfileVO,
   UserProfileUpdateDTO,
   // 用户管理（写操作）
