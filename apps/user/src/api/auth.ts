@@ -65,4 +65,18 @@ export const authApi = {
 export const profileApi = {
   get: () => http.get<UserProfileVO>('/app/user/profile'),
   update: (dto: UserProfileUpdateDTO) => http.put<UserProfileVO>('/app/user/profile', dto),
+
+  /**
+   * 上传头像（multipart/form-data，字段名固定为 `file`）。
+   *
+   * ⚠️ 不要手动设 `Content-Type`：axios 会按 FormData 自动补上带 boundary 的头。
+   *    自己写成 `multipart/form-data` 反而会丢掉 boundary，后端解析直接报错。
+   *
+   * 返回的是**最新的完整资料**，调用方拿它刷新页面即可，不用再 GET 一次。
+   */
+  uploadAvatar: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.post<UserProfileVO>('/app/user/avatar', form)
+  },
 }
