@@ -47,6 +47,9 @@ const rules = computed<FormRules<typeof form>>(() => ({
 /** 切换登录方式：清空标识输入 —— 刚才打的用户名几乎一定不是合法邮箱 */
 function onModeChange(): void {
   form.username = ''
+  // 切换后「标识」这一项的文案和规则都变了，留着旧模式的报错
+  //（「请输入用户名」）会指着一个已经不存在的字段说话，所以清掉。
+  // 密码项不动：那儿的报错是用户真的失焦触发过的，替他掩盖反而是骗人。
   formRef.value?.clearValidate('username')
 }
 
@@ -90,10 +93,18 @@ async function onSubmit(): Promise<void> {
         <el-radio-button value="email">邮箱登录</el-radio-button>
       </el-radio-group>
 
+      <!--
+        ⚠️ validate-on-rule-change 必须关掉（EP 默认是 true）。
+        下面的 rules 是 computed，切换「用户名 / 邮箱」会返回一个全新的对象，
+        el-form 内部 watch(rules) 一旦看到规则变了就立刻 validate() 整张表单 ——
+        于是刚点完切换，还没碰任何输入框，标识框和密码框就一起标红了。
+        关掉之后校验只由各规则的 trigger: 'blur' 和提交时的 validate() 驱动。
+      -->
       <el-form
         ref="formRef"
         :model="form"
         :rules="rules"
+        :validate-on-rule-change="false"
         label-position="top"
         @submit.prevent="onSubmit"
       >
