@@ -15,9 +15,8 @@ const rows = ref<ResumeVO[]>([])
 const total = ref(0)
 const query = reactive({ page: 1, pageSize: 12 })
 
-/** 正在上传 / 正在触发解析的简历 id（按钮 loading 用） */
+/** 正在上传（上传按钮 loading 用） */
 const uploading = ref(false)
-const acting = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement>()
 
 /**
@@ -41,6 +40,13 @@ const STATUS_TONE: Record<string, 'neutral' | 'warning' | 'success' | 'danger'> 
   FAILED: 'danger',
 }
 
+/** 解析按钮的文案：解析中要明确写「在跑」，不然用户会以为按钮坏了 */
+function parseButtonText(status: string): string {
+  if (status === 'PARSING') return '解析中…'
+  if (status === 'FAILED') return '重试解析'
+  return '解析'
+}
+
 function fail(e: unknown, fallback: string): void {
   ElMessage.error(e instanceof BizError ? e.message : fallback)
 }
@@ -61,8 +67,12 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
 }
 
 /**
- * 有简历正在解析中就自动刷新 —— 解析是后端异步跑的，光靠手动点根本不知道什么时候好。
- * 逻辑在 composables/useAutoRefresh.ts（和管理端文档列表共用同一套）。
+ * 有简历正在解析中就自动刷新。
+ *
+ * ⚠️ 解析接口本身是**同步**的（1~3 分钟才返回），前端刻意不等它，
+ *    靠这里 5 秒一轮去看 parseStatus 变了没有 —— 否则用户只能盯着一个
+ *    转三分钟的按钮，还以为卡死了。
+ *    逻辑在 composables/useAutoRefresh.ts（和管理端文档列表共用同一套）。
  */
 const {
   active: refreshing,
@@ -93,9 +103,9 @@ async function onFileChange(event: Event): Promise<void> {
   uploading.value = true
   try {
     const created = await resumeApi.upload(file)
-    ElMessage.success('上传成功，接着点「解析」让 AI 读出内容')
+    ElMessage.success('上传成功，接着点「解析」让 AI 读出内容（大约 1~3 分钟）')
     await load()
-    // 上传完不自动解析 —— 后端刻意把两件事拆开（解析是几十秒的慢接口），
+    // 上传完不自动解析 —— 后端刻意把两件事拆开（解析是 1~3 分钟的慢接口），
     // 而且让用户显式点一下，他对「要等一会儿」有预期。
     void created
   } catch (e) {
@@ -106,18 +116,29 @@ async function onFileChange(event: Event): Promise<void> {
 }
 
 // ---------- 操作 ----------
-async function onParse(row: ResumeVO): Promise<void> {
-  acting.value = row.id
-  try {
-    await resumeApi.parse(row.id)
-    ElMessage.success('已提交解析，稍等片刻')
-    await load()
-    resume()
-  } catch (e) {
-    fail(e, '提交解析失败')
-  } finally {
-    acting.value = null
-  }
+/**
+ * 触发解析。
+ *
+ * ⚠️ 这个接口是**同步**的，一次 1~3 分钟（实测 195~205 秒），所以这里**不等它返回**：
+ *    后端在调模型之前就把状态置成 PARSING 了，直接把本地状态改掉、交给自动刷新
+ *    去感知结果。请求本身不取消 —— 跑完后端照样落库，回来时顺手再刷一次兜底。
+ */
+function onParse(row: ResumeVO): void {
+  // 立刻把这一行切成「解析中」：卡片标签、按钮禁用、顶部「解析中，自动刷新」都会跟着变，
+  // 用户点完马上能看到反馈，而不是盯着一个没反应的按钮
+  row.parseStatus = 'PARSING'
+  // 清掉轮数计数 —— 上一次可能已经刷到上限停了，不重置的话这次不会继续轮询
+  resume()
+  ElMessage.info('已开始解析，通常需要 1~3 分钟，期间可以继续浏览其他页面')
+
+  resumeApi
+    .parse(row.id)
+    .then(() => load({ silent: true }))
+    .catch((e) => {
+      // 走到这里说明后端确实失败了（AI 报错 / 请求超时），刷新一下拿真实的失败原因
+      fail(e, '解析失败')
+      void load({ silent: true })
+    })
 }
 
 async function onOptimize(row: ResumeVO): Promise<void> {
@@ -212,18 +233,18 @@ onMounted(load)
           <!--
             解析按钮的文案随状态变：
               没解析过 → 「解析」
-              解析过   → 「重新解析」（改了文件想重跑）
-              解析中   → 禁用（正在跑，再点没意义）
+              解析失败 → 「重试解析」
+              解析中   → 「解析中…」并禁用（同步接口要跑 1~3 分钟，再点只会撞 409）
+              已解析   → 走下面那个「重新解析」
           -->
           <el-button
             v-if="r.parseStatus !== 'SUCCESS'"
             size="small"
             :icon="Refresh"
-            :loading="acting === r.id"
             :disabled="r.parseStatus === 'PARSING'"
             @click="onParse(r)"
           >
-            {{ r.parseStatus === 'FAILED' ? '重试解析' : '解析' }}
+            {{ parseButtonText(r.parseStatus) }}
           </el-button>
           <el-button v-else size="small" :icon="Refresh" @click="onParse(r)">重新解析</el-button>
 

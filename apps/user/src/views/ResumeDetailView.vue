@@ -23,7 +23,6 @@ const router = useRouter()
 
 const id = computed(() => String(route.params.id))
 const loading = ref(false)
-const parsing = ref(false)
 const studioVisible = ref(false)
 const detail = ref<ResumeDetailVO | null>(null)
 
@@ -50,7 +49,10 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
   }
 }
 
-/** 解析中是后端异步跑的 —— 用同一套轮询逻辑盯着 */
+/**
+ * 解析接口本身是**同步**的（1~3 分钟才返回），前端不等它，
+ * 靠这里 5 秒一轮去看 parseStatus 变了没有。
+ */
 const {
   active: refreshing,
   exhausted,
@@ -60,17 +62,34 @@ const {
   onRefresh: () => load({ silent: true }),
 })
 
-async function onParse(): Promise<void> {
-  parsing.value = true
-  try {
-    await resumeApi.parse(id.value)
-    ElMessage.success('已提交解析，稍等片刻')
-    await load()
-  } catch (e) {
-    fail(e, '提交解析失败')
-  } finally {
-    parsing.value = false
-  }
+/** 解析按钮文案：解析中要明确写「在跑」，不然用户会以为按钮坏了 */
+const parseText = computed(() => {
+  const status = detail.value?.parseStatus
+  if (status === 'PARSING') return '解析中…'
+  if (status === 'SUCCESS') return '重新解析'
+  return '解析'
+})
+
+/**
+ * 触发解析。
+ *
+ * ⚠️ 和列表页一致：接口是同步的，一次 1~3 分钟，所以不等它返回 ——
+ *    先把状态切成 PARSING，交给自动刷新去感知结果。
+ */
+function onParse(): void {
+  if (!detail.value) return
+  detail.value.parseStatus = 'PARSING'
+  // 清掉轮数计数 —— 上一次可能已经刷到上限停了，不重置的话这次不会继续轮询
+  resume()
+  ElMessage.info('已开始解析，通常需要 1~3 分钟，期间可以继续浏览其他页面')
+
+  resumeApi
+    .parse(id.value)
+    .then(() => load({ silent: true }))
+    .catch((e) => {
+      fail(e, '解析失败')
+      void load({ silent: true })
+    })
 }
 
 /**
@@ -223,11 +242,10 @@ onMounted(load)
 
         <el-button
           :icon="Refresh"
-          :loading="parsing"
           :disabled="detail?.parseStatus === 'PARSING'"
           @click="onParse"
         >
-          {{ detail?.parseStatus === 'SUCCESS' ? '重新解析' : '解析' }}
+          {{ parseText }}
         </el-button>
       </div>
     </header>

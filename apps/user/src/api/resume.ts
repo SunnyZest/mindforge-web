@@ -61,11 +61,17 @@ export const resumeApi = {
   /**
    * 触发解析。
    *
-   * ★ 这是个**慢接口**（几十秒），但它是异步的：调完立刻返回，
-   *   实际进度去看 `parseStatus`（PENDING → PARSING → SUCCESS / FAILED）。
-   *   所以超时不用放宽，调完开始轮询就行。
+   * ⚠️ 这是个**同步慢接口**，不是异步任务：一次调用要 1~3 分钟
+   *    （实测 195~205 秒 —— 模型要输出上万 token 的结构化 JSON）。
+   *
+   *    后端确实在调模型【之前】就把 parseStatus 置成 PARSING 了，但**HTTP 请求
+   *    本身一直挂着**，不会「调完立刻返回」。所以：
+   *      · 超时必须放宽到 5 分钟，用默认 30 秒必然超时（表现为「提交解析失败」，
+   *        而后端其实还在跑，用户再点就撞 409「简历正在解析中」）；
+   *      · 页面不必等它返回，发出去就可以靠轮询 parseStatus 感知结果。
    */
-  parse: (id: string) => http.post<void>(`/app/resumes/${id}/parse`),
+  parse: (id: string) =>
+    http.post<void>(`/app/resumes/${id}/parse`, undefined, { timeout: 5 * 60 * 1000 }),
 
   /** 在线精修或采纳 AI 改写建议后保存简历内容 */
   update: (id: string, dto: ResumeUpdateDTO) =>
