@@ -37,6 +37,8 @@
   --mf-font-md: 14px; /* 需要强调的正文、按钮 */
   --mf-font-lg: 20px; /* 区块标题 */
   --mf-font-xl: 28px; /* 页面标题 */
+  --mf-font-sub: 16px; /* 大标题下的导语段（比正文大一档，才压得住大标题） */
+  --mf-font-display: 48px; /* 超大标题 —— 页面级的视觉重心，一页只该出现一次 */
   --mf-font-size-sm: var(--mf-font-sm); /* 旧名别名，兼容历史写法 */
 
   --mf-leading: 1.6;

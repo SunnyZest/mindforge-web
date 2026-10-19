@@ -205,6 +205,66 @@ const isEmptyStats = computed(() =>
   visibleMetrics.value.every((m) => !stats[m.key]),
 )
 
+/* ========== Hero 首屏的「备战实力」指标 ========== */
+
+interface HeroVital {
+  label: string
+  /** stats 中的 key */
+  key: keyof typeof stats
+  /** 附加单位 */
+  suffix?: string
+  permission: Permission
+}
+
+/**
+ * ★ 为什么挑这四个，而不是复用下面「数据总览」那六个：
+ *   统计接口一次就返回 10 个字段，下面只消费了 6 个 ——
+ *   这四个（面试平均分 / 已掌握 / 累计作答 / 近期面试）本来就是白拿的。
+ *   拿它们填 Hero，既不用多发一个请求，也不会和下面那排数字
+ *   重复成「同一页出现两遍同一组数」。
+ */
+const HERO_VITALS: HeroVital[] = [
+  { label: '面试平均分', key: 'averageScore', suffix: '分', permission: 'app:interview:read' },
+  { label: '已掌握题目', key: 'masteredCount', permission: 'app:interview:read' },
+  { label: '累计作答', key: 'totalAnswered', permission: 'app:interview:read' },
+  { label: '近期面试', key: 'upcomingScheduleCount', permission: 'app:job:read' },
+]
+
+const heroVitals = computed(() =>
+  HERO_VITALS.filter((v) => auth.can(v.permission)).map((v) => ({
+    label: v.label,
+    raw: stats[v.key],
+    suffix: v.suffix,
+  })),
+)
+
+/**
+ * 全 0 就把整排藏起来。
+ *
+ * ⚠️ 不复用 isEmptyStats —— 那个只看下面「数据总览」的六个指标，
+ *    和 Hero 这四个不是同一批字段，判空得各判各的。
+ *
+ * 新用户首屏挂一排 0，只会让人觉得「这产品我还没用起来」；
+ * 让它干净地收在按钮那儿，反而更像个欢迎页。
+ */
+const showHeroVitals = computed(() => heroVitals.value.some((v) => Boolean(v.raw)))
+
+/**
+ * 「浏览核心能力」—— 滚到下面对应的区块。
+ *
+ * 用 scrollIntoView 而不是锚点跳转：不往地址栏塞 hash，也不惊动路由。
+ *
+ * ⚠️ 手动判 reduced-motion —— CSS 的 scroll-behavior 会被这个偏好自动降级，
+ *    但 JS 传 behavior: 'smooth' 不会。用户开了「减少动态效果」时得给 auto。
+ */
+function scrollToFeatures(): void {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.querySelector('.ws__section--features')?.scrollIntoView({
+    behavior: reduce ? 'auto' : 'smooth',
+    block: 'start',
+  })
+}
+
 /* ========== 核心求职链路 ========== */
 
 interface FlowStep {
@@ -464,45 +524,66 @@ const greeting = computed(() => {
 
 <template>
   <div class="ws">
-    <!-- ========== 顶部仪表控制台 ========== -->
-    <header class="ws__hero mf-glass-card-interactive">
-      <div class="ws__hero-left">
+    <!-- ========== 顶部 Hero ==========
+         居中单列：胶囊 → 超大标题 → 导语 → 动作 → 实力指标。
+         ★ 刻意【不套卡片背景】—— 内容直接浮在背景壁纸上，视觉重心全给标题；
+           一旦套上玻璃卡片，那层「一屏一件事」的开放感就没了。 -->
+    <header class="ws__hero">
+      <div class="ws__hero-inner">
         <div class="ws__badge-bar">
           <!-- 状态由 /app/ai/status 真实探测，不再是永远绿的装饰点 -->
           <span class="ws__pill" :class="`ws__pill--${aiBadge.tone}`">
             <span class="ws__dot" />
             {{ aiBadge.label }}
           </span>
-          <span class="ws__pill">
-            <el-icon><Cpu /></el-icon>
-            双核大模型驱动
-          </span>
-          <span class="ws__pill">
-            <el-icon><Lightning /></el-icon>
-            RAG 知识图谱已连接
-          </span>
         </div>
-        <h1 class="ws__hello">{{ greeting }}，{{ auth.displayName || '求职探索者' }}</h1>
-        <p class="ws__sub">
-          欢迎使用 <strong>MindForge AI</strong> ——
-          新一代沉浸式 AI 求职备战中枢。从简历精修到投递管控、从模拟面试到错题复盘，构建「简历打磨 ➔
-          投递追踪 ➔ 实战模拟 ➔ 闭环复盘」的全链路求职能力壁垒。
-        </p>
-      </div>
 
-      <div class="ws__hero-tip">
-        <div class="tip-card">
-          <div class="tip-card__head">
-            <el-icon class="tip-card__icon"><Star /></el-icon>
-            <span class="tip-card__title">高效通关建议</span>
+        <h1 class="ws__hello">
+          {{ greeting }}，<span class="ws__name">{{ auth.displayName || '求职探索者' }}</span>
+        </h1>
+
+        <p class="ws__sub">简历、职位、面试、知识库 —— 把求职全流程收进一条 AI 闭环</p>
+
+        <div class="ws__actions">
+          <router-link class="ws__btn ws__btn--primary" to="/resumes">
+            开始使用
+            <el-icon><ArrowRight /></el-icon>
+          </router-link>
+          <button type="button" class="ws__btn ws__btn--ghost" @click="scrollToFeatures">
+            浏览核心能力
+          </button>
+        </div>
+
+        <!--
+          实力指标：数字全部来自上面 onMounted 已经拉过的那几个接口，没有新增请求。
+          全 0（新用户）时整排不渲染，Hero 就干净地收在按钮那里。
+        -->
+        <div v-if="!statsLoading && showHeroVitals" class="ws__vitals">
+          <div v-for="v in heroVitals" :key="v.label" class="vital">
+            <span class="vital__value">
+              {{ v.raw ?? 0 }}<em v-if="v.suffix">{{ v.suffix }}</em>
+            </span>
+            <span class="vital__label">{{ v.label }}</span>
           </div>
-          <p class="tip-card__body">
-            建议先上传简历并录入目标 JD，AI
-            将自动完成匹配诊断并基于交集精准出题。面试后的错题会自动归入错题本，随时刷分攻克薄弱点。
-          </p>
         </div>
       </div>
     </header>
+
+    <!-- ========== 高效通关建议 ==========
+         ★ 原先挤在 Hero 右侧 300px 的窄栏里，一行只排得下十来个字。
+         挪成横条后文案能舒展铺开，也不再和居中的标题抢视觉重心。 -->
+    <div class="tip-strip">
+      <div class="tip-strip__icon">
+        <el-icon><Star /></el-icon>
+      </div>
+      <div class="tip-strip__body">
+        <span class="tip-strip__title">高效通关建议</span>
+        <p class="tip-strip__text">
+          建议先上传简历并录入目标 JD，AI
+          将自动完成匹配诊断并基于交集精准出题。面试后的错题会自动归入错题本，随时刷分攻克薄弱点。
+        </p>
+      </div>
+    </div>
 
     <!-- ========== 平台特色与差异化展示 ========== -->
     <section class="ws__section ws__section--features">
@@ -776,27 +857,27 @@ const greeting = computed(() => {
   padding-bottom: 48px;
 }
 
-/* ---------- 顶部 Hero 区域 ---------- */
+/* ---------- 顶部 Hero 区域 ----------
+   ★ 居中单列、不做卡片背景 —— 整块直接浮在背景壁纸上。
+   上下给足留白（上 56 / 下 12），是「一屏一件事」那种排场感的关键；
+   若补上卡片背景，这层开放感立刻被框死，不要再加回来。 */
 .ws__hero {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  justify-content: space-between;
-  align-items: center;
-  padding: 28px 32px;
-  border-radius: var(--mf-radius-xl);
+  padding: 56px var(--mf-space-6) 12px;
+  text-align: center;
 }
 
-.ws__hero-left {
-  flex: 1;
-  min-width: 320px;
+.ws__hero-inner {
+  /* 收窄到 760px —— 太宽时标题与导语会散开，失去汇聚感 */
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .ws__badge-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
 }
 
 .ws__pill {
@@ -854,57 +935,177 @@ const greeting = computed(() => {
 }
 
 .ws__hello {
-  margin: 0 0 8px;
-  font-size: var(--mf-font-xl);
-  font-weight: 600;
+  margin: 0 0 16px;
+  /* clamp 免断点：小屏贴住 --mf-font-xl(28px)，大屏封顶 48px */
+  font-size: clamp(var(--mf-font-xl), 5.5vw, var(--mf-font-display));
+  font-weight: var(--mf-weight-semibold);
+  line-height: 1.15;
   letter-spacing: -0.03em;
   color: var(--mf-text-primary);
 }
 
+/* 名字用主色 —— 超大字里唯一的彩色落点，视线自然先落在这里 */
+.ws__name {
+  color: var(--mf-primary);
+}
+
 .ws__sub {
   margin: 0;
-  font-size: var(--mf-font-sm);
-  line-height: 1.65;
+  font-size: var(--mf-font-sub);
+  line-height: 1.6;
   color: var(--mf-text-secondary);
-  max-width: 660px;
 }
 
-.ws__hero-tip {
-  flex: none;
-  width: 300px;
-}
-
-.tip-card {
-  padding: 16px;
-  background: var(--mf-glass-tint);
-  border: 1px solid var(--mf-glass-border-soft);
-  border-radius: var(--mf-radius-md);
-}
-
-.tip-card__head {
+/* ---------- Hero 动作按钮 ---------- */
+.ws__actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.ws__btn {
+  display: inline-flex;
   gap: 6px;
   align-items: center;
-  margin-bottom: 8px;
-}
-
-.tip-card__icon {
-  font-size: var(--mf-font-sm);
-  color: var(--mf-warning);
-}
-
-.tip-card__title {
-  font-size: var(--mf-font-xs);
+  padding: 11px 24px;
+  font-family: inherit;
+  font-size: var(--mf-font-md);
   font-weight: var(--mf-weight-medium);
+  line-height: 1;
+  border: none;
+  border-radius: var(--mf-radius-pill);
+  cursor: pointer;
+  transition:
+    background-color var(--mf-duration-fast) var(--mf-ease-out),
+    transform var(--mf-duration-fast) var(--mf-ease-spring),
+    box-shadow var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+.ws__btn:hover {
+  transform: translateY(-1px);
+}
+
+.ws__btn--primary {
+  color: #fff;
+  text-decoration: none;
+  background: var(--mf-primary);
+  box-shadow: 0 6px 16px rgb(0 122 255 / 28%);
+}
+
+.ws__btn--primary:hover {
+  background: var(--mf-primary-hover);
+}
+
+/* 次要动作：透明底 + 描边。放这里是为了让主按钮独占视觉重量 */
+.ws__btn--ghost {
+  color: var(--mf-text-primary);
+  background: transparent;
+  border: 1px solid var(--mf-glass-border);
+}
+
+.ws__btn--ghost:hover {
+  background: var(--mf-glass-tint-strong);
+}
+
+/* ---------- Hero 实力指标 ---------- */
+.ws__vitals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  justify-content: center;
+  margin-top: 44px;
+}
+
+.vital {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vital__value {
+  font-size: var(--mf-font-xl);
+  font-weight: var(--mf-weight-semibold);
+  line-height: 1.2;
+  color: var(--mf-text-primary);
+  /* 等宽数字：数字变化时宽度不跳 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 单位（分 / 题 / 场）降一档字号 —— 别和数字等大，会把主数压小 */
+.vital__value em {
+  margin-left: 2px;
+  font-size: var(--mf-font-sm);
+  font-style: normal;
+  font-weight: var(--mf-weight-normal);
+  color: var(--mf-text-tertiary);
+}
+
+.vital__label {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+}
+
+/* ---------- 高效通关建议（横条） ---------- */
+.tip-strip {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: var(--mf-glass-card);
+  border: 1px solid var(--mf-glass-border-soft);
+  border-radius: var(--mf-radius-lg);
+}
+
+.tip-strip__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mf-warning), #ff9500);
+  border-radius: var(--mf-radius-sm);
+}
+
+.tip-strip__body {
+  /* min-width: 0 让长文案在 flex 里换行，而不是把整条撑破 */
+  min-width: 0;
+}
+
+.tip-strip__title {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--mf-font-md);
+  font-weight: var(--mf-weight-semibold);
   color: var(--mf-warning-text);
   letter-spacing: 0.02em;
 }
 
-.tip-card__body {
+.tip-strip__text {
   margin: 0;
-  font-size: var(--mf-font-xs);
-  line-height: 1.55;
+  font-size: var(--mf-font-sm);
+  line-height: 1.6;
   color: var(--mf-text-secondary);
+}
+
+/* 窄屏：指标挤到两行时收起列间距，避免右侧留白不均 */
+@media (width <= 720px) {
+  .ws__hero {
+    padding-top: 40px;
+  }
+
+  .ws__vitals {
+    gap: 20px 28px;
+    margin-top: 32px;
+  }
+
+  .ws__btn {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
 /* ---------- 实时数据仪表盘 ---------- */
