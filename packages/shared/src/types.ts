@@ -65,6 +65,13 @@ export interface TokenVO {
 }
 
 export interface LoginDTO {
+  /**
+   * 登录标识：用户名或邮箱。
+   *
+   * 后端 `CustomUserDetailsService` 先按用户名查，查不到且含 `@` 再按邮箱查 ——
+   * 所以前端不需要告诉后端「我用哪种」，只需要按选择的模式做格式校验。
+   * 上限 64（`user.email varchar(64)`）；用户名本身仍是 3-32。
+   */
   username: string
   password: string
 }

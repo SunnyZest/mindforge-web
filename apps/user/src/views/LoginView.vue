@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Lock, User } from '@element-plus/icons-vue'
+import { Lock, Message, User } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { BizError } from '@mindforge/shared'
@@ -15,6 +15,16 @@ const auth = useAuthStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
+/**
+ * 登录标识类型。
+ *
+ * 后端只收一个 `username` 字段，会自己判断「是用户名还是邮箱」——
+ * 这里的切换管两件事：输入框的文案 / 校验规则，以及同样的字符串别被误读成另一种标识。
+ * （比如用户选了邮箱却打成了用户名，前端先拦下来，不用等后端报「密码错误」）
+ */
+type LoginMode = 'username' | 'email'
+const mode = ref<LoginMode>('username')
+
 const form = reactive({ username: '', password: '' })
 
 // 从注册页跳过来时会带上 ?username=xxx —— 帮他填好，省得再打一遍。
@@ -23,9 +33,21 @@ const form = reactive({ username: '', password: '' })
 const fromRegister = route.query.username
 if (typeof fromRegister === 'string') form.username = fromRegister
 
-const rules: FormRules<typeof form> = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+const rules = computed<FormRules<typeof form>>(() => ({
+  username:
+    mode.value === 'email'
+      ? [
+          { required: true, message: '请输入邮箱', trigger: 'blur' },
+          { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
+        ]
+      : [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+}))
+
+/** 切换登录方式：清空标识输入 —— 刚才打的用户名几乎一定不是合法邮箱 */
+function onModeChange(): void {
+  form.username = ''
+  formRef.value?.clearValidate('username')
 }
 
 async function onSubmit(): Promise<void> {
@@ -35,7 +57,7 @@ async function onSubmit(): Promise<void> {
 
   loading.value = true
   try {
-    await auth.login({ username: form.username, password: form.password })
+    await auth.login({ username: form.username.trim(), password: form.password })
 
     // 被守卫拦下来的话 query 里带着原目标，登录后送回去
     const redirect = route.query.redirect
@@ -58,6 +80,16 @@ async function onSubmit(): Promise<void> {
       <h1 class="auth__title">欢迎回来</h1>
       <p class="auth__subtitle">登录 MindForge AI，继续你的求职准备</p>
 
+      <el-radio-group
+        v-model="mode"
+        class="auth__mode"
+        size="small"
+        @change="onModeChange"
+      >
+        <el-radio-button value="username">用户名登录</el-radio-button>
+        <el-radio-button value="email">邮箱登录</el-radio-button>
+      </el-radio-group>
+
       <el-form
         ref="formRef"
         :model="form"
@@ -65,12 +97,13 @@ async function onSubmit(): Promise<void> {
         label-position="top"
         @submit.prevent="onSubmit"
       >
-        <el-form-item label="用户名" prop="username">
+        <el-form-item :label="mode === 'email' ? '邮箱' : '用户名'" prop="username">
           <el-input
             v-model="form.username"
-            :prefix-icon="User"
-            placeholder="用户名"
-            autocomplete="username"
+            :prefix-icon="mode === 'email' ? Message : User"
+            :placeholder="mode === 'email' ? '注册时填写的邮箱' : '用户名'"
+            :autocomplete="mode === 'email' ? 'email' : 'username'"
+            maxlength="64"
           />
         </el-form-item>
 
@@ -150,10 +183,18 @@ async function onSubmit(): Promise<void> {
 }
 
 .auth__subtitle {
-  margin: 0 0 var(--mf-space-6);
+  margin: 0 0 var(--mf-space-5);
   font-size: var(--mf-font-sm);
   color: var(--mf-text-tertiary);
   text-align: center;
+}
+
+/* 切换条整行居中，和上下留白对齐 */
+.auth__mode {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--mf-space-5);
 }
 
 .auth__submit {
