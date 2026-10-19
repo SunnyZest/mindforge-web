@@ -2,11 +2,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs" alt="Vue 3.5" />
-  <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript" alt="TypeScript 5.8" />
-  <img src="https://img.shields.io/badge/Vite-6.x-646CFF?style=flat-square&logo=vite" alt="Vite 6" />
-  <img src="https://img.shields.io/badge/Pinia-3.0-FFD859?style=flat-square" alt="Pinia 3" />
-  <img src="https://img.shields.io/badge/Element%20Plus-2.9-409EFF?style=flat-square&logo=elementplus" alt="Element Plus" />
-  <img src="https://img.shields.io/badge/ECharts-5.6-AA344D?style=flat-square&logo=apacheecharts" alt="ECharts 5.6" />
+  <img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript" alt="TypeScript 5.6" />
+  <img src="https://img.shields.io/badge/Vite-5.x-646CFF?style=flat-square&logo=vite" alt="Vite 5" />
+  <img src="https://img.shields.io/badge/Pinia-2.x-FFD859?style=flat-square" alt="Pinia 2" />
+  <img src="https://img.shields.io/badge/Element%20Plus-2.14-409EFF?style=flat-square&logo=elementplus" alt="Element Plus 2.14" />
+  <img src="https://img.shields.io/badge/ECharts-6.1-AA344D?style=flat-square&logo=apacheecharts" alt="ECharts 6.1" />
   <img src="https://img.shields.io/badge/Package%20Manager-pnpm%20workspace-F69220?style=flat-square&logo=pnpm" alt="pnpm" />
   <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
 </p>
@@ -127,27 +127,30 @@ mindforge-web/
 
 | 维度 | 技术栈 | 版本 / 选型理由 |
 | :--- | :--- | :--- |
-| **基础框架** | Vue 3 | `3.4+`（组合式 API `<script setup>`） |
-| **编程语言** | TypeScript | `5.6`（全链路强类型契约保障） |
-| **构建工具** | Vite | `5.x`（极速 HMR 热重载与 Rollup 生产分包） |
-| **状态管理** | Pinia | `2.x`（轻量模块化状态管理） |
-| **路由管理** | Vue Router | `4.x`（HTML5 History 路由模式） |
-| **UI 组件库** | Element Plus | `2.7+`（成熟的企业级组件库与主题定制） |
-| **数据可视化** | ECharts | `6.x`（高性能交互式图表） |
+| **基础框架** | Vue 3 | `3.5.43`（组合式 API `<script setup>`） |
+| **编程语言** | TypeScript | `5.6.3`（全链路强类型契约保障） |
+| **构建工具** | Vite | `5.4.21`（极速 HMR 热重载与 Rollup 生产分包） |
+| **状态管理** | Pinia | `2.3.1`（轻量模块化状态管理） |
+| **路由管理** | Vue Router | `4.6.4`（HTML5 History 路由模式） |
+| **UI 组件库** | Element Plus | `2.14.7`（成熟的企业级组件库与主题定制） |
+| **数据可视化** | ECharts | `6.1.0`（高性能交互式图表） |
 | **网络请求** | Axios | `1.x`（拦截器与 Single-Flight 并发队列） |
-| **包管理器** | pnpm | `12.x`（Workspace 符号链接，杜绝幽灵依赖） |
+| **包管理器** | pnpm | `12.10.1`（Workspace 符号链接，杜绝幽灵依赖） |
 
 >**版本以各 `package.json` 为准，且刻意停在「市面主流档位」而不是最新大版本**
 > （Vite 5 而非 6、Pinia 2 而非 3、vue-router 4 而非 5）——
 > 新大版本的生态与文档还没跟上，踩坑概率高。装依赖请**显式写版本号**，别裸 `pnpm add xxx`。
+>
+>注：apps 的 `package.json` 依赖用 `^` 范围（如 `"vue": "^3.4.0"`），上表是实际 install 到的版本；
+>**只有仓库根的 devDependencies（ESLint / Prettier 等）是精确版本**。
 
 ---
 
 ## 四、 本地开发与快速上手
 
 ### 1. 前置依赖准备
-- **Node.js**：`>= 20.10.0`
-- **pnpm**：`9+` 或通过 Corepack 启用：
+- **Node.js**：`>= 20`（根 `package.json` 的 `engines` 要求）
+- **pnpm**：`10+`（仓库 `packageManager` 锁在 `pnpm@12.10.1`，`corepack enable` 会自动启用这个版本）
   ```bash
   corepack enable pnpm
   ```
@@ -275,6 +278,12 @@ location /api/ {
   同一输入永远同一分）；简历在线精修 + A4 PDF 导出 + AI 改写采纳。**靶向简历生成**（选简历 A + JD B，
   AI 按 STAR 重构项目经历）也已实现。
 - **多 Offer 五维加权对比决策器**：薪资包/技术栈/平台背书/加班强度/通勤距离，权重滑块实时重算排名。
+- **AI 薪酬测算**（`/salary`）：按城市/岗位/年限/学历/技能生成年薪区间（P25/P50/P75）+ 年终月数建议，
+  带「AI 估算而非市场行情」的常驻免责说明；置信度由**服务端按规则钳制**（城市不在常见表 /
+  岗位不命中关键词 / 年限越界都只降不升），同参数 7 天内命中 Redis 缓存。
+- **管理端官方智库 + 双层 RAG**：管理员维护全平台公域官方知识库（`is_system=1`）；
+  问答 / 简历润色 / 模拟面试出题并行召回「公域 + 私域」再精排。RAG 未命中时**降级通用模型**
+  并标 `hasContext:false`，前端展示灰色胶囊「通用模型生成」而不是绿色的「知识库溯源」。
 
 **仍未做**：
 
