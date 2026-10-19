@@ -2,6 +2,15 @@
 
 本目录包含 MindForge Web 前端（一仓两端：用户端与管理端）的生产部署规范与配置。
 
+| 文件 | 用途 |
+| --- | --- |
+| `nginx.conf` | 基础版：按 `/admin/` 分流 + IP 白名单 + SSE 流式代理。够开发 / 内网用 |
+| `nginx.prod.conf` | **生产版**（HTTPS 部署用）。相对基础版有 4 处硬化，见文件头注释：<br>① 新增 `^~ /api/internal/` 直接 `return 403`（Java 的 `/api/internal/**` 是无用户态、只认共享令牌的内部接口，绝不能被公网代理到）；<br>② `client_max_body_size` 30m → **50m**，与 Spring 的 `max-file-size: 50MB` 对齐（不对齐的话 30~50MB 简历会被 Nginx 先 413 拒掉）；<br>③ `server_name` 说明改为香港地域免备案场景；<br>④ 澄清 Docker 歧义（本 conf 按「Nginx 装在宿主机」编写，upstream 用 `127.0.0.1:8080`；跑容器里要改 `host.docker.internal`） |
+| `Dockerfile` / `docker-compose.yml` / `.env.example` | 容器化部署三件套 |
+
+> ⚠️ `nginx.prod.conf` 已纳入版本库 —— 它不含任何密钥，只有 Nginx 行为与占位域名。
+> 真机部署前务必核对 `server_name`、证书路径与 `upstream` 地址。
+
 ---
 
 ## 一、架构与目录映射规范
@@ -61,12 +70,15 @@ sudo chown -R nginx:nginx /var/www/mindforge
 ```
 
 ### 3. 配置 Nginx
-将 `deploy/nginx.conf` 复制或软链接至 `/etc/nginx/conf.d/mindforge.conf`：
+把 `deploy/nginx.conf`（开发 / 内网）或 **`deploy/nginx.prod.conf`（生产，推荐）**
+复制或软链接至 `/etc/nginx/conf.d/mindforge.conf`：
 ```bash
-sudo cp deploy/nginx.conf /etc/nginx/conf.d/mindforge.conf
+sudo cp deploy/nginx.prod.conf /etc/nginx/conf.d/mindforge.conf
 sudo nginx -t
 sudo nginx -s reload
 ```
+> HTTPS 建议：先用 `nginx.prod.conf`（仅 80 端口）跑通，再执行
+> `sudo certbot --nginx -d <你的域名>` —— certbot 会自动改写文件补上 443 与 301 跳转。
 
 ---
 
@@ -95,3 +107,21 @@ chunked_transfer_encoding on;
 ### 3. 静态资源缓存策略
 - `index.html`（HTML 入口）：配置 `Cache-Control: no-cache, no-store, must-revalidate`，保证发布新版本后用户端立即刷新获取最新资源。
 - 带 Hash 的 JS/CSS/图片资源（`/assets/`）：配置 `max-age=31536000, immutable` 一年长缓存，提升二次加载与 CDN 命中率。
+
+### 4. 内部接口拦截（仅 `nginx.prod.conf`）
+Java 的内部接口完整路径是 `/api/internal/**`（只认共享令牌、无用户态）。必须在 Nginx 最外层直接挡掉：
+```nginx
+location ^~ /api/internal/ {
+    return 403;   # 从公网打来的都是扫描器；Java↔Python 走 127.0.0.1 不经过 Nginx
+}
+```
+`^~` 保证它优先于 `/api/` 块生效（Nginx 按最长前缀匹配）。**不加这一段，内部 API 会被公网代理出去。**
+
+### 5. 上传体积对齐
+`client_max_body_size` 必须与 Spring 的 `multipart.max-file-size` 一致（当前 **50MB**）。
+Nginx 小于后端时，30~50MB 的简历会在 Nginx 层先被 413 拒掉，后端配置形同虚设。
+`nginx.prod.conf` 已对齐到 `50m`。
+
+### 6. 真实客户端 IP 透传
+`/api/` 代理块要带 `X-Real-IP` / `X-Forwarded-For`，且 Java 侧开 `trust-forwarded-headers: true` ——
+两者配合，后端限流（100 次/分钟每 IP）与登录失败计数才能按真实客户端 IP 生效，否则会把所有请求算成同一个来源。
