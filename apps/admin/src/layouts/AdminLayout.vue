@@ -92,6 +92,16 @@ const menus = computed(() =>
 )
 
 /**
+ * 没设头像时 el-avatar 里显示什么。
+ *
+ * ⚠️ 一定要给回退值：el-avatar 的默认插槽就是「图没设置 / 加载失败」时显示的内容，
+ *    留空就是一个空心的灰圈。取昵称（没昵称用用户名）的首字。
+ */
+const avatarText = computed(() =>
+  (auth.user?.nickname || auth.user?.username || '?').trim().charAt(0).toUpperCase(),
+)
+
+/**
  * 右上角用户下拉的命令分发。
  *
  * ⚠️ 别把 `@command` 直接绑到 `onLogout` 上 —— 那样会**忽略传进来的命令**，
@@ -219,7 +229,22 @@ watch(
 
           <el-dropdown @command="onCommand">
             <span class="layout__user">
-              {{ auth.user?.nickname || auth.user?.username || '未登录' }}
+              <!--
+                头像。src 直接吃后端路径 `/api/app/avatars/{fileId}` ——
+                接口公开、每次 302 跳现签的 OSS URL，<img> 能直接加载，不用带 token。
+                ⚠️ 用 `|| undefined` 而不是空串：el-avatar 只看 src 真假，
+                   给空串它会去请求当前页地址，然后渲染成「图裂了」的图标。
+              -->
+              <el-avatar
+                class="layout__avatar"
+                :size="26"
+                :src="auth.user?.avatarUrl || undefined"
+              >
+                {{ avatarText }}
+              </el-avatar>
+              <span class="layout__user-text">
+                {{ auth.user?.nickname || auth.user?.username || '未登录' }}
+              </span>
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -342,15 +367,34 @@ watch(
 /* 用户区做成胶囊按钮 —— 悬停有反馈，符合「功能层元素可交互」的暗示 */
 .layout__user {
   display: flex;
-  gap: var(--mf-space-1);
+  gap: var(--mf-space-2);
   align-items: center;
-  padding: var(--mf-space-1) var(--mf-space-3);
+  padding: var(--mf-space-1) var(--mf-space-3) var(--mf-space-1) var(--mf-space-1);
   border-radius: var(--mf-radius-pill);
   color: var(--mf-text-secondary);
   cursor: pointer;
   transition:
     background-color var(--mf-duration-fast) var(--mf-ease-out),
     color var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+/*
+  头像。默认插槽（首字）用品牌蓝渐变 —— 没上传头像时顶栏不会出现一块突兀的灰。
+*/
+.layout__avatar {
+  flex: none;
+  font-size: 13px;
+  color: #fff;
+  background: linear-gradient(160deg, #4a9eff, #0071e3);
+}
+
+/* 名字太长时截断 —— flex 子项不给 min-width: 0 的话省略号不生效 */
+.layout__user-text {
+  min-width: 0;
+  max-width: 8em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .layout__user:hover {

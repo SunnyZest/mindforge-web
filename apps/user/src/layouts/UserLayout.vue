@@ -91,6 +91,15 @@ const menus = computed(() =>
 )
 
 /**
+ * 没设头像时 el-avatar 里显示什么。
+ *
+ * ⚠️ 一定要给回退值：el-avatar 的默认插槽就是「图没设置 / 加载失败」时显示的内容，
+ *    留空就是一个空心的灰圈，比放个文字还难看。
+ *    用昵称（没昵称用用户名）的首字，中文就是姓、英文就是首字母。
+ */
+const avatarText = computed(() => (auth.displayName || '?').trim().charAt(0).toUpperCase())
+
+/**
  * 右上角用户菜单的命令分发。
  * ⚠️ 别把 @command 直接绑到 onLogout 上 —— 那样会忽略传进来的命令，
  *    将来加一项（比如「修改密码」）点它也会把人踢下线。
@@ -153,7 +162,16 @@ async function onCommand(command: string): Promise<void> {
 
         <el-dropdown @command="onCommand">
           <span class="layout__user">
-            {{ auth.displayName || '未登录' }}
+            <!--
+              头像。src 直接吃后端路径 `/api/app/avatars/{fileId}` ——
+              接口公开、每次 302 跳现签的 OSS URL，所以 <img> 能直接加载，不用带 token。
+              ⚠️ 用 :src="... || undefined" 而不是空串：el-avatar 只看 src 真假，
+                 给空串它会去请求当前页地址，然后渲染成一个「图裂了」的图标。
+            -->
+            <el-avatar class="layout__avatar" :size="26" :src="auth.user?.avatarUrl || undefined">
+              {{ avatarText }}
+            </el-avatar>
+            <span class="layout__user-text">{{ auth.displayName || '未登录' }}</span>
             <el-icon><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
@@ -321,15 +339,37 @@ async function onCommand(command: string): Promise<void> {
 
 .layout__user {
   display: flex;
-  gap: var(--mf-space-1);
+  gap: var(--mf-space-2);
   align-items: center;
-  padding: var(--mf-space-1) var(--mf-space-3);
+  padding: var(--mf-space-1) var(--mf-space-3) var(--mf-space-1) var(--mf-space-1);
   color: var(--mf-text-secondary);
   cursor: pointer;
   border-radius: var(--mf-radius-pill);
   transition:
     background-color var(--mf-duration-fast) var(--mf-ease-out),
     color var(--mf-duration-fast) var(--mf-ease-out);
+}
+
+/*
+  头像。默认插槽（首字）用的就是品牌蓝渐变 —— 和左上角的 logo 同一套视觉，
+  用户没上传头像时顶栏也不会出现一块突兀的灰色。
+  ★ 注意别用 var(--mf-primary) 之类做背景：那是给文字/描边用的语义变量，
+    放在渐变里会和 logo 的观感对不上。
+*/
+.layout__avatar {
+  flex: none;
+  font-size: 13px;
+  color: #fff;
+  background: linear-gradient(160deg, #4a9eff, #0071e3);
+}
+
+/* 昵称太长时截断 —— 顶栏是 flex 容器，不给 min-width: 0 的话省略号不生效 */
+.layout__user-text {
+  min-width: 0;
+  max-width: 8em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .layout__user:hover {

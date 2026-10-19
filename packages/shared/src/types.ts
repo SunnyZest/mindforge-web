@@ -42,6 +42,14 @@ export interface UserInfoVO {
   id: string
   username: string
   nickname: string | null
+  /**
+   * 头像地址，未设置为 null。
+   *
+   * ⚠️ 后端给的是**后端路径** `/api/app/avatars/{fileId}`，直接塞给 `<img>` / `<el-avatar>` 的 `src` 即可。
+   *    那个读取接口是**公开**的（img 标签带不上 Authorization 头），每次请求 302 跳到现签的 OSS URL。
+   *    再上传一次会拿到新的 fileId，所以 URL 会跟着变，不需要手动破缓存。
+   */
+  avatarUrl: string | null
   /** 角色 code，如 SUPER_ADMIN / ADMIN / USER */
   roles: string[]
   /** 权限码，如 admin:user:list —— 前端拿它决定菜单和按钮显不显示 */
