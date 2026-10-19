@@ -752,6 +752,7 @@ export interface JobCreateDTO {
  * 修改职位（Java 的 `JobUpdateDTO`）。
  * ⚠️ 和 Create 的区别：**没有必填项**，另外多了 `status` 与求职 CRM 字段。
  *    后端是「传了才改」的语义。
+ * ⚠️ `nextActionAt` 传 null 是「不修改」，不是「清空」——要清空必须传 `clearNextActionAt: true`。
  */
 export interface JobUpdateDTO {
   title?: string
@@ -764,7 +765,10 @@ export interface JobUpdateDTO {
   applicationStage?: JobApplicationStage
   linkedResumeId?: string | null
   salaryOffer?: string | null
+  /** 有值时直接覆盖；要清空请用 clearNextActionAt */
   nextActionAt?: string | null
+  /** 显式清空待办提醒（nextActionAt 有值时以 nextActionAt 为准） */
+  clearNextActionAt?: boolean
   crmNotes?: string | null
   status?: number
 }
@@ -819,9 +823,13 @@ export interface JobStageUpdateDTO {
 /** 更新求职 CRM 信息请求（Java 的 `JobCrmUpdateDTO`） */
 export interface JobCrmUpdateDTO {
   applicationStage?: JobApplicationStage
+  /** 传空字符串 = 解除绑定；不传 = 不动 */
   linkedResumeId?: string | null
   salaryOffer?: string | null
+  /** 有值时直接覆盖；要清空请用 clearNextActionAt（传 null 只是「不修改」） */
   nextActionAt?: string | null
+  /** 显式清空待办提醒（nextActionAt 有值时以 nextActionAt 为准） */
+  clearNextActionAt?: boolean
   crmNotes?: string | null
 }
 

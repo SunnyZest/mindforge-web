@@ -268,6 +268,9 @@ location /api/ {
 
 - **求职投递看板 (Kanban CRM)**：8 列泳道 + 关联简历/薪资包/下次跟进/备注，已打通
   「岗位 JD + 针对性简历 + 模拟面试复盘」；同一页还有**面试日历**视图（`?view=calendar`，多场次时间节点）。
+  跟进弹窗里把「日程提醒」清空会真的把 `job.next_action_at` 置空（走 `clearNextActionAt` 显式标志 ——
+  局部更新里 `nextActionAt: null` 只表示「不修改」），日历里的面试场次不受影响；选「暂不绑定专属简历」
+  同理走 `linkedResumeId: ''` 真正解绑。
 - **ATS 穿透评分与简历导出**：`GET /app/resumes/{id}/ats-score?jobId=` 纯本地算法（零 token、毫秒级、
   同一输入永远同一分）；简历在线精修 + A4 PDF 导出 + AI 改写采纳。**靶向简历生成**（选简历 A + JD B，
   AI 按 STAR 重构项目经历）也已实现。

@@ -95,6 +95,10 @@ async function onSave(): Promise<void> {
       linkedResumeId: form.value.linkedResumeId || '',
       salaryOffer: form.value.salaryOffer?.trim() || '',
       nextActionAt: form.value.nextActionAt || null,
+      // ★ 时间框空着 = 明确要求清空提醒。后端「没传该字段」和「传 null」反序列化后
+      //   都是 null，光靠 nextActionAt 表达不了「清空」，必须靠这个显式标志。
+      //   时间填了的话后端以 nextActionAt 为准，两个一起传不会互相打架，所以这里无脑带上。
+      clearNextActionAt: !form.value.nextActionAt,
       crmNotes: form.value.crmNotes?.trim() || '',
     }
     const updated = await jobApi.updateCrm(props.job.id, payload)
@@ -168,6 +172,10 @@ async function onSave(): Promise<void> {
         </el-form-item>
       </div>
 
+      <p class="crm-hint">
+        提醒时间清空后，看板卡片上就不再出现这条待办；日历里的面试场次不受影响。
+      </p>
+
       <el-form-item label="求职跟进备忘 / 复盘笔记">
         <el-input
           v-model="form.crmNotes"
@@ -204,5 +212,12 @@ async function onSave(): Promise<void> {
 .form-col {
   flex: 1;
   min-width: 0;
+}
+
+.crm-hint {
+  margin: calc(var(--mf-space-2) * -1) 0 var(--mf-space-4);
+  font-size: var(--mf-font-xs);
+  line-height: 1.6;
+  color: var(--mf-text-secondary);
 }
 </style>
