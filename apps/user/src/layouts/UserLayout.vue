@@ -10,6 +10,7 @@ import {
   Moon,
   Search,
   Sunny,
+  TrendCharts,
   Trophy,
   User,
 } from '@element-plus/icons-vue'
@@ -42,6 +43,8 @@ const ICONS: Record<string, Component> = {
   Search,
   User,
   Trophy,
+  // 薪酬测算：走势图正好对上「测算 / 预算」的语义
+  TrendCharts,
 }
 
 /**
