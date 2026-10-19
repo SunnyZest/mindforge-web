@@ -44,13 +44,21 @@ const rules = computed<FormRules<typeof form>>(() => ({
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }))
 
-/** 切换登录方式：清空标识输入 —— 刚才打的用户名几乎一定不是合法邮箱 */
+/**
+ * 切换登录方式：两个输入框都清空，并把整张表单的校验态重置。
+ * 标识为什么要清：刚才打的用户名几乎一定不是合法邮箱。
+ * 密码为什么要一起清：切模式等于换个身份重新登，留着上一个身份的密码没有意义。
+ */
 function onModeChange(): void {
+  // 切换登录方式视为一次「重新开始」：输入清空 + 校验态整体归零。
+  //
+  // ⚠️ clearValidate() 必须【不带参数】。只清 'username' 的后果（第一版踩过）：
+  //    密码框先失焦报了「请输入密码」，之后切到邮箱、再切回用户名，
+  //    那条红框和提示一路挂着不放 —— 看起来像「新模式已经校验过一遍」，
+  //    其实用户什么都没输。
   form.username = ''
-  // 切换后「标识」这一项的文案和规则都变了，留着旧模式的报错
-  //（「请输入用户名」）会指着一个已经不存在的字段说话，所以清掉。
-  // 密码项不动：那儿的报错是用户真的失焦触发过的，替他掩盖反而是骗人。
-  formRef.value?.clearValidate('username')
+  form.password = ''
+  formRef.value?.clearValidate()
 }
 
 async function onSubmit(): Promise<void> {
