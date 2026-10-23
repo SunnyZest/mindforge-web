@@ -25,6 +25,18 @@ export const useAuthStore = defineStore('auth', () => {
   const permissions = computed(() => user.value?.permissions ?? [])
   const displayName = computed(() => user.value?.nickname || user.value?.username || '')
 
+  /**
+   * 是否具备任何用户端权限（`app:*`）。
+   *
+   * ★ 为什么需要它：一个账号可以同时挂多个角色，权限取并集。只挂 ADMIN、没挂 USER 的
+   *   账号**能从用户端登录成功**（用户端登录不校验角色），但每个业务接口都会 403 ——
+   *   进去只会看到一片「无权限」，像是系统坏了。
+   *   SUPER_ADMIN 不受影响：它绑了全部权限码，`permissions` 里本来就有 `app:*`。
+   */
+  const hasUserSideAccess = computed(() =>
+    permissions.value.some((p) => p.startsWith('app:')),
+  )
+
   /** 权限判断。用法：`auth.can('app:resume:read')` */
   function can(permission: Permission): boolean {
     if (user.value?.roles?.includes('SUPER_ADMIN')) {
@@ -72,6 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     permissions,
     displayName,
+    hasUserSideAccess,
     can,
     login,
     fetchMe,

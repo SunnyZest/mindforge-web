@@ -22,6 +22,25 @@ const saving = ref(false)
 
 const userName = computed(() => props.user?.nickname || props.user?.username || '')
 
+/** 选中角色的 code 列表 —— 判断「只有管理端角色、没有用户端角色」用 */
+const selectedCodes = computed(() =>
+  props.roles.filter((r) => selected.value.includes(r.id)).map((r) => r.code),
+)
+
+/**
+ * 只挂了 ADMIN、没挂 USER 时提示。
+ *
+ * ★ 不自动帮用户勾上 USER：那会顺手多给 31 个用户端权限，破坏最小权限。
+ *   这里只提示，让分配者自己决定。
+ * ★ SUPER_ADMIN 不提示 —— 它绑了全部权限码（含 app:*），本来就能用用户端。
+ */
+const adminWithoutUser = computed(
+  () =>
+    selectedCodes.value.includes('ADMIN') &&
+    !selectedCodes.value.includes('USER') &&
+    !selectedCodes.value.includes('SUPER_ADMIN'),
+)
+
 /**
  * ★ 这个页面最容易踩的地方：
  *
@@ -103,6 +122,16 @@ async function submit(): Promise<void> {
       :closable="false"
       show-icon
       title="一个都不选 = 清空该用户的全部角色"
+    />
+
+    <!-- 只给管理端角色：能进管理端，但用户端每个接口都会 403 -->
+    <el-alert
+      v-if="adminWithoutUser"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="该账号将无法使用用户端"
+      description="只分配 ADMIN 时，登录用户端会全部 403。如需使用用户端，请同时勾选 USER。"
     />
 
     <template #footer>

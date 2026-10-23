@@ -70,6 +70,20 @@ async function onSubmit(): Promise<void> {
   try {
     await auth.login({ username: form.username.trim(), password: form.password })
 
+    // 登录成功但没有一个 app:* 权限（典型：只挂了 ADMIN、没挂 USER）——
+    // 继续跳转会进到一片 403 的页面，看着像系统坏了。这里直接说清楚并留在登录页。
+    if (!auth.hasUserSideAccess) {
+      await ElMessageBox.alert(
+        '你的账号只有管理端角色，用户端的简历、职位、知识库等功能都无法访问。' +
+          '如需使用，请联系管理员在「用户管理 → 分配角色」里同时勾选 USER。',
+        '该账号未开通用户端权限',
+        { type: 'warning', confirmButtonText: '知道了' },
+      ).catch(() => {})
+      // 清掉本地登录态：token 留着也没用，只会让路由守卫以为已登录
+      auth.reset()
+      return
+    }
+
     // 被守卫拦下来的话 query 里带着原目标，登录后送回去
     const redirect = route.query.redirect
     await router.replace(typeof redirect === 'string' ? redirect : { name: 'workspace' })
