@@ -27,7 +27,7 @@
  * 隐藏了按钮不等于拦住了请求 —— 后端每个接口都有 @PreAuthorize，那才是真防线。
  */
 
-/** 管理端权限码（对齐 sys_permission 里 `admin:%` 的全部 25 条） */
+/** 管理端权限码（对齐 sys_permission 里 `admin:%` 的全部 28 条） */
 export type AdminPermission =
   | 'admin:dashboard:read'
   | 'admin:user:list'
@@ -44,8 +44,11 @@ export type AdminPermission =
   | 'admin:role:assign-permission'
   | 'admin:permission:list'
   | 'admin:knowledge:list'
+  | 'admin:knowledge:create'
+  | 'admin:knowledge:update'
   | 'admin:knowledge:delete'
   | 'admin:document:list'
+  | 'admin:document:upload'
   | 'admin:document:retry'
   | 'admin:document:update'
   | 'admin:document:delete'
@@ -55,7 +58,7 @@ export type AdminPermission =
   | 'admin:prompt:manage'
   | 'admin:alert:list'
 
-/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 27 条） */
+/** 用户端权限码（对齐 sys_permission 里 `app:%` 的全部 31 条） */
 export type AppPermission =
   | 'app:knowledge:read'
   | 'app:knowledge:write'
@@ -89,6 +92,9 @@ export type AppPermission =
   /** 薪酬估算（AI 参考区间）：查看历史 / 发起估算 */
   | 'app:salary:read'
   | 'app:salary:write'
+  /** 回收站：最近删除 / 恢复与彻底删除（一期只收 Offer 与面试日程） */
+  | 'app:recycle:read'
+  | 'app:recycle:write'
 
 export type Permission = AdminPermission | AppPermission
 
