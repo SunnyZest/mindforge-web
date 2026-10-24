@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import { Back, MagicStick, VideoPlay, Promotion, Check, Delete } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+/**
+ * echarts **按需引入**。
+ *
+ * ★ 不要改回 `import * as echarts from 'echarts'`：那样会把整个 echarts 打进来，
+ *   这一个页面的 chunk 就有 1.1MB（占用户端 dist 的 44%）。按需引入后只编入
+ *   RadarChart + CanvasRenderer，约 300KB。
+ * ★ `graphic`（LinearGradient 用）在 `echarts/core` 里，不需要单独引。
+ */
+import * as echarts from 'echarts/core'
+import { RadarChart } from 'echarts/charts'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([RadarChart, CanvasRenderer])
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -240,7 +252,7 @@ function renderRadarChart(): void {
   const overall = r.overallScore ?? 78
   const eng = Math.round((tech + ps) / 2)
 
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     tooltip: {
       ...getGlassTooltipOption(isDark),
       trigger: 'item',
