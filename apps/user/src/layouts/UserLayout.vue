@@ -4,6 +4,7 @@ import {
   Briefcase,
   ChatDotRound,
   Collection,
+  Delete,
   Document,
   HomeFilled,
   Microphone,
@@ -45,6 +46,8 @@ const ICONS: Record<string, Component> = {
   Trophy,
   // 薪酬测算：走势图正好对上「测算 / 预算」的语义
   TrendCharts,
+  // 最近删除：垃圾桶，语义直白
+  Delete,
 }
 
 /**

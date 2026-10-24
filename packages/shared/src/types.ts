@@ -1859,3 +1859,24 @@ export interface SalaryEstimateVO {
   cached: boolean
   createdAt: string
 }
+
+/** 回收站支持的资源类型（一期只有这两种：删除时没有物理清理，恢复是完整的） */
+export type RecycleResourceType = 'OFFER' | 'JOB_EVENT'
+
+/** 回收站记录 */
+export interface RecycleBinVO {
+  /** 回收站记录 id —— 恢复与彻底删除都用它，**不是**原资源 id */
+  id: string
+  resourceType: RecycleResourceType
+  /** 类型中文名（服务端给，前端不自己映射，避免两处维护） */
+  resourceTypeName: string
+  /** 原资源 id */
+  resourceId: string
+  /** 展示名（公司名 / 日程标题） */
+  title: string
+  deletedAt: string
+  /** 到期时间，过了就不能再恢复 */
+  expireAt: string
+  /** 剩余可恢复天数，0 表示今天到期 */
+  remainingDays: number
+}

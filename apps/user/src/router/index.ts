@@ -153,6 +153,13 @@ const router = createRouter({
           },
         },
         {
+          // 最近删除：删除后的恢复入口。放最后 —— 低频，但真需要时救命
+          path: 'recycle-bin',
+          name: 'recycle-bin',
+          component: lazyView(() => import('@/views/RecycleBinView.vue')),
+          meta: { title: '最近删除', icon: 'Delete', order: 91, permission: 'app:recycle:read' },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: lazyView(() => import('@/views/ProfileView.vue')),
