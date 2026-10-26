@@ -1880,3 +1880,16 @@ export interface RecycleBinVO {
   /** 剩余可恢复天数，0 表示今天到期 */
   remainingDays: number
 }
+
+/**
+ * 恢复操作的结果。
+ *
+ * ⚠️ `complete=false` 表示**关联数据没回来**（职位缺技能、面试缺题目、对话缺消息），
+ * 只有主记录被还原。前端必须提示 warning，不能报成功 ——
+ * 否则用户要打开详情才发现少了一半。
+ */
+export interface RecycleRestoreResultVO {
+  complete: boolean
+  /** 不完整时的说明；完整时为 null */
+  warning: string | null
+}

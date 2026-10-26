@@ -40,8 +40,15 @@ async function load(): Promise<void> {
 async function restore(row: RecycleBinVO): Promise<void> {
   restoringId.value = row.id
   try {
-    await recycleApi.restore(row.id)
-    ElMessage.success(`已恢复「${row.title}」`)
+    const result = await recycleApi.restore(row.id)
+
+    // ★ 不完整必须说清楚：主记录回来了、关联数据没回来。
+    //   只报成功的话，用户要打开详情才发现技能/题目/消息少了一半。
+    if (result.complete) {
+      ElMessage.success(`已恢复「${row.title}」`)
+    } else {
+      ElMessage.warning(`已恢复「${row.title}」，但${result.warning ?? '关联数据没有回来'}`)
+    }
     await load()
   } catch (e) {
     // 常见两种：过了恢复期、原记录已经被恢复过一次

@@ -183,6 +183,7 @@ export type {
   SalaryConfidence,
   RecycleBinVO,
   RecycleResourceType,
+  RecycleRestoreResultVO,
 } from './types'
 
 // ⚠️ 这两个是【运行时值】（const 映射表，模板里直接要用），不能放进上面的 export type 块

@@ -1,4 +1,4 @@
-import type { PageResult, RecycleBinVO } from '@mindforge/shared'
+import type { PageResult, RecycleBinVO, RecycleRestoreResultVO } from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -21,8 +21,11 @@ export const recycleApi = {
    * 恢复。记录不存在或已过恢复期会返回业务错误。
    *
    * ⚠️ 没有 body —— 后端靠路径上的回收站记录 id 找原资源，不需要前端传原资源 id。
+   * ⚠️ 返回 `complete=false` 表示**关联数据没回来**（技能/题目/消息），
+   *    调用方要提示 warning 而不是成功。
    */
-  restore: (id: string) => http.post<void>(`/app/recycle-bin/${id}/restore`),
+  restore: (id: string) =>
+    http.post<RecycleRestoreResultVO>(`/app/recycle-bin/${id}/restore`),
 
   /** 彻底删除（不可逆）。只删仍处于逻辑删除状态的原记录，已被恢复的不受影响 */
   purge: (id: string) => http.delete<void>(`/app/recycle-bin/${id}`),
