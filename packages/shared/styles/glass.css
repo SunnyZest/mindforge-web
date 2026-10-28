@@ -1,7 +1,8 @@
 /**
  * 液态玻璃工具类 —— Liquid Glass 材质的实现层。
  *
- * 用法：给需要玻璃质感的元素加 class="mf-glass"（更强的是 mf-glass--strong）。
+ * 用法：给需要玻璃质感的元素加 class="mf-glass"（更强的是 mf-glass--strong，
+ * 小尺寸标签 / 徽章用 mf-glass--chip）。
  * 这是【全局】类，Element Plus 组件的玻璃化在 element-plus.css 里单独做
  * （那边要处理 EP 自己的变量和选择器权重，放一起会乱）。
  *
@@ -56,6 +57,21 @@
     brightness(var(--mf-glass-brightness));
 }
 
+/* 玻璃胶囊：小尺寸的标签 / 徽章。
+   ★ 模糊半径比面板小一档（8px 而不是 24px）—— 小面积上用 24px 会把底色糊成一团，
+     反而看不出是玻璃。所以它不是「参数不同的 .mf-glass」，而是一个变体。
+   ★ 单独成类而不是让组件手写 backdrop-filter：手写那份拿不到下面的降级规则，
+     prefers-reduced-transparency 生效时面板变实心了、胶囊还糊在那儿。
+   着色用自定义属性间接一层 —— 这样组件的状态变体（成功 / 警告 / 危险）
+   只改 --mf-chip-tint 就能换色，不必和本类的 background-color 抢权重。 */
+.mf-glass--chip {
+  background-color: var(--mf-chip-tint, var(--mf-glass-tint-strong));
+  border: 1px solid var(--mf-chip-border, var(--mf-glass-border-soft));
+  border-radius: var(--mf-radius-pill);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
 /* 镜面光泽层：叠在玻璃表面，模拟光线流动。
    ★ 用 ::after 而不是 ::before —— EP 的组件（卡片、弹窗、气泡）常占用 ::before。 */
 .mf-glass--specular::after {
@@ -78,6 +94,7 @@
 .mf-glass,
 .mf-glass--strong,
 .mf-glass--edge,
+.mf-glass--chip,
 .mf-glass-card-interactive {
   transition:
     background-color var(--mf-duration) var(--mf-ease-out),
@@ -135,7 +152,8 @@
 @media (prefers-reduced-transparency: reduce) {
   .mf-glass,
   .mf-glass--strong,
-  .mf-glass--edge {
+  .mf-glass--edge,
+  .mf-glass--chip {
     background-color: var(--mf-solid-tint-strong);
     border-color: var(--mf-border);
     -webkit-backdrop-filter: none;
@@ -153,7 +171,8 @@
     background-color: var(--mf-solid-tint);
   }
   .mf-glass--strong,
-  .mf-glass--edge {
+  .mf-glass--edge,
+  .mf-glass--chip {
     background-color: var(--mf-solid-tint-strong);
   }
   .mf-glass--specular::after {
@@ -165,7 +184,8 @@
 @media (prefers-reduced-motion: reduce) {
   .mf-glass,
   .mf-glass--strong,
-  .mf-glass--edge {
+  .mf-glass--edge,
+  .mf-glass--chip {
     transition: none;
   }
 }

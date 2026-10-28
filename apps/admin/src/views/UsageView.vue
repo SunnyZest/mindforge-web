@@ -501,7 +501,7 @@ onUnmounted(() => {
           <span>请求数</span>
         </div>
         <div class="card__n">{{ formatCount(summary?.requests ?? 0) }}</div>
-        <div class="card__sub">
+        <div class="card__sub mf-glass--chip">
           成功 {{ formatCount(summary?.successCount ?? 0) }} · 失败
           {{ formatCount(summary?.failedCount ?? 0) }}
         </div>
@@ -514,7 +514,7 @@ onUnmounted(() => {
         </div>
         <!-- 没请求时显示「-」而不是 0% -->
         <div class="card__n">{{ successRate === null ? '-' : successRate + '%' }}</div>
-        <div class="card__sub">按总请求量统计</div>
+        <div class="card__sub mf-glass--chip">按总请求量统计</div>
       </div>
 
       <div class="card mf-glass-card-interactive">
@@ -523,7 +523,7 @@ onUnmounted(() => {
           <span>消耗 Token</span>
         </div>
         <div class="card__n">{{ formatCount(summary?.totalTokens ?? 0) }}</div>
-        <div class="card__sub">
+        <div class="card__sub mf-glass--chip">
           入 {{ formatCount(summary?.promptTokens ?? 0) }} · 出
           {{ formatCount(summary?.completionTokens ?? 0) }}
         </div>
@@ -537,7 +537,7 @@ onUnmounted(() => {
         <div class="card__n">
           {{ summary?.avgDurationMs ? (summary.avgDurationMs / 1000).toFixed(1) + 's' : '-' }}
         </div>
-        <div class="card__sub">含端到端网络与生成</div>
+        <div class="card__sub mf-glass--chip">含端到端网络与生成</div>
       </div>
     </div>
 
@@ -739,16 +739,14 @@ onUnmounted(() => {
   margin: 2px 0;
 }
 
+/* 胶囊的玻璃质感在 `.mf-glass--chip` 里（含 prefers-reduced-transparency 降级）——
+   别在这儿手写 backdrop-filter，手写那份降级会漏掉。 */
 .card__sub {
   display: inline-flex;
   align-items: center;
   padding: 3px 12px;
   font-size: var(--mf-font-xs);
   color: var(--mf-text-tertiary);
-  background-color: var(--mf-glass-tint-strong);
-  border: 1px solid var(--mf-glass-border-soft);
-  border-radius: var(--mf-radius-pill);
-  backdrop-filter: blur(8px);
 }
 
 /* ---------- 面板 ---------- */

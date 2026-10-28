@@ -532,7 +532,7 @@ const greeting = computed(() => {
       <div class="ws__hero-inner">
         <div class="ws__badge-bar">
           <!-- 状态由 /app/ai/status 真实探测，不再是永远绿的装饰点 -->
-          <span class="ws__pill" :class="`ws__pill--${aiBadge.tone}`">
+          <span class="ws__pill mf-glass--chip" :class="`ws__pill--${aiBadge.tone}`">
             <span class="ws__dot" />
             {{ aiBadge.label }}
           </span>
@@ -880,6 +880,10 @@ const greeting = computed(() => {
   margin-bottom: 20px;
 }
 
+/* 胶囊的玻璃质感（着色 / 描边 / 模糊 / 圆角）全在 `.mf-glass--chip` 里 ——
+   ⚠️ 别在这儿手写 backdrop-filter：手写那份拿不到 prefers-reduced-transparency 等降级，
+   实测踩过「面板变实心了、胶囊还糊在那儿」。状态变体只改 --mf-chip-* 两个变量换色，
+   不去和全局类抢 background-color 的权重。 */
 .ws__pill {
   display: inline-flex;
   gap: 6px;
@@ -887,42 +891,38 @@ const greeting = computed(() => {
   padding: 4px 12px;
   font-size: var(--mf-font-xs);
   color: var(--mf-text-secondary);
-  background-color: var(--mf-glass-tint-strong);
-  border: 1px solid var(--mf-glass-border-soft);
-  border-radius: var(--mf-radius-pill);
-  backdrop-filter: blur(8px);
 }
 
 .ws__pill--success {
   color: var(--mf-success-text);
-  background-color: var(--mf-success-subtle);
-  border-color: transparent;
 
+  --mf-chip-tint: var(--mf-success-subtle);
+  --mf-chip-border: transparent;
   --tone: var(--mf-success);
 }
 
 .ws__pill--warning {
   color: var(--mf-warning-text);
-  background-color: var(--mf-warning-subtle);
-  border-color: transparent;
 
+  --mf-chip-tint: var(--mf-warning-subtle);
+  --mf-chip-border: transparent;
   --tone: var(--mf-warning);
 }
 
 .ws__pill--danger {
   color: var(--mf-danger-text);
-  background-color: var(--mf-danger-subtle);
-  border-color: transparent;
 
+  --mf-chip-tint: var(--mf-danger-subtle);
+  --mf-chip-border: transparent;
   --tone: var(--mf-danger);
 }
 
 /* 「检测中 / 状态未知」用中性灰 —— 别用状态色，那会误导用户以为已经出结果了 */
 .ws__pill--neutral {
   color: var(--mf-text-tertiary);
-  background-color: var(--mf-bg-subtle);
-  border-color: transparent;
 
+  --mf-chip-tint: var(--mf-bg-subtle);
+  --mf-chip-border: transparent;
   --tone: var(--mf-text-tertiary);
 }
 
