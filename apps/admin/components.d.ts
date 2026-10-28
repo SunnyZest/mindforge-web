@@ -9,6 +9,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AiModelFormDialog: typeof import('./src/components/AiModelFormDialog.vue')['default']
     DocumentChunksDialog: typeof import('./src/components/DocumentChunksDialog.vue')['default']
+    DocumentDetailDrawer: typeof import('./src/components/DocumentDetailDrawer.vue')['default']
     DocumentStatusDialog: typeof import('./src/components/DocumentStatusDialog.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']

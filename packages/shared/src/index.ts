@@ -17,6 +17,9 @@ export type {
   UserInfoVO,
   UserSummaryVO,
   UserListQuery,
+  // 管理端：用户详情（比列表多角色明细 / 登录安全 / 资源占用）
+  AdminUserRoleVO,
+  AdminUserDetailVO,
   // 用户端：注册 / 改密 / 个人资料
   RegisterDTO,
   ChangePasswordDTO,

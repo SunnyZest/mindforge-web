@@ -1,5 +1,6 @@
 import type {
   AdminUserCreateDTO,
+  AdminUserDetailVO,
   AssignRolesDTO,
   PageResult,
   UserInfoVO,
@@ -22,8 +23,14 @@ export const userApi = {
   page: (query: UserListQuery) =>
     http.get<PageResult<UserSummaryVO>>('/admin/users', { params: query }),
 
-  /** 用户详情（返回的是 UserInfoVO，含 permissions） */
-  detail: (id: string) => http.get<UserInfoVO>(`/admin/users/${id}`),
+  /**
+   * 用户详情。
+   *
+   * ⚠️ 返回的是 `AdminUserDetailVO`，**不是** `UserInfoVO` —— 它比列表行多
+   * 角色明细（带角色名）、有效权限、登录失败计数 / 锁定剩余、资源与存储占用。
+   * 用户端那个 `UserInfoVO` 被 `/app/auth/me` 复用，后端刻意没往里面塞管理端字段。
+   */
+  detail: (id: string) => http.get<AdminUserDetailVO>(`/admin/users/${id}`),
 
   create: (dto: AdminUserCreateDTO) => http.post<UserInfoVO>('/admin/users', dto),
 

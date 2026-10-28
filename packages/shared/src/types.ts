@@ -187,6 +187,57 @@ export interface UserListQuery extends PageQuery {
   role?: string
 }
 
+/** 管理端用户详情里的角色项（Java 的 `AdminUserRoleVO`） */
+export interface AdminUserRoleVO {
+  /** 雪花 ID 字符串 */
+  roleId: string
+  /** 角色 code，如 ADMIN */
+  roleCode: string
+  /** 角色名称，如 管理员 */
+  roleName: string
+}
+
+/**
+ * 管理端用户详情（Java 的 `AdminUserDetailVO`）。
+ *
+ * ★ 它是「列表行 + 增量」，不是用户端的 `UserInfoVO`。后端刻意分成了两个 VO：
+ *   `UserInfoVO` 被 `/app/auth/me` 复用，往它里面塞 `failedLoginCount` 这类字段
+ *   等于把管理端信息发给用户端。
+ * ★ 所有字段都由详情接口一次给全 —— 不必再拿列表行来拼。
+ */
+export interface AdminUserDetailVO {
+  id: string
+  username: string
+  nickname: string | null
+  email: string | null
+  phone: string | null
+  avatarUrl: string | null
+  /** 1 启用 / 0 禁用 */
+  status: number
+  /** 角色 code 列表（与列表接口同形） */
+  roles: string[]
+  /** 角色明细，带 roleId 与角色名 */
+  roleItems: AdminUserRoleVO[]
+  /** 有效权限码（多角色取并集后的结果） */
+  permissions: string[]
+  /** 最后登录时间；该功能上线前的历史数据为 null */
+  lastLoginAt: string | null
+  /** 最后登录 IP；历史数据为 null */
+  lastLoginIp: string | null
+  createdAt: string | null
+  /** 当前窗口内的登录失败次数（登录成功即清零，不是历史累计） */
+  failedLoginCount: number
+  /** 账号剩余锁定秒数，0 表示未锁定 */
+  loginLockRemainingSeconds: number
+  knowledgeBaseCount: number
+  documentCount: number
+  resumeCount: number
+  interviewCount: number
+  jobCount: number
+  /** 存储占用（字节，只算未删除的文件） */
+  storageBytes: number
+}
+
 /* ============================================================
    管理端 · 用户管理（写操作）
    ============================================================ */
@@ -276,11 +327,13 @@ export interface AssignPermissionsDTO {
    管理端 · 知识库 / 文档 / 分块
    ============================================================ */
 
-/** 管理端知识库列表项（Java 的 `AdminKnowledgeBaseVO`）—— 比用户端多带归属人 */
+/** 管理端知识库列表项（Java 的 `AdminKnowledgeBaseVO`）—— 比用户端多带归属人与容量统计 */
 export interface AdminKnowledgeBaseVO {
   id: string
   userId: string
   username: string | null
+  /** 归属人昵称，未设置为 null */
+  ownerNickname: string | null
   name: string
   description: string | null
   /** 1 正常 / 0 禁用 */
@@ -289,6 +342,10 @@ export interface AdminKnowledgeBaseVO {
   isSystem?: number
   /** 文档数（实时统计，不是表里的冗余字段） */
   documentCount: number
+  /** 库内文档总字节数（只算未删除的文档） */
+  totalBytes: number
+  /** 最近一次上传文档的时间，空库为 null */
+  lastDocumentAt: string | null
   createdAt: string | null
   updatedAt: string | null
 }
@@ -315,6 +372,8 @@ export interface AdminDocumentVO {
   fileType: string | null
   /** 字节 */
   fileSize: number
+  /** 文件记录 id（sys_file）；网页导入的文档为 null */
+  fileId: string | null
   /** 三段状态聚合后的总状态 */
   status: string
   parseStatus: ParseStatus | null
@@ -323,6 +382,14 @@ export interface AdminDocumentVO {
   errorMessage: string | null
   pageCount: number | null
   createdAt: string | null
+  /** 最后更新时间（状态回写会刷新它） */
+  updatedAt: string | null
+  /** 分块数 —— ⚠️ 只有详情接口返回，列表里是 null */
+  chunkCount: number | null
+  /** 预签名下载地址 —— ⚠️ 只有详情接口返回（1 小时有效）；网页导入的文档为 null */
+  downloadUrl: string | null
+  /** 上传到完成的耗时（毫秒）—— ⚠️ 只有详情接口返回，且仅 COMPLETED 时有值（含排队时间） */
+  processDurationMs: number | null
 }
 
 export interface AdminDocumentQuery extends PageQuery {

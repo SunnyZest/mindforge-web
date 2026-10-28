@@ -8,7 +8,7 @@ import { BizError } from '@mindforge/shared'
 import { knowledgeApi } from '@/api/knowledge'
 import StatusTag from '@/components/StatusTag.vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatDateTime } from '@/utils/format'
+import { formatBytes, formatDateTime } from '@/utils/format'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -198,7 +198,7 @@ onMounted(load)
       <el-button type="success" @click="openCreateDialog">+ 新建知识库</el-button>
     </div>
 
-    <!-- 列宽合计 855px，最窄视口（1366）下内容区约 1040px，留有余量 -->
+    <!-- 最小宽度合计 995px；最窄视口（1366）下内容区约 1056px，留 60px 余量 -->
     <el-table v-loading="loading" :data="rows" border stripe @sort-change="onSortChange">
       <el-table-column prop="name" label="名称" min-width="160" sortable="custom">
         <template #default="{ row }">
@@ -210,14 +210,25 @@ onMounted(load)
           </div>
         </template>
       </el-table-column>
+      <!-- 归属人优先显示昵称，没设昵称才退回用户名 -->
       <el-table-column label="归属人" min-width="90">
-        <template #default="{ row }">{{ asKb(row).username || '-' }}</template>
+        <template #default="{ row }">
+          {{ asKb(row).ownerNickname || asKb(row).username || '-' }}
+        </template>
       </el-table-column>
       <el-table-column label="描述" min-width="160">
         <template #default="{ row }">{{ asKb(row).description || '-' }}</template>
       </el-table-column>
       <el-table-column label="文档数" width="80" align="center">
         <template #default="{ row }">{{ asKb(row).documentCount }}</template>
+      </el-table-column>
+      <!-- 库内文档总大小；最近上传时间放进 title，不占列宽 -->
+      <el-table-column label="大小" width="90" align="right">
+        <template #default="{ row }">
+          <span :title="`最近上传：${formatDateTime(asKb(row).lastDocumentAt)}`">
+            {{ formatBytes(asKb(row).totalBytes) }}
+          </span>
+        </template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="90" align="center" sortable="custom">
         <template #default="{ row }">
@@ -230,7 +241,9 @@ onMounted(load)
         <template #default="{ row }">{{ formatDateTime(asKb(row).updatedAt) }}</template>
       </el-table-column>
 
-      <el-table-column label="操作" width="160" fixed="right">
+      <!-- 180 而不是 160：三个链接按钮实测要 170px，160 时「删除」会被 .cell 的
+           text-overflow: ellipsis 截成「删除…」（EP 的 .cell 默认 overflow:hidden） -->
+      <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <span class="actions">
             <el-button

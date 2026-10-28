@@ -8,10 +8,12 @@ import { BizError } from '@mindforge/shared'
 import { documentApi } from '@/api/document'
 import { knowledgeApi } from '@/api/knowledge'
 import DocumentChunksDialog from '@/components/DocumentChunksDialog.vue'
+import DocumentDetailDrawer from '@/components/DocumentDetailDrawer.vue'
 import DocumentStatusDialog from '@/components/DocumentStatusDialog.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { useAuthStore } from '@/stores/auth'
+import { STAGES, STAGE_TEXT, STAGE_TONE, STATUS_TEXT, STATUS_TONE } from '@/utils/document-status'
 import { formatDateTime } from '@/utils/format'
 
 const auth = useAuthStore()
@@ -44,56 +46,9 @@ if (/^\d+$/.test(kbIdFromRoute)) {
 }
 
 /**
- * 聚合总状态的取值与配色。
- *
- * ⚠️ 来源是后端 `DocumentStatusUtils.aggregate()`，不是猜的：
- * 失败优先（任一段 FAILED 整体 FAILED），然后按推进最远的一段给
- * COMPLETED / CHUNKED / PARSED，正在解析给 PARSING，否则 UPLOADED。
+ * 文档状态的取值与配色口径收在 `@/utils/document-status` —— 详情抽屉也要用，
+ * 两处各写一份的话，同一个 FAILED 可能在一处红、一处灰，排查时会被颜色带偏。
  */
-const STATUS_TEXT: Record<string, string> = {
-  UPLOADED: '已上传',
-  PARSING: '解析中',
-  PARSED: '已解析',
-  CHUNKED: '已分块',
-  COMPLETED: '已完成',
-  FAILED: '失败',
-}
-
-type Tone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
-
-const STATUS_TONE: Record<string, Tone> = {
-  UPLOADED: 'neutral',
-  PARSING: 'warning',
-  PARSED: 'info',
-  CHUNKED: 'info',
-  COMPLETED: 'success',
-  FAILED: 'danger',
-}
-
-/** 三段状态展示用的固定顺序（后端字段也是这个顺序推进的） */
-const STAGES = [
-  { key: 'parseStatus', label: '解析' },
-  { key: 'chunkStatus', label: '分块' },
-  { key: 'vectorStatus', label: '向量' },
-] as const
-
-const STAGE_TEXT: Record<string, string> = {
-  PENDING: '等待',
-  PARSING: '解析中',
-  CHUNKING: '分块中',
-  EMBEDDING: '嵌入中',
-  SUCCESS: '完成',
-  FAILED: '失败',
-}
-
-const STAGE_TONE: Record<string, Tone> = {
-  PENDING: 'neutral',
-  PARSING: 'warning',
-  CHUNKING: 'warning',
-  EMBEDDING: 'warning',
-  SUCCESS: 'success',
-  FAILED: 'danger',
-}
 
 function fail(e: unknown, fallback: string): void {
   ElMessage.error(e instanceof BizError ? e.message : fallback)
@@ -187,12 +142,20 @@ function onSortChange(data: { prop?: string | null; order?: string | null }): vo
   void load()
 }
 
-// ---------- 弹窗 ----------
+// ---------- 弹窗 / 抽屉 ----------
 const chunksVisible = ref(false)
 const chunksDoc = ref<AdminDocumentVO | null>(null)
 
 const statusVisible = ref(false)
 const statusDoc = ref<AdminDocumentVO | null>(null)
+
+const detailVisible = ref(false)
+const detailDoc = ref<AdminDocumentVO | null>(null)
+
+function onDetail(row: AdminDocumentVO): void {
+  detailDoc.value = row
+  detailVisible.value = true
+}
 
 function onChunks(row: AdminDocumentVO): void {
   chunksDoc.value = row
@@ -469,13 +432,28 @@ onMounted(() => {
       @sort-change="onSortChange"
     >
       <el-table-column type="selection" width="48" align="center" />
-      <el-table-column
-        prop="fileName"
-        label="文件名"
-        min-width="150"
-        sortable="custom"
-        show-overflow-tooltip
-      />
+      <el-table-column prop="fileName" label="文件名" min-width="150" sortable="custom">
+        <template #default="{ row }">
+          <!--
+            文件名点开详情。
+            ⚠️ 刻意不把「详情」塞进操作列 —— 那列已经 230px（分块/修正/重试/删除），
+               再加一个按钮会挤到盖住前一列（见 MEMORY 的列宽规矩）。
+            用 span + role/tabindex 而不是 el-button：按钮的内层 span 不吃父级 ellipsis，
+            长文件名会把列撑开。
+          -->
+          <span
+            class="name-link"
+            role="button"
+            tabindex="0"
+            :title="asDoc(row).fileName"
+            @click="onDetail(asDoc(row))"
+            @keydown.enter.prevent="onDetail(asDoc(row))"
+            @keydown.space.prevent="onDetail(asDoc(row))"
+          >
+            {{ asDoc(row).fileName }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column label="知识库" min-width="110" show-overflow-tooltip>
         <template #default="{ row }">{{ asDoc(row).knowledgeBaseName || '-' }}</template>
       </el-table-column>
@@ -553,6 +531,7 @@ onMounted(() => {
       @change="() => load()"
     />
 
+    <DocumentDetailDrawer v-model="detailVisible" :doc="detailDoc" />
     <DocumentChunksDialog v-model="chunksVisible" :doc="chunksDoc" />
     <DocumentStatusDialog v-model="statusVisible" :doc="statusDoc" @saved="() => load()" />
 
@@ -732,6 +711,22 @@ onMounted(() => {
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--mf-space-1);
+}
+
+/* 文件名：看起来像链接、点开是详情。长名字省略，完整值在 title 里 */
+.name-link {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--mf-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.name-link:hover,
+.name-link:focus-visible {
+  text-decoration: underline;
 }
 
 .actions {
