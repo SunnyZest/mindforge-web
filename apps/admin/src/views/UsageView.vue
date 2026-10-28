@@ -8,7 +8,27 @@ import {
   Refresh,
   TrendCharts,
 } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+/**
+ * echarts **按需引入**。
+ *
+ * ★ 不要改回 `import * as echarts from 'echarts'` —— 全量引入时这个页面的 chunk
+ *   有 1.1MB，是管理端 dist 里最大的一块。这里只画折线 + 饼图。
+ * ★ `PieChart` 和上面 Element Plus 的图标重名，这里改名引入。
+ * ★ 类型名和 5.x 不同：`echarts/core` 里没有 `EChartsOption`，只有 `EChartsCoreOption`。
+ */
+import * as echarts from 'echarts/core'
+import { LineChart, PieChart as PieChartSeries } from 'echarts/charts'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([
+  LineChart,
+  PieChartSeries,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  CanvasRenderer,
+])
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import {
@@ -199,7 +219,7 @@ function renderTrendChart(): void {
   const requests = chart.value.map((d) => d.requests)
   const tokens = chart.value.map((d) => d.totalTokens)
 
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     tooltip: {
       ...getGlassTooltipOption(isDark),
       formatter: (params: unknown) => {
@@ -357,7 +377,7 @@ function renderPieChart(): void {
   const isTokens = pieMetric.value === 'tokens'
   const unit = isTokens ? 'Token' : '次'
 
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     color: APPLE_PALETTE,
     tooltip: {
       ...getPieTooltipOption(isDark),

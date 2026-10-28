@@ -10,7 +10,19 @@ import {
   Reading,
   User,
 } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+/**
+ * echarts **按需引入**。
+ *
+ * ★ 不要改回 `import * as echarts from 'echarts'` —— 全量引入时这个页面的 chunk
+ *   有 1.1MB，是管理端 dist 里最大的一块。这里只画一个仪表盘，
+ *   编入 GaugeChart + CanvasRenderer 就够。
+ * ★ 类型名和 5.x 不同：`echarts/core` 里没有 `EChartsOption`，只有 `EChartsCoreOption`。
+ */
+import * as echarts from 'echarts/core'
+import { GaugeChart } from 'echarts/charts'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([GaugeChart, CanvasRenderer])
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 
@@ -187,7 +199,7 @@ function renderGauge(): void {
     : 100
   const rateVal = Math.round(rawRate * 10) / 10
 
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     series: [
       {
         type: 'gauge',
