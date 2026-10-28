@@ -92,6 +92,44 @@ const pwdRules: FormRules<typeof pwdForm> = {
   ],
 }
 
+// ---------- 邮件提醒 ----------
+/**
+ * 开关状态。
+ *
+ * ⚠️ 后端 VO 里是 `Integer`（1 / 0），DTO 里是 `Boolean` —— 两边类型不一样是刻意的，
+ *    转换在后端做（`Boolean` 直接塞进 tinyint 列会变成 0/1 之外的怪值）。
+ *    前端这里统一用布尔，只在这一层做 1 === 开 的映射。
+ */
+const reminderOn = ref(true)
+const savingReminder = ref(false)
+
+/**
+ * 切换即保存，不设「保存」按钮。
+ *
+ * ★ 用 `before-change` 而不是 `@change`：接口失败时返回 false，开关**不会**先跳过去再跳回来
+ *   （那样看起来像「点了一下没反应，过一秒又弹回去」）。EP 2.2 起支持。
+ *
+ * ⚠️⚠️ 这个函数里**不要动 `reminderOn`**。EP 的目标值是「当前 modelValue 取反」，
+ *   在 resolve 之前先把它改掉，它算出来的目标值就变回原值了 —— 实测表现是
+ *   「点一下开关自己弹回去，但 toast 已经提示成功」。本地状态交给 v-model 更新。
+ */
+async function beforeReminderChange(): Promise<boolean> {
+  const next = !reminderOn.value
+  savingReminder.value = true
+  try {
+    const data = await profileApi.update({ reminderEnabled: next })
+    // 只更新卡片上的其它字段；开关状态由 v-model 跟着这次切换走
+    profile.value = data
+    ElMessage.success(next ? '已开启邮件提醒' : '已关闭邮件提醒')
+    return true
+  } catch (e) {
+    fail(e, '保存提醒设置失败')
+    return false
+  } finally {
+    savingReminder.value = false
+  }
+}
+
 function fail(e: unknown, fallback: string): void {
   ElMessage.error(e instanceof BizError ? e.message : fallback)
 }
@@ -103,6 +141,8 @@ async function load(): Promise<void> {
     profile.value = data
     // 表单填当前值 —— 后端是「传了才改」的语义，所以留空 = 不改
     profileForm.nickname = data.nickname ?? ''
+    // 老数据可能还没有这一列，兜底成开启（和后端 VO.of 的兜底、DDL 的 DEFAULT 1 对齐）
+    reminderOn.value = (data.reminderEnabled ?? 1) === 1
   } catch (e) {
     fail(e, '加载个人资料失败')
   } finally {
@@ -236,6 +276,34 @@ onMounted(load)
 
     <el-card class="profile__card">
       <template #header>
+        <span class="profile__title">通知提醒</span>
+      </template>
+
+      <div class="reminder">
+        <div class="reminder__text">
+          <span class="reminder__label">面试与待办邮件提醒</span>
+          <span class="reminder__hint">
+            日程开始前 24 小时内，把这段时间的安排汇总成一封邮件，一天最多一封。
+          </span>
+        </div>
+        <el-switch
+          v-model="reminderOn"
+          :loading="savingReminder"
+          :disabled="!profile?.email"
+          :before-change="beforeReminderChange"
+        />
+      </div>
+
+      <p class="reminder__foot">
+        <template v-if="profile?.email">
+          发送到 {{ profile?.email }}；邮箱未验证、或日程已完成 / 已取消的不会发送。
+        </template>
+        <template v-else> 还没绑定邮箱，暂时无法接收提醒。 </template>
+      </p>
+    </el-card>
+
+    <el-card class="profile__card">
+      <template #header>
         <span class="profile__title">修改密码</span>
       </template>
 
@@ -361,6 +429,37 @@ onMounted(load)
 
 .profile__hint {
   margin: 0 0 var(--mf-space-4);
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+}
+
+/* ---------- 邮件提醒 ---------- */
+.reminder {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-4);
+}
+
+.reminder__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  min-width: 0;
+}
+
+.reminder__label {
+  font-size: var(--mf-font-sm);
+}
+
+.reminder__hint {
+  font-size: var(--mf-font-xs);
+  line-height: 1.5;
+  color: var(--mf-text-tertiary);
+}
+
+.reminder__foot {
+  margin: var(--mf-space-3) 0 0;
   font-size: var(--mf-font-xs);
   color: var(--mf-text-tertiary);
 }

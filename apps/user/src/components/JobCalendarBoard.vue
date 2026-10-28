@@ -2,6 +2,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  Bell,
   Calendar,
   Check,
   Clock,
@@ -27,6 +28,7 @@ import {
 
 import { calendarApi } from '@/api/calendar'
 import { jobApi } from '@/api/job'
+import { formatDateTime } from '@/utils/format'
 
 const props = defineProps<{
   /** 跟随职位页的搜索框 —— 只在本地过滤，不重新请求 */
@@ -400,6 +402,16 @@ function timeOf(iso: string): string {
   return iso.length >= 16 ? iso.slice(11, 16) : ''
 }
 
+/**
+ * 悬停提示：只有提醒过的日程才带时间，其余的 title 保持默认（显示标题）。
+ *
+ * ⚠️ `remindedAt` 是「已经发过」的事实，不是「会不会发」的承诺 ——
+ *    改期后后端会把它清成 null，所以这里不能写成「将于 x 时提醒」。
+ */
+function remindTitle(ev: JobEventVO): string | undefined {
+  return ev.remindedAt ? `已发送邮件提醒：${formatDateTime(ev.remindedAt)}` : undefined
+}
+
 onMounted(() => {
   void load()
   void loadJobs()
@@ -464,10 +476,13 @@ defineExpose({ refresh: load })
                 'cal__chip--cancelled': ev.status === 'CANCELLED',
               }"
               :style="{ '--tone': TYPE_TONE[ev.eventType] }"
+              :title="remindTitle(ev)"
               @click.stop="openEdit(ev)"
             >
               <span class="cal__chip-time">{{ timeOf(ev.eventAt) }}</span>
               <span class="cal__chip-text">{{ ev.title }}</span>
+              <!-- 邮件已发出的标记。网格里只放图标不放字 —— 11px 的行里塞「已提醒」会把标题挤没 -->
+              <el-icon v-if="ev.remindedAt" class="cal__chip-bell"><Bell /></el-icon>
             </div>
             <span v-if="eventsOf(d.key).length > 2" class="cal__more">
               +{{ eventsOf(d.key).length - 2 }}
@@ -510,6 +525,13 @@ defineExpose({ refresh: load })
               <span class="cal__item-time">{{ timeOf(ev.eventAt) }}</span>
               <span class="cal__item-type">{{ JOB_EVENT_TYPE_LABELS[ev.eventType] }}</span>
               <span class="cal__item-status">{{ STATUS_LABELS[ev.status] }}</span>
+              <span
+                v-if="ev.remindedAt"
+                class="cal__item-reminded mf-glass--chip"
+                :title="remindTitle(ev)"
+              >
+                已提醒
+              </span>
             </div>
 
             <h5 class="cal__item-title">{{ ev.title }}</h5>
@@ -833,6 +855,13 @@ defineExpose({ refresh: load })
   white-space: nowrap;
 }
 
+/* 已提醒的铃铛。尺寸靠 font-size，el-icon 会继承 */
+.cal__chip-bell {
+  flex: none;
+  font-size: 11px;
+  color: var(--mf-text-tertiary);
+}
+
 .cal__chip--cancelled {
   opacity: 0.5;
 }
@@ -930,6 +959,15 @@ defineExpose({ refresh: load })
 .cal__item-status {
   margin-left: auto;
   color: var(--mf-text-tertiary);
+}
+
+/* 「已提醒」小标签：玻璃质感来自 .mf-glass--chip（含降级），这里只补排版 */
+.cal__item-reminded {
+  flex: none;
+  padding: 0 6px;
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-secondary);
+  cursor: help;
 }
 
 .cal__item-title {

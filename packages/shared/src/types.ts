@@ -153,15 +153,24 @@ export interface UserProfileVO {
   avatarUrl: string | null
   /** 1 正常 / 0 禁用 */
   status: number
+  /** 是否接收日程邮件提醒：1 开启 / 0 关闭（老数据兜底为 1，与库里的 DEFAULT 1 一致） */
+  reminderEnabled: number
   createdAt: string | null
 }
 
-/** 修改个人资料（Java 的 `UserProfileUpdateDTO`）—— 两个字段都可空，传了才改 */
+/** 修改个人资料（Java 的 `UserProfileUpdateDTO`）—— 三个字段都可空，传了才改 */
 export interface UserProfileUpdateDTO {
   /** 最长 64 */
   nickname?: string
   /** 最长 500 */
   avatarUrl?: string
+  /**
+   * 日程邮件提醒开关。
+   *
+   * ⚠️ 这里是 Boolean，VO 里是 Integer（0/1）—— 后端自己做了转换，
+   *    别在前端把 true/false 当数字传，也别把 1/0 当布尔传。
+   */
+  reminderEnabled?: boolean
 }
 
 /** 用户列表行（Java 的 `UserSummaryVO`） */
@@ -1777,6 +1786,13 @@ export interface JobEventVO {
   location: string | null
   note: string | null
   status: JobEventStatus
+  /**
+   * 邮件提醒的发送时间，null = 还没提醒过。
+   *
+   * ★ 这是「已经发出去了」的事实记录，不是开关 —— 开关在用户资料里（`reminderEnabled`）。
+   * ★ 改期（`eventAt` 变了）后端会把它重置成 null，所以别拿它判断「这条日程要不要提醒」。
+   */
+  remindedAt: string | null
   createdAt: string
   updatedAt: string
 }
