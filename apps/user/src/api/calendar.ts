@@ -1,4 +1,9 @@
-import type { JobEventSaveDTO, JobEventVO } from '@mindforge/shared'
+import type {
+  InvitationExtractDTO,
+  InvitationExtractVO,
+  JobEventSaveDTO,
+  JobEventVO,
+} from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -30,4 +35,24 @@ export const calendarApi = {
     http.put<JobEventVO>(`/app/calendar/events/${id}`, dto),
 
   remove: (id: string) => http.delete<void>(`/app/calendar/events/${id}`),
+
+  /**
+   * 从面试邀约里抽取日程（**不落库**）。
+   *
+   * ★ 这是**同步慢接口**：后端要先解析文件（PDF / 截图可能走 OCR）再调模型。
+   *   实测 1~6 秒（2026-10-29，`ai_usage_record` 里 4 次成功调用平均 3.9 秒、最长 6.0 秒，
+   *   输出约 230 token）—— 比简历解析快一个量级，因为输出只有几百 token。
+   *
+   * ⚠️ **超时不要往下调**。耗时链条是：
+   *   Python 单次 55 秒 × (1 + 1 次重试) = 110 秒  <  Java 读超时 115 秒  <  前端 120 秒。
+   *   前端必须比 Java 长 —— 否则 Java 还在等、前端先放弃，用户看到「失败」而后端其实成功了
+   *   （简历解析那边踩过同样的坑）。要改就三处一起改。
+   *
+   * ★ 返回的是**候选**，用户确认后才逐条调 `create`。
+   *   不要把它当「已创建」处理。
+   */
+  extractInvitation: (dto: InvitationExtractDTO) =>
+    http.post<InvitationExtractVO>('/app/calendar/invitations/extract', dto, {
+      timeout: 120 * 1000,
+    }),
 }

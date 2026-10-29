@@ -1833,6 +1833,90 @@ export const JOB_EVENT_MODE_LABELS: Record<JobEventMode, string> = {
   PHONE: '电话',
 }
 
+// ---------- 用户端：面试邀约抽取 ----------
+
+/**
+ * 可以被「原文依据」校验的字段。
+ *
+ * ★ 后端对每个字段都做了 `原文.contains(evidence)` 校验，**校验不过的字段会被丢弃**。
+ * 所以前端拿到 null 时，正确的语义是「原文里没写」，不是「AI 偷懒」。
+ */
+export type ExtractedEventField =
+  | 'title'
+  | 'companyName'
+  | 'positionName'
+  | 'eventType'
+  | 'eventAt'
+  | 'durationMinutes'
+  | 'eventMode'
+  | 'location'
+
+/**
+ * 从邀约原文里抽出来的一条日程 —— **没有落库**，等用户确认。
+ *
+ * ⚠️ 所有字段都可能是 null（原文没写），前端必须逐项兜底，
+ * 不能假设「抽出来就是对的」。`eventAt` 与职位是提交的硬前提：
+ * 缺了这两项的行不允许提交。
+ */
+export interface ExtractedJobEventVO {
+  title: string | null
+  companyName: string | null
+  positionName: string | null
+  /** 轮次 → 日程类型；原文没写轮次时为 null（**不要**在前端补默认值） */
+  eventType: JobEventType | null
+  /** ISO 本地时间；null = 原文没有可用的时间 */
+  eventAt: string | null
+  /**
+   * 时间是否由相对表述换算而来（「下周三下午 2 点」「明天」）。
+   *
+   * ★ 这是**唯一允许推导**的字段，且必须显式标出来让人核对 ——
+   *   换算错一小时，提醒就会在错的时间发出去。
+   */
+  eventAtDerived: boolean
+  durationMinutes: number | null
+  eventMode: JobEventMode | null
+  /** 地点（现场面试的地址） */
+  location: string | null
+  /** 线上会议链接（腾讯会议 / Zoom / Teams） */
+  meetingUrl: string | null
+  interviewer: string | null
+  note: string | null
+  /** 字段名 → 支撑该值的原文片段。缺 key = 该字段没抽到 */
+  evidence: Partial<Record<ExtractedEventField, string>>
+  /** 匹配到的已有职位；null = 没匹配上，必须让用户自己选 */
+  matchedJobId: string | null
+  matchedJobTitle: string | null
+}
+
+/** 邀约抽取结果 */
+export interface InvitationExtractVO {
+  /** 一封邀约常含多轮（笔试 + 一面），所以是数组 */
+  events: ExtractedJobEventVO[]
+  /** 原文有效字符数，前端用来显示「已读取 N 字」 */
+  sourceLength: number
+  /** 需要提醒用户注意的地方（如「扫描件，识别可能有误差」），没有则为 null */
+  warning: string | null
+}
+
+/**
+ * 邀约抽取请求。
+ *
+ * ★ 二选一：要么传 `text`（粘贴的微信 / 邮件正文），要么传文件（前端读成 base64）。
+ *   文件走后端解析器（PDF / DOCX / 图片 OCR），前端**不解析文件内容**。
+ */
+export interface InvitationExtractDTO {
+  source: 'TEXT' | 'FILE'
+  /** source = TEXT 时必填 */
+  text?: string
+  /** source = FILE 时必填，如 PDF / DOCX / PNG / JPG / TXT */
+  fileType?: string
+  /** source = FILE 时必填，不带 data: 前缀的纯 base64 */
+  contentBase64?: string
+}
+
+/** 邀约抽取支持的文件类型（与后端解析器保持一致） */
+export const INVITATION_FILE_TYPES = ['PDF', 'DOCX', 'TXT', 'MD', 'PNG', 'JPG', 'JPEG'] as const
+
 // ---------- 用户端：AI 能力状态 ----------
 
 /**

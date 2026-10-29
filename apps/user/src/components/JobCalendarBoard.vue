@@ -10,6 +10,7 @@ import {
   Edit,
   Location,
   Plus,
+  Upload,
   VideoCamera,
 } from '@element-plus/icons-vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
@@ -28,6 +29,7 @@ import {
 
 import { calendarApi } from '@/api/calendar'
 import { jobApi } from '@/api/job'
+import InvitationImportDialog from '@/components/InvitationImportDialog.vue'
 import { formatDateTime } from '@/utils/format'
 
 const props = defineProps<{
@@ -93,6 +95,20 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const editing = ref<JobEventVO | null>(null)
 const submitting = ref(false)
+
+/** 导入面试邀约的弹窗 —— 识别 + 核对都在里面，这里只管开关与刷新 */
+const importOpen = ref(false)
+
+/**
+ * 导入完成后重新拉一次。
+ *
+ * ⚠️ 导入的日程可能落在**下个月**，当前这屏看不到 —— 不能因为「没变化」就以为没导进去。
+ *    所以顺带把游标挪到第一条日程所在的月份？不做：用户可能连续导入多份，
+ *    每次都跳月反而晕。只在成功提示里说明「已导入 N 条」，让用户自己翻。
+ */
+function onImported(): void {
+  void load()
+}
 
 /** 还没有任何职位 —— 日程必须挂职位，得先提示用户去建 */
 const noJobs = computed(() => jobs.value.length === 0)
@@ -436,6 +452,7 @@ defineExpose({ refresh: load })
           <el-icon><Calendar /></el-icon>
           本屏 {{ filteredEvents.length }} 场 · 待进行 {{ upcomingCount }} 场
         </span>
+        <el-button :icon="Upload" @click="importOpen = true">导入邀约</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate()">新建日程</el-button>
       </div>
     </div>
@@ -675,6 +692,9 @@ defineExpose({ refresh: load })
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 导入面试邀约：抽出来的只是候选，确认后才落库 -->
+    <InvitationImportDialog v-model="importOpen" :jobs="jobs" @imported="onImported" />
   </div>
 </template>
 

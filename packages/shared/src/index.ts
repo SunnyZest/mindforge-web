@@ -177,6 +177,11 @@ export type {
   JobEventType,
   JobEventMode,
   JobEventStatus,
+  // 用户端：面试邀约抽取
+  ExtractedJobEventVO,
+  ExtractedEventField,
+  InvitationExtractVO,
+  InvitationExtractDTO,
   ConfirmTokenVO,
   AiEngineStatus,
   AiStatusVO,
@@ -191,7 +196,7 @@ export type {
 
 // ⚠️ 这两个是【运行时值】（const 映射表，模板里直接要用），不能放进上面的 export type 块
 //    —— export type 会被整体擦除，运行时根本拿不到，模板渲染会报 undefined。
-export { JOB_EVENT_TYPE_LABELS, JOB_EVENT_MODE_LABELS } from './types'
+export { JOB_EVENT_TYPE_LABELS, JOB_EVENT_MODE_LABELS, INVITATION_FILE_TYPES } from './types'
 
 // ---------- HTTP 客户端 ----------
 export { createHttp, BizError, HttpError } from './http'
