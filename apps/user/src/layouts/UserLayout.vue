@@ -173,8 +173,24 @@ async function onCommand(command: string): Promise<void> {
           <span v-if="m.comingSoon" class="nav__dot" aria-hidden="true" />
         </router-link>
 
-        <!-- 次要入口收在这里，别让顶栏被 11 项挤爆 -->
-        <el-dropdown v-if="moreMenus.length" trigger="click" @command="onMoreCommand">
+        <!--
+          次要入口收在这里，别让顶栏被 11 项挤爆。
+
+          ★ `trigger` 传**数组** ['hover','click'] 而不是单个字符串：
+            · hover —— 鼠标移上去就展开，导航类菜单的通行交互
+            · click —— 触屏没有 hover，以及习惯点一下的人
+            · 键盘 —— ElTooltip 的 triggerKeys 默认是 Enter / NumpadEnter / Space，
+              但只有 trigger 里含 'click' 时才会绑定；只写 'hover' 的话键盘用户打不开。
+          ★ show/hide-timeout 只对 hover 生效：hide 给 200ms 是为了留出
+            「从按钮移到菜单」的那段路程，太短会刚移过去就关掉。
+        -->
+        <el-dropdown
+          v-if="moreMenus.length"
+          :trigger="['hover', 'click']"
+          :show-timeout="80"
+          :hide-timeout="200"
+          @command="onMoreCommand"
+        >
           <button
             type="button"
             class="nav__item nav__more"
