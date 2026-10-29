@@ -9,6 +9,7 @@ import {
   HomeFilled,
   Microphone,
   Moon,
+  MoreFilled,
   Search,
   Sunny,
   TrendCharts,
@@ -94,6 +95,31 @@ const menus = computed(() =>
 )
 
 /**
+ * 收进「更多」下拉的次要入口。
+ *
+ * ★ 为什么是**固定名单**而不是「按宽度动态折叠」：
+ *   动态折叠要渲染一遍再量宽度，resize 时会闪一下，而且窗口拖动过程中
+ *   菜单项会在「显示」和「收进更多」之间反复横跳，很难受。
+ *   固定名单在任何宽度下表现一致，也省掉了 ResizeObserver。
+ *
+ * 进这个名单的判断标准：**不是每天都要点的**。
+ *   · 知识搜索 —— 是「知识库」里的一个动作，不是并列的一级入口
+ *   · 最近删除 —— 低频，且误删后才知道有它
+ *   · 个人资料 —— 右上角头像下拉里已经有同一个入口，这里是重复的
+ */
+const SECONDARY = new Set(['knowledge-search', 'recycle-bin', 'profile'])
+
+const primaryMenus = computed(() => menus.value.filter((m) => !SECONDARY.has(m.name)))
+const moreMenus = computed(() => menus.value.filter((m) => SECONDARY.has(m.name)))
+
+/** 当前路由落在「更多」里时，让「更多」本身高亮 —— 否则用户看不出自己在哪 */
+const moreActive = computed(() => moreMenus.value.some((m) => m.path === route.path))
+
+async function onMoreCommand(name: string): Promise<void> {
+  await router.push({ name })
+}
+
+/**
  * 没设头像时 el-avatar 里显示什么。
  *
  * ⚠️ 一定要给回退值：el-avatar 的默认插槽就是「图没设置 / 加载失败」时显示的内容，
@@ -131,7 +157,7 @@ async function onCommand(command: string): Promise<void> {
 
       <nav class="layout__nav">
         <router-link
-          v-for="m in menus"
+          v-for="m in primaryMenus"
           :key="m.name"
           :to="m.path"
           class="nav__item"
@@ -146,6 +172,27 @@ async function onCommand(command: string): Promise<void> {
           <!-- 未开放的挂一个小圆点，别让人以为是坏了 -->
           <span v-if="m.comingSoon" class="nav__dot" aria-hidden="true" />
         </router-link>
+
+        <!-- 次要入口收在这里，别让顶栏被 11 项挤爆 -->
+        <el-dropdown v-if="moreMenus.length" trigger="click" @command="onMoreCommand">
+          <button
+            type="button"
+            class="nav__item nav__more"
+            :class="{ 'nav__item--active': moreActive }"
+            title="更多"
+          >
+            <el-icon><MoreFilled /></el-icon>
+            <span class="nav__text">更多</span>
+            <el-icon class="nav__caret"><ArrowDown /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="m in moreMenus" :key="m.name" :command="m.name">
+                {{ m.title }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </nav>
 
       <div class="layout__actions">
@@ -295,6 +342,20 @@ async function onCommand(command: string): Promise<void> {
   height: 5px;
   background-color: var(--mf-warning);
   border-radius: 50%;
+}
+
+/* 「更多」用的是 <button>，得先清掉原生按钮样式再套 .nav__item 的外观 */
+.nav__more {
+  font-family: inherit;
+  font-weight: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nav__caret {
+  font-size: 12px;
+  opacity: 0.55;
 }
 
 /* ---------- 右侧 ---------- */
