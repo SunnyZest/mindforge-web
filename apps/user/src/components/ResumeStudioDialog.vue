@@ -26,6 +26,7 @@ const visible = computed({
 })
 
 const saving = ref(false)
+const exporting = ref(false)
 const activeTab = ref<'basic' | 'work' | 'projects' | 'edu' | 'raw'>('basic')
 
 /** 本地可编辑副本 */
@@ -34,6 +35,38 @@ const rawContent = ref('')
 const form = ref<StructuredResume>( createEmptyStructured() )
 const skillsText = ref('')
 const certsText = ref('')
+
+/**
+ * 上次保存时的内容快照（稳定序列化后的字符串）。
+ *
+ * 导出走的是**服务端渲染**，读的是库里的数据 —— 所以有未保存的修改时，
+ * 导出的是旧版本。这里靠快照判断「有没有改过」，改过就先提示保存。
+ *
+ * ⚠️ 用快照对比而不是 watch 加 dirty 标记：watch 会被「改了又改回来」、
+ *    切换 tab、AI 回填等动作误触发，标记一旦脏了就再也擦不干净，
+ *    用户会遇到「什么都没改却不让导出」。
+ */
+const savedSnapshot = ref('')
+
+/** 键名排序后再序列化 —— 否则对象键顺序不同会造成「值一样但判成改过」 */
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    return `{${Object.keys(obj)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value) ?? 'null'
+}
+
+/** 当前编辑状态快照。只包含会影响导出结果的字段 */
+function snapshotOf(): string {
+  return stableStringify({ title: resumeTitle.value, form: form.value })
+}
 
 function createEmptyStructured(): StructuredResume {
   return {
@@ -78,6 +111,8 @@ function initFromDetail(d: ResumeDetailVO | null): void {
   }
   skillsText.value = form.value.skills.map((sk) => sk.name).join('、')
   certsText.value = form.value.certificates.join('\n')
+  // 刚打开时还没有任何改动
+  savedSnapshot.value = snapshotOf()
 }
 
 watch(
@@ -203,8 +238,9 @@ function syncStructuredToRaw(): void {
   ElMessage.success('已根据结构化内容同步更新简历原文')
 }
 
-async function onSave(): Promise<void> {
-  if (!props.detail) return
+/** @returns 是否保存成功（导出前要先保存，得知道结果） */
+async function onSave(): Promise<boolean> {
+  if (!props.detail) return false
   syncSkillsAndCerts()
   saving.value = true
   try {
@@ -215,10 +251,13 @@ async function onSave(): Promise<void> {
       rawContent: rawContent.value,
       structuredJson: form.value,
     })
+    savedSnapshot.value = snapshotOf()
     ElMessage.success('简历精修内容已保存')
     emit('saved', updated)
+    return true
   } catch (e) {
     ElMessage.error(e instanceof BizError ? e.message : '保存简历失败')
+    return false
   } finally {
     saving.value = false
   }
@@ -234,8 +273,68 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#39;')
 }
 
-/** 导出高清矢量 A4 PDF（通过独立打印窗口渲染标准 A4 样式，可选中文字、兼容大厂 ATS 解析） */
-function onExportPdf(): void {
+/**
+ * 导出 PDF —— 走服务端渲染（`GET /app/resumes/{id}/export`）。
+ *
+ * ★ 和旧的「浏览器打印」相比，产出是确定的：同一份简历任何人任何时候导出
+ *   字节都一样，不受用户浏览器的纸张、边距、缩放设置影响，文字也一定可选可提取
+ *   （投递的第一关是机器读，ATS 读不出字的 PDF 等于白导）。
+ *
+ * ⚠️ 导出的是**库里的数据**，所以有未保存的修改时必须先保存，否则导的是旧版本。
+ */
+async function onExportPdf(): Promise<void> {
+  if (!props.detail) return
+
+  // 技能 / 证书是文本框，得先同步进 form 才能判断改动
+  syncSkillsAndCerts()
+
+  if (snapshotOf() !== savedSnapshot.value) {
+    try {
+      await ElMessageBox.confirm(
+        '内容有未保存的修改，直接导出会得到上次保存的版本。是否先保存再导出？',
+        '需要先保存',
+        { confirmButtonText: '保存并导出', cancelButtonText: '取消', type: 'warning' },
+      )
+    } catch {
+      return // 用户点了取消
+    }
+    if (!(await onSave())) return // 保存失败就不导出了
+  }
+
+  exporting.value = true
+  try {
+    const { blob, fileName } = await resumeApi.exportPdf(props.detail.id)
+    triggerDownload(blob, fileName)
+  } catch (e) {
+    // 后端失败分支（未解析 40001 / 并发打满 42901 / 404）都是 JSON 信封，
+    // shared/http.ts 的拦截器已经把 Blob 读回来抛成 BizError 了
+    ElMessage.error(e instanceof BizError ? e.message : '导出失败，请稍后重试')
+  } finally {
+    exporting.value = false
+  }
+}
+
+/** 用临时 object URL 触发浏览器下载 */
+function triggerDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  // 立刻 revoke 会让部分浏览器取消下载，延后一拍再释放
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/**
+ * 打印 / 另存为 PDF —— 浏览器打印通道，**备用路径**。
+ *
+ * 留着它是因为「真的要用打印机打出来」时打印对话框更顺手；
+ * 但导简历请用上面的服务端导出：这里的结果取决于用户的打印设置，
+ * 而且部分浏览器「另存为 PDF」会把文字转成图形，ATS 读不出来。
+ */
+function onPrint(): void {
   syncSkillsAndCerts()
   const s = form.value
   const docTitle = escapeHtml(s.name || resumeTitle.value || '个人简历')
@@ -717,12 +816,13 @@ function onExportPdf(): void {
     <template #footer>
       <div class="studio-foot">
         <span class="studio-foot__tip">
-          提示：点击「导出高清 A4 PDF」将在打印预览中生成文字可选中、支持大厂 ATS 解析的标准 A4 简历
+          导出由服务端生成，排版与字体固定，文字可被 ATS 解析
         </span>
         <div class="studio-foot__btns">
           <el-button @click="visible = false">关闭</el-button>
-          <el-button type="success" :icon="Download" @click="onExportPdf">
-            导出高清 A4 PDF
+          <el-button link @click="onPrint">打印</el-button>
+          <el-button type="success" :icon="Download" :loading="exporting" @click="onExportPdf">
+            导出 PDF
           </el-button>
           <el-button type="primary" :icon="Check" :loading="saving" @click="onSave">
             保存修改到简历库

@@ -49,6 +49,23 @@ declare module 'axios' {
   }
 }
 
+/**
+ * 把「本该是 JSON、但因为 responseType: 'blob' 被包成 Blob」的错误体读回来。
+ *
+ * 只在二进制接口（简历 PDF 导出）的错误分支用得上：那些接口成功时返回二进制、
+ * 失败时返回统一 JSON 信封，axios 会把两种都塞进 Blob。
+ *
+ * @returns 解析出 code 就返回信封，否则 null（比如网关返回的 HTML 错误页）
+ */
+async function parseErrorBlob(blob: Blob): Promise<Result<unknown> | null> {
+  try {
+    const parsed = JSON.parse(await blob.text()) as Result<unknown>
+    return typeof parsed?.code === 'number' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export interface HttpClientOptions {
   /** 一般是 `/api`（开发时由 Vite 代理到 :8080，上线由 nginx 代理） */
   baseURL: string
@@ -171,9 +188,22 @@ export function createHttp(options: HttpClientOptions): HttpClient {
         return Promise.reject(new HttpError(0, '网络异常：请确认后端已启动'))
       }
 
-      // ③ 其他 HTTP 错误 —— 后端在响应体里也放了 {code,message}，
+      // ③ 二进制响应（简历 PDF 导出这类）：错误体被 responseType: 'blob' 包成了 Blob，
+      //    直接读 body.code 永远拿不到，会退化成「Request failed with status code 400」——
+      //    用户看到的是状态码，不是后端写的那句人话。
+      //    这里把它读回文本再解析：后端的错误响应一律是 {code,message,traceId} 信封。
+      const rawBody = error.response.data
+      if (rawBody instanceof Blob) {
+        const parsed = await parseErrorBlob(rawBody)
+        if (parsed) {
+          return Promise.reject(new BizError(parsed.code, parsed.message, parsed.traceId))
+        }
+        return Promise.reject(new HttpError(status ?? 0, error.message))
+      }
+
+      // ④ 其他 HTTP 错误 —— 后端在响应体里也放了 {code,message}，
       //    翻出来给用户看。不然前端只能显示「Request failed with status code 403」
-      const body = error.response.data as Result<unknown> | undefined
+      const body = rawBody as Result<unknown> | undefined
       if (body && typeof body.code === 'number') {
         return Promise.reject(new BizError(body.code, body.message, body.traceId))
       }

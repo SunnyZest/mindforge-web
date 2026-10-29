@@ -134,5 +134,57 @@ export const resumeApi = {
    */
   atsScore: (id: string, jobId: string) =>
     http.get<AtsScoreVO>(`/app/resumes/${id}/ats-score`, { params: { jobId } }),
+
+  /**
+   * 导出 PDF（服务端渲染）。
+   *
+   * ⚠️ **不能用 `http.get()`** —— 那个封装会拆 `{code,message,data}` 信封，
+   *    而这里成功时返回的是二进制流，`body.code` 是 undefined，
+   *    会被判成「业务错误」。必须走 `http.raw` 配 `responseType: 'blob'`。
+   *    （错误分支已经在 shared/http.ts 的拦截器里处理好了：Blob 会被读回
+   *      JSON 再抛 BizError，所以 catch 到的仍是后端那句人话。）
+   *
+   * ⚠️ 前置条件：简历**已解析过**。没解析时后端返回 40001。
+   *
+   * ⚠️ 首次导出会加载 17MB 中文字体，冷启动可能要几秒，超时给到 60 秒。
+   */
+  exportPdf: async (id: string): Promise<DownloadFile> => {
+    const response = await http.raw.get(`/app/resumes/${id}/export`, {
+      responseType: 'blob',
+      timeout: 60_000,
+    })
+    return {
+      blob: response.data as Blob,
+      fileName: fileNameFromDisposition(response.headers['content-disposition']),
+    }
+  },
+}
+
+/** 导出的文件：二进制 + 后端建议的文件名 */
+export interface DownloadFile {
+  blob: Blob
+  fileName: string
+}
+
+/**
+ * 从 Content-Disposition 里取文件名。
+ *
+ * 后端给的是两段式：`filename="resume.pdf"; filename*=UTF-8''%E5%BC%A0...`。
+ * 优先用 `filename*`（RFC 5987，中文靠它），取不到再退回 `filename`。
+ */
+function fileNameFromDisposition(disposition: unknown): string {
+  const header = typeof disposition === 'string' ? disposition : ''
+
+  const encoded = header.match(/filename\*=UTF-8''([^;]+)/i)
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1])
+    } catch {
+      // 编码坏了就往下走，别为了文件名把整个导出搞失败
+    }
+  }
+
+  const plain = header.match(/filename="?([^";]+)"?/i)
+  return plain?.[1] || 'resume.pdf'
 }
 
