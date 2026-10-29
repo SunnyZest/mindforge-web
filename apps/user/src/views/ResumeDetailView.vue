@@ -50,7 +50,7 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
 }
 
 /**
- * 解析接口本身是**同步**的（1~3 分钟才返回），前端不等它，
+ * 解析接口本身是**同步**的（实测 10~40 秒才返回），前端不等它，
  * 靠这里 5 秒一轮去看 parseStatus 变了没有。
  */
 const {
@@ -73,7 +73,7 @@ const parseText = computed(() => {
 /**
  * 触发解析。
  *
- * ⚠️ 和列表页一致：接口是同步的，一次 1~3 分钟，所以不等它返回 ——
+ * ⚠️ 和列表页一致：接口是同步的，一次 10~40 秒，所以不等它返回 ——
  *    先把状态切成 PARSING，交给自动刷新去感知结果。
  */
 function onParse(): void {
@@ -81,7 +81,7 @@ function onParse(): void {
   detail.value.parseStatus = 'PARSING'
   // 清掉轮数计数 —— 上一次可能已经刷到上限停了，不重置的话这次不会继续轮询
   resume()
-  ElMessage.info('已开始解析，通常需要 1~3 分钟，期间可以继续浏览其他页面')
+  ElMessage.info('已开始解析，通常需要 10~40 秒，期间可以继续浏览其他页面')
 
   resumeApi
     .parse(id.value)

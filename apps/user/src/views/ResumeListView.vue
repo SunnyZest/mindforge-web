@@ -69,7 +69,7 @@ async function load(options: { silent?: boolean } = {}): Promise<void> {
 /**
  * 有简历正在解析中就自动刷新。
  *
- * ⚠️ 解析接口本身是**同步**的（1~3 分钟才返回），前端刻意不等它，
+ * ⚠️ 解析接口本身是**同步**的（实测 10~40 秒才返回），前端刻意不等它，
  *    靠这里 5 秒一轮去看 parseStatus 变了没有 —— 否则用户只能盯着一个
  *    转三分钟的按钮，还以为卡死了。
  *    逻辑在 composables/useAutoRefresh.ts（和管理端文档列表共用同一套）。
@@ -103,9 +103,9 @@ async function onFileChange(event: Event): Promise<void> {
   uploading.value = true
   try {
     const created = await resumeApi.upload(file)
-    ElMessage.success('上传成功，接着点「解析」让 AI 读出内容（大约 1~3 分钟）')
+    ElMessage.success('上传成功，接着点「解析」让 AI 读出内容（大约 10~40 秒）')
     await load()
-    // 上传完不自动解析 —— 后端刻意把两件事拆开（解析是 1~3 分钟的慢接口），
+    // 上传完不自动解析 —— 后端刻意把两件事拆开（解析是 10~40 秒的慢接口），
     // 而且让用户显式点一下，他对「要等一会儿」有预期。
     void created
   } catch (e) {
@@ -119,7 +119,7 @@ async function onFileChange(event: Event): Promise<void> {
 /**
  * 触发解析。
  *
- * ⚠️ 这个接口是**同步**的，一次 1~3 分钟（实测 195~205 秒），所以这里**不等它返回**：
+ * ⚠️ 这个接口是**同步**的，一次 10~40 秒（改之前同一份简历实测 175~195 秒），所以这里**不等它返回**：
  *    后端在调模型之前就把状态置成 PARSING 了，直接把本地状态改掉、交给自动刷新
  *    去感知结果。请求本身不取消 —— 跑完后端照样落库，回来时顺手再刷一次兜底。
  */
@@ -129,7 +129,7 @@ function onParse(row: ResumeVO): void {
   row.parseStatus = 'PARSING'
   // 清掉轮数计数 —— 上一次可能已经刷到上限停了，不重置的话这次不会继续轮询
   resume()
-  ElMessage.info('已开始解析，通常需要 1~3 分钟，期间可以继续浏览其他页面')
+  ElMessage.info('已开始解析，通常需要 10~40 秒，期间可以继续浏览其他页面')
 
   resumeApi
     .parse(row.id)
@@ -234,7 +234,7 @@ onMounted(load)
             解析按钮的文案随状态变：
               没解析过 → 「解析」
               解析失败 → 「重试解析」
-              解析中   → 「解析中…」并禁用（同步接口要跑 1~3 分钟，再点只会撞 409）
+              解析中   → 「解析中…」并禁用（同步接口要跑几十秒，再点只会撞 409）
               已解析   → 走下面那个「重新解析」
           -->
           <el-button
