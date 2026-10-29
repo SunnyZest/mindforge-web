@@ -55,6 +55,8 @@ export type {
   AiModelVO,
   AiModelCreateDTO,
   AiModelUpdateDTO,
+  AiEffectiveConfigVO,
+  AiEffectiveSceneVO,
   AiScene,
   // 审计日志 / 仪表盘
   AuditLogVO,

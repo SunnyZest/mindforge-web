@@ -1,4 +1,10 @@
-import type { AiModelCreateDTO, AiModelUpdateDTO, AiModelVO, AiScene } from '@mindforge/shared'
+import type {
+  AiEffectiveConfigVO,
+  AiModelCreateDTO,
+  AiModelUpdateDTO,
+  AiModelVO,
+  AiScene,
+} from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -13,6 +19,16 @@ import { http } from './index'
 export const aiModelApi = {
   /** `scene` 不传 = 返回全部用途的配置 */
   list: (scene?: AiScene) => http.get<AiModelVO[]>('/admin/ai/models', { params: { scene } }),
+
+  /**
+   * 当前**真正生效**的配置 —— `list` 答不出的那个问题。
+   *
+   * ⚠️ 后端在 Python 不可达时**抛 50201**，不会吞成空数组：
+   * 「查不到」和「没有任何生效配置」要给的提示完全不同
+   * （「先把 AI 服务起起来」vs「去配一个模型」）。
+   * 所以这里**不要 catch 成默认值**，让错误冒到页面上。
+   */
+  effective: () => http.get<AiEffectiveConfigVO>('/admin/ai/models/effective'),
 
   create: (dto: AiModelCreateDTO) => http.post<AiModelVO>('/admin/ai/models', dto),
 

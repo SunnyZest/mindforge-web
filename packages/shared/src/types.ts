@@ -497,6 +497,36 @@ export interface AiModelUpdateDTO {
   description?: string
 }
 
+/**
+ * 单个用途的**当前生效**配置（Java 的 `AiEffectiveConfigVO.SceneVO`）。
+ *
+ * ⚠️ 这不是 `AiModelVO` 的投影 —— 它是 Python 内存缓存里真正在用的那份。
+ * 两者经常不一致，而「不一致」正是这个接口要暴露的东西：
+ * 某用途多条却没勾默认时生效的是 id 最大的那条；一条都没配时走 .env，
+ * 库里根本没有这条记录。只看列表永远答不出「现在到底在用什么」。
+ */
+export interface AiEffectiveSceneVO {
+  /** 用途：CHAT / EMBEDDING / RERANK */
+  scene: AiScene
+  /** 生效的模型名；空串表示未配置（RERANK 没有 .env 兜底） */
+  model: string
+  /** java = 来自管理端配置；env = 回退环境变量 */
+  source: string
+  baseUrl: string
+  /** ⚠️ 永远不返回 Key 本身，只有「配没配」 */
+  hasKey: boolean
+}
+
+/** AI 配置当前生效情况（Java 的 `AiEffectiveConfigVO`，转发 Python 内存快照） */
+export interface AiEffectiveConfigVO {
+  /** 每个用途一条，没配置的也会出现（source = 'env'） */
+  scenes: AiEffectiveSceneVO[]
+  /** 上一次成功同步配置的时间（ISO 带时区）；null = 从没成功同步过 */
+  refreshedAt: string | null
+  /** 上一次同步失败的原因；成功时为 null */
+  lastError: string | null
+}
+
 /* ============================================================
    管理端 · 审计日志 / 仪表盘
    ============================================================ */

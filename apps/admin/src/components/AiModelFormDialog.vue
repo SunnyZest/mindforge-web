@@ -11,6 +11,14 @@ const visible = defineModel<boolean>({ required: true })
 const props = defineProps<{
   /** null = 新增，有值 = 编辑 */
   model: AiModelVO | null
+  /**
+   * 新增时预填的用途。
+   *
+   * 列表页已按用途分组，从「新增向量化配置」进来的人不该再选一遍用途 ——
+   * 选错用途的后果不是报错，而是「加了一条配置却毫无效果」，最难自查。
+   * ⚠️ 只在新增时生效，编辑时以 `model.scene` 为准。
+   */
+  defaultScene?: AiScene
 }>()
 
 const emit = defineEmits<{ saved: [] }>()
@@ -68,7 +76,7 @@ watch(visible, (open) => {
     form.description = props.model.description ?? ''
   } else {
     form.name = ''
-    form.scene = 'CHAT'
+    form.scene = props.defaultScene ?? 'CHAT'
     form.provider = ''
     form.modelName = ''
     form.baseUrl = ''
