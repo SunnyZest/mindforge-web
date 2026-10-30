@@ -1,4 +1,4 @@
-# MindForge Web（前端一仓两端 Monorepo）
+# MindForge Web
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs" alt="Vue 3.5" />
@@ -11,286 +11,308 @@
   <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
 </p>
 
-> **MindForge Web** 是 MindForge AI（企业级求职赋能系统）的统一前端工程仓库。  
-> 采用 **pnpm workspace Monorepo** 架构，将面向普通求职者的**用户端门户 (User Portal)** 与面向运营运维的**管理控制台 (Admin Console)** 聚合于同一代码仓库，共享核心类型契约、鉴权机制与 API 请求客户端。
-
----
+MindForge Web 是 MindForge AI（企业级求职赋能系统）的前端工程仓库。项目采用 pnpm workspace
+Monorepo 架构，在同一个代码仓库中同时维护**面向求职者的用户端**与**面向运营人员的管理端**，
+两端共享类型契约、鉴权机制、请求客户端与设计系统。
 
 ## 目录
 
-- [一、 架构定位与设计哲学](#一-架构定位与设计哲学)
-- [二、 模块构成与功能全景](#二-模块构成与功能全景)
-  - [1. 用户端 (apps/user :5173)](#1-用户端-appsuser-5173)
-  - [2. 管理端 (apps/admin :5174/admin/)](#2-管理端-appsadmin-5174admin)
-  - [3. 共享基座 (packages/shared)](#3-共享基座-packagesshared)
-- [三、 技术栈一览](#三-技术栈一览)
-- [四、 本地开发与快速上手](#四-本地开发与快速上手)
-  - [1. 前置依赖准备](#1-前置依赖准备)
-  - [2. 安装依赖](#2-安装依赖)
-  - [3. 启动开发服务](#3-启动开发服务)
-  - [4. 编译打包与类型检查](#4-编译打包与类型检查)
-- [五、 核心工程设计与避坑规约](#五-核心工程设计与避坑规约)
-  - [1. 邮箱验证码与找回密码](#1-邮箱验证码与找回密码)
-  - [2. 单飞 (Single-Flight) 无感 Token 刷新机制](#2-单飞-single-flight-无感-token-刷新机制)
-  - [3. 同源部署 LocalStorage 前缀严格隔离](#3-同源部署-localstorage-前缀严格隔离)
-  - [4. 64 位雪花 Long ID 精度防截断](#4-64-位雪花-long-id-精度防截断)
-  - [5. HTML5 History 路由与 Nginx 分流部署](#5-html5-history-路由与-nginx-分流部署)
-- [六、 未来演进路线图](#六-未来演进路线图)
+- [简介](#简介)
+- [功能特性](#功能特性)
+  - [用户端](#用户端)
+  - [管理端](#管理端)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [快速开始](#快速开始)
+- [核心实现](#核心实现)
+  - [请求层与 Token 刷新](#请求层与-token-刷新)
+  - [二进制接口](#二进制接口)
+  - [鉴权与本地存储](#鉴权与本地存储)
+  - [数据类型约定](#数据类型约定)
+  - [主题与设计系统](#主题与设计系统)
+  - [认证与账号](#认证与账号)
+- [部署](#部署)
+- [许可证](#许可证)
 
----
+## 简介
 
-## 一、 架构定位与设计哲学
+求职过程涉及简历、投递、面试、Offer 等多个环节，信息分散在邮件、聊天记录和表格里。
+MindForge AI 把这些环节收进一个工作台：简历可解析与改写，投递进度可视化，
+面试邀请自动抽取成日程，面试可模拟演练并复盘，多个 Offer 可量化对比。
 
-### 为什么选择 Monorepo（一仓两端）？
-1. **消灭多端接口契约漂移**：用户端与管理端均调用后端 Spring Boot 服务（`:8080/api`），两端共享的 DTO、VO 类型与通用枚举（如文档处理状态、面试阶段）在 `packages/shared` 中集中定义，一处修改全局静态检查联动响应；
-2. **零重复的防御性请求基座**：将最容易在多端复制出错的双 Token 自动轮转、并发请求队列挂起、全局异常 Toast 等逻辑封装于共享层；
-3. **物理隔离与安全可控**：管理端拥有独立路由 base（`/admin/`）与独立打包产物，在生产环境可通过反向代理配置企业内网 IP 白名单或 VPN 访问限制，无需与面向公网的用户端混部。
+仓库包含三个包：
+
+| 包                | 说明                   | 开发端口 | 路由 base |
+| :---------------- | :--------------------- | :------- | :-------- |
+| `apps/user`       | 用户端，面向求职者     | `5173`   | `/`       |
+| `apps/admin`      | 管理端，面向运营与运维 | `5174`   | `/admin/` |
+| `packages/shared` | 共享模块，两端共用     | —        | —         |
+
+前端依赖两个后端服务：Java 服务（`http://localhost:8080/api`）提供业务接口，
+Python AI 服务（`http://localhost:8000`）提供模型调用能力，后者仅由 Java 服务访问。
+
+## 功能特性
+
+### 用户端
+
+- **工作台（`/workspace`）**：简历、投递、面试、Offer、错题的数量总览，统计卡可直达对应模块。
+- **简历中心（`/resumes`）**：上传 PDF / DOCX 后解析为结构化内容，在线精修，导出服务端渲染的
+  PDF；内置 ATS 关键词评分，按目标岗位给出改写建议。
+- **目标职位（`/jobs`）**：投递看板、面试日历、卡片列表三种视图。日历支持从 HR 发来的邀约文字
+  或附件中抽取面试信息，确认后写入日程。抽取结果要求能在原文中找到对应片段，
+  找不到依据的字段直接丢弃——少填一项可以补，填错一项用户通常不会逐条核对。
+- **模拟面试（`/interviews`）**：结合简历与岗位 JD 出题，多轮追问，结束后生成四维复盘报告，
+  薄弱点归档到错题本并可单独重练。
+- **Offer 对比（`/offers`）**：按薪资、技术栈、平台、加班强度、通勤距离五维加权，调整权重后排名实时更新。
+- **薪酬测算（`/salary`）**：按城市、岗位、年限、学历、技能生成年薪区间与年终奖建议。
+  置信度由服务端按规则下调（城市不在常见表、岗位不命中关键词、年限越界），不采信模型自评。
+- **AI 问答（`/chat`）**：基于知识库的流式问答，回答附带引用来源；检索未命中时回退通用模型并明确标注。
+- **知识库（`/knowledge`）与知识检索（`/search`）**：管理个人文档，按语义而非关键词检索。
+- **最近删除（`/recycle-bin`）**：恢复误删的 Offer 与面试日程。
+- **个人资料（`/profile`）**：昵称、头像、密码与面试邮件提醒开关。
+
+### 管理端
+
+- **运营大盘（`/dashboard`）**：全站核心指标与 Token 消耗趋势。
+- **用户管理（`/users`）与角色权限（`/roles`）**：基于 RBAC 的权限矩阵，用户启禁用、角色分配、重置密码。
+- **官方智库（`/knowledge-bases`）与文档（`/documents`）**：维护全平台公域知识库，支持批量上传、
+  网页 URL 导入、切片预览与失败任务重试。
+- **AI 配置（`/ai-models`、`/prompts`）**：配置各用途（对话、向量化、重排）使用的模型，
+  并展示当前实际生效的配置及其来源。生效规则统一由服务端计算，前端只展示结果，
+  避免多端各自判断产生分歧；管理 Prompt 模板的多个变体，支持发布与回滚。
+- **用量与告警（`/usage`、`/alerts`、`/audit-logs`）**：Token 用量统计、高危操作告警、全链路审计日志。
+- **设计规范（`/style-guide`）**：设计 token 的可视化文档，深浅两套主题对照。
+
+## 技术栈
+
+| 类别     | 技术         | 版本      | 说明                         |
+| :------- | :----------- | :-------- | :--------------------------- |
+| 框架     | Vue 3        | `3.5.43`  | 组合式 API，`<script setup>` |
+| 语言     | TypeScript   | `5.6.3`   | 全链路强类型                 |
+| 构建     | Vite         | `5.4.21`  | 开发热更新与生产分包         |
+| 状态管理 | Pinia        | `2.3.1`   | 模块化 store                 |
+| 路由     | Vue Router   | `4.6.4`   | History 模式                 |
+| UI       | Element Plus | `2.14.7`  | 按需引入                     |
+| 图表     | ECharts      | `6.1.0`   | 按需引入，见下方说明         |
+| 请求     | Axios        | `1.x`     | 统一拦截器                   |
+| 包管理   | pnpm         | `12.10.1` | workspace                    |
+
+依赖版本刻意保持在当前主流稳定档位，而非刚发布的大版本（Vite 5 而非 6、Pinia 2 而非 3、
+Vue Router 4 而非 5），以降低生态与文档不完善带来的风险。安装依赖时请显式指定版本号。
+
+`apps/*` 的 `package.json` 使用 `^` 范围声明，上表为实际安装到的版本；仓库根目录的
+devDependencies（ESLint、Prettier 等）为精确版本。
+
+ECharts 必须按需引入。全量引入 `import * as echarts from 'echarts'` 会产生约 1.1 MB 的单个
+chunk；改为 `echarts/core` 配合 `echarts.use([...])` 后，最大的图表页面 chunk 降至 400 KB 以内。
+
+## 项目结构
 
 ```
 mindforge-web/
 ├── apps/
-│   ├── user/              # 用户端应用 (Vite :5173，面向求职者)
-│   └── admin/             #管理端应用 (Vite :5174，base: /admin/，面向管理员)
+│   ├── user/                    # 用户端（:5173，base: /）
+│   │   └── src/
+│   │       ├── api/             # 接口层，每个文件导出一个 xxxApi 对象
+│   │       ├── components/      # 业务组件
+│   │       ├── layouts/         # 布局（顶栏、侧边栏）
+│   │       ├── router/          # 路由与菜单定义
+│   │       ├── stores/          # Pinia store
+│   │       ├── utils/           # 工具函数
+│   │       └── views/           # 页面，一个路由对应一个 XxxView.vue
+│   └── admin/                   # 管理端（:5174，base: /admin/），结构与用户端一致
 └── packages/
-    └── shared/            # 共享模块库 (@mindforge/shared)
+    └── shared/                  # @mindforge/shared
         ├── src/
-        │   ├── http.ts    # 统一 Axios 实例 (单飞 Token 刷新、401 重试队列)
-        │   ├── types.ts   # 全局 TypeScript 接口契约
-        │   ├── auth.ts    # Token 持久化与解析工具
-        │   └── index.ts   # 统一向外导出
+        │   ├── http.ts          # Axios 实例与拦截器
+        │   ├── types.ts         # DTO / VO / 枚举等接口契约
+        │   ├── permission.ts    # 权限码定义
+        │   ├── auth.ts          # Token 持久化
+        │   ├── theme.ts         # 主题切换
+        │   ├── echarts-theme.ts # 图表主题
+        │   ├── format.ts        # 通用格式化函数
+        │   ├── progress.ts      # 路由切换时的顶部进度条
+        │   ├── router-util.ts   # 带退避重试的异步分包加载
+        │   ├── ambient.ts       # 背景极光与指针跟随
+        │   └── index.ts         # 统一导出
+        └── styles/              # 设计 token、主题、玻璃效果、Element Plus 覆盖
 ```
 
----
+`packages/shared` 不做构建，`main` 直接指向 `src/index.ts`，由消费方的 Vite 编译。
+这样省去一层构建步骤，修改后立即生效；对应地，`vite.config.ts` 中需要对它设置
+`optimizeDeps.exclude`，否则修改 shared 不会触发热更新。
 
-## 二、 模块构成与功能全景
+页面组件统一通过 `router-util.ts` 的懒加载封装引入，该封装在模块拉取失败时会自动退避重试，
+覆盖开发期依赖优化中断与生产环境旧 chunk 哈希失效两种情况。
 
-### 1. 用户端 (`apps/user` 监听 `:5173`)
-专为互联网求职者打造的端到端提效工作台：
+## 快速开始
 
-- **求职工作台中枢 (`/workspace`)**：数据总览（简历/投递/面试/Offer/错题实时统计）、
-  高效通关建议、六大差异化优势；统计卡可直接跳到对应模块。
-- **智能简历中心 (`/resumes`)**：PDF/DOCX 上传 + 结构化技能/项目/量化成果抽取；
-  **在线精修**（AI 改写建议逐条采纳）+ **A4 PDF 导出**；
-  **ATS 关键词跑分**（纯本地算法，零 token，逐词命中/缺失 + 缺失必须项置顶）；
-  针对目标岗位的具象化改写建议（严格区分「表达改写」与「缺失事实待补」）。
-- **目标职位 (`/jobs`)**：三种视图可切换（`?view=`）——
-  **投递看板 CRM**（8 列泳道 + 关联简历/薪资/下次跟进/备注）、
-  **面试日历**（按类型着色的月视图，笔试/一面/二面/HR 面多场次，与看板待办提醒联动）、卡片列表；
-  深度拆解 JD 生成「已匹配/表达缺口/证据不足/真实缺口」四类匹配矩阵。
-- **全真 AI 模拟面试 (`/interviews`)**：
-  - 动态情境化出题：结合候选人简历经历与目标岗位 JD 进行深度追问；
-  - 考场交互界面：实时答题计时、多轮追问推进；
-  - 四维复盘报告：技术深度、逻辑表达、架构设计评分与标准参考要点对比；
-  - **面试错题本**：薄弱点归档 + 单题 AI 重练。
-- **Offer 对比 (`/offers`)**：五维（薪资包/技术栈/平台背书/加班强度/通勤距离）加权决策，
-  权重滑块拖一下排名实时重算。
-- **AI 薪酬测算 (`/salary`)**：按城市/岗位/年限/学历/技能生成年薪区间（P25/P50/P75）与
-  年终月数建议，带「AI 估算而非市场行情」的常驻免责说明。★ 置信度由**服务端按规则钳制**
-  （城市不在常见表 / 岗位不命中关键词 / 年限越界都只降不升），不采信模型自评；
-  同参数 7 天内命中 Redis 缓存，不重复烧 token。
-- **AI 智能助手与知识库问答 (`/chat`)**：
-  - 支持个人私域知识库关联问答；
-  - **零门槛对话**：用户无需强制绑定知识库，默认调用通用模型；
-  - **优雅降级**：私域检索未命中时自动无缝兜底专业解答；
-  - **流式体验**：基于 SSE 的毫秒级逐字打字机推流与引用来源卡片。
-- **知识搜索 (`/search`)**：走**向量语义检索**（复用 `/app/rag/search`，只检索不生成）——
-  搜「慢查询怎么排查」能命中写了「索引失效」的段落；支持指定单个知识库或默认
-  搜「我的全部知识库 + 官方智库」，结果带相关度条与命中高亮。
+### 环境要求
 
-### 2. 管理端 (`apps/admin` 监听 `:5174/admin/`)
-企业级运营与运维控制台：
-- **运营监控大盘 (`/dashboard`)**：全站求职者指标、面试场次、Token 消耗 ECharts 动态折线与柱状图；
-- **用户与权限管控 (`/users`, `/roles`)**：完整的 RBAC 矩阵授权，用户启禁用、角色绑定、重置密码及详情抽屉；
-- **官方智库管理 (`/knowledge-bases`)**：创建与管理全平台公域共享的官方智库（如《2026各大厂高频真题集》）；
-- **文档全生命周期运维 (`/documents`)**：
-  - 多格式本地文档批量上传与状态机跟踪（`PARSING` ➔ `CHUNKING` ➔ `EMBEDDING`）；
-  - **一键导入网页 URL**：输入技术博客/面经链接，后端毫秒级清洗提取纯净 Markdown 并自动入库；
-  - 向量切片预览与失败任务人工一键重试；
-- **AI 基础设施配置 (`/ai-models`, `/prompts`)**：
-  - 动态配置大模型供应商、API Key 与 Token 速率上限；
-  - 场景 Prompt 模板多变体编辑、发布与一键秒级回滚；
-- **系统用量与告警 (`/usage`, `/alerts`, `/audit-logs`)**：
-  - Token 用量按天/按模型统计；
-  - 危险操作（模型修改、批量删除）实时告警与顶栏未读角标轮询；
-  - 完整全链路审计日志查看。
+- Node.js >= 20
+- pnpm >= 12（仓库通过 `packageManager` 锁定到 `pnpm@12.10.1`）
 
-### 3. 共享基座 (`packages/shared`)
-- **API 通信契约**：封装全部 HTTP 方法与标准化响应解析；
-- **权限安全钩子**：封装 `useAuth`、`hasPermission` 与路由白名单守卫；
-- **类型与权限码单一来源**：DTO/VO 类型与 54 个权限码只在这里定义一份，两端 import。
-  邮箱验证码的 `SendVerificationCodeDTO` / `ResetPasswordDTO` / `VerificationScene` 也在其中 ——
-  前端类型就是后端 `@NotBlank` 校验的镜子，对不上要到运行期才报错。
+```bash
+corepack enable pnpm
+```
 
----
+### 安装依赖
 
-## 三、 技术栈一览
-
-| 维度 | 技术栈 | 版本 / 选型理由 |
-| :--- | :--- | :--- |
-| **基础框架** | Vue 3 | `3.5.43`（组合式 API `<script setup>`） |
-| **编程语言** | TypeScript | `5.6.3`（全链路强类型契约保障） |
-| **构建工具** | Vite | `5.4.21`（极速 HMR 热重载与 Rollup 生产分包） |
-| **状态管理** | Pinia | `2.3.1`（轻量模块化状态管理） |
-| **路由管理** | Vue Router | `4.6.4`（HTML5 History 路由模式） |
-| **UI 组件库** | Element Plus | `2.14.7`（成熟的企业级组件库与主题定制） |
-| **数据可视化** | ECharts | `6.1.0`（高性能交互式图表） |
-| **网络请求** | Axios | `1.x`（拦截器与 Single-Flight 并发队列） |
-| **包管理器** | pnpm | `12.10.1`（Workspace 符号链接，杜绝幽灵依赖） |
-
->**版本以各 `package.json` 为准，且刻意停在「市面主流档位」而不是最新大版本**
-> （Vite 5 而非 6、Pinia 2 而非 3、vue-router 4 而非 5）——
-> 新大版本的生态与文档还没跟上，踩坑概率高。装依赖请**显式写版本号**，别裸 `pnpm add xxx`。
->
->注：apps 的 `package.json` 依赖用 `^` 范围（如 `"vue": "^3.4.0"`），上表是实际 install 到的版本；
->**只有仓库根的 devDependencies（ESLint / Prettier 等）是精确版本**。
-
----
-
-## 四、 本地开发与快速上手
-
-### 1. 前置依赖准备
-- **Node.js**：`>= 20`（根 `package.json` 的 `engines` 要求）
-- **pnpm**：`10+`（仓库 `packageManager` 锁在 `pnpm@12.10.1`，`corepack enable` 会自动启用这个版本）
-  ```bash
-  corepack enable pnpm
-  ```
-
-### 2. 安装依赖
-在前端工程根目录下执行（自动并行安装 workspace 内全部包）：
 ```bash
 pnpm install
 ```
 
-### 3. 启动开发服务
->**前置要求**：请确保 Java 后端服务（`:8080/api`）已正常运行。
+### 启动开发服务
+
+启动前需要先运行后端服务：
+
+- **Java 服务**（`http://localhost:8080/api`）— 必需，提供全部业务接口。
+- **Python AI 服务**（`http://localhost:8000`）— 使用 AI 功能（简历解析、面试邀约抽取、
+  知识库问答）时必需。只启动 Java 服务时页面仍可正常浏览，但 AI 请求会返回服务不可用，
+  管理端的 AI 配置页也会显示「读不到当前生效的配置」，两者是同一个原因。
 
 ```bash
 # 同时启动用户端与管理端
 pnpm dev
 
-# 或者单独启动用户端（访问 http://localhost:5173/）
-pnpm dev:user
-
-# 或者单独启动管理端（访问 http://localhost:5174/admin/）
-pnpm dev:admin
+# 或单独启动
+pnpm dev:user    # http://localhost:5173/
+pnpm dev:admin   # http://localhost:5174/admin/
 ```
 
-> **代理说明**：各应用的 `vite.config.ts` 已内置将 `/api` 请求代理转发至本地 `http://localhost:8080`，本地开发无需后端额外配置 CORS 跨域。
+两个应用的 `vite.config.ts` 都已配置将 `/api` 代理至 `http://localhost:8080`，本地开发无需额外处理跨域。
 
-### 4. 编译打包与类型检查
+### 构建与检查
 
 ```bash
-# 全局严格类型检查（vue-tsc）
-pnpm typecheck
-
-# 分别打包用户端与管理端
-pnpm build:user      # 产物输出至 apps/user/dist
-pnpm build:admin     # 产物输出至 apps/admin/dist
-
-# 代码风格检查与格式化
-pnpm lint
-pnpm format
+pnpm typecheck   # vue-tsc 类型检查
+pnpm build:user  # 用户端产物 → apps/user/dist
+pnpm build:admin # 管理端产物 → apps/admin/dist
+pnpm lint        # ESLint
+pnpm format      # Prettier
 ```
 
----
+## 核心实现
 
-## 五、 核心工程设计与避坑规约
+### 请求层与 Token 刷新
 
-### 1. 邮箱验证码与找回密码
-- **注册**：`email` 与 `code` 都是必填（2026-10-18 起的破坏性变更），
-  流程是「获取验证码 → 填写 → 提交」；发码按钮带 60 秒倒计时，**这不是装饰** ——
-  后端有 60 秒冷却，不挡按钮用户连点几次全撞 `42904`，看起来像「点了没反应」。
-- **找回密码 (`/forgot-password`)**：公开路由，未登录可用。提示文案是
-  「如果该邮箱已注册，验证码会送达」—— 后端对未注册邮箱**也返回成功**（不便透露注册状态），
-  前端不能替它说漏嘴。
-- **登录后的「修改密码」不加验证码**：那条路径只验原密码 + 撤销 refreshToken。
-- **登录支持两种标识**：登录页可切换「用户名登录 / 邮箱登录」。切换只改变输入框文案与
-  校验规则（邮箱模式走 `type: 'email'`），请求体字段仍是 `username` ——
-  后端先按用户名查、未命中且含 `@` 再按邮箱查，前端不需要告诉它「我选了哪种」。
-  ⚠️ 切换时会把标识输入清空：刚打的用户名十有八九不是合法邮箱。
-- **头像上传即时生效**：个人资料页点头像选图即上传（JPG / PNG / WEBP / GIF，≤2MB），
-  接口返回最新资料，不需要再点「保存」。昵称仍走「保存」按钮。
-  头像地址存的是 `/api/app/avatars/{fileId}`，读取时后端 302 到 OSS 预签名 URL ——
-  所以 `avatar_url` 不会因为预签名过期而裂图。
-- 发送通道做了抽象（`VerificationCodeSender`），短信以后加一个实现类即可，前端复用同一套类型。
+`packages/shared/src/http.ts` 封装统一的 Axios 实例，负责三件事：自动附加 `Authorization` 头、
+拆解响应信封（调用方直接拿到 `data`）、401 时刷新 Token 并重放原请求。
 
-### 2. 单飞 (Single-Flight) 无感 Token 刷新机制
-- **痛点**：当页面多个组件并发请求且 Access Token 过期时，如果并发发起多个 `/auth/refresh` 请求，由于后端采用了长效 Token 轮转机制（Rotation），后续请求会被后端防御机制判定为“Token 重放攻击”而强制踢用户下线。
-- **解决方案**：在 `packages/shared/src/http.ts` 中维护刷新锁与挂起队列：
-  - 仅由首个 401 请求发起 `refresh`；
-  - 其余并发请求压入等待队列 `requestsQueue`；
-  - 刷新成功后统一更新 Token 并重放队列中的请求，用户全程无感知。
+刷新采用**单飞（single-flight）**策略：后端的 refreshToken 使用轮换机制并检测重放，
+同一个 refreshToken 使用一次即失效。如果多个并发请求同时遇到 401 并各自发起刷新，
+第二个刷新会被判定为重放，整条会话会被撤销，用户被强制登出。因此同一时刻只允许一个刷新请求，
+其余请求等待同一个 Promise 的结果。
 
-### 3. 同源部署 LocalStorage 前缀严格隔离
-- 当用户端与管理端打包部署在同一域名/IP 下时，浏览器的 `localStorage` 是完全共享的。
-- **规约**：
-  - 用户端所有存储键强制加前缀：`mf_user_access_token`、`mf_user_refresh_token`；
-  - 管理端所有存储键强制加前缀：`mf_admin_access_token`、`mf_admin_refresh_token`；
-  - 彻底避免在同一浏览器窗口中交替登录导致的串号与顶号问题。
+登录接口必须携带 `skipRefresh: true`。密码错误时后端同样返回 401，不跳过会被当作会话过期
+而去刷新 Token，最终提示「登录已过期」而非「用户名或密码错误」。
 
-### 4. 64 位雪花 Long ID 精度防截断
-- 后端主键采用 64 位雪花算法（如 `1843928174829104821`），超过 JavaScript 的安全整数上限（`2^53 - 1 = 9007199254740991`）。
-- **规约**：
-  - 前端 TypeScript 类型定义中所有 ID 一律声明为 `string`；
-  - 后端 Jackson 序列化输出统一转为字符串，禁止在前端参与数字数学运算。
+### 二进制接口
 
-### 5. HTML5 History 路由与 Nginx 分流部署
-由于应用均采用 History 模式且管理端包含 `/admin/` base 路径，生产部署时 Nginx 必须按前缀分流并配置 `try_files` 兜底：
+简历 PDF 导出（`GET /app/resumes/{id}/export`）是唯一经由前端请求层获取二进制的接口。
+它成功时返回 `application/pdf` 字节流，失败时仍返回统一的 `{code, message, data}` JSON 信封。
+文档下载不经过请求层（由 `window.open` 交给浏览器处理），因此不受以下约束影响。
+
+- **不能使用 `http.get()`**。封装层会读取 `body.code` 判断成功与否，而二进制响应的
+  `body.code` 是 `undefined`，会被误判为业务错误。需要使用 `http.raw.get(url, { responseType: 'blob' })`。
+- **错误响应需要先读回文本**。`responseType: 'blob'` 会把 JSON 错误体一并包装成 Blob，
+  直接读取 `body.code` 拿不到值。`http.ts` 中的 `parseErrorBlob()` 负责读回文本再解析成 `BizError`，
+  使调用方拿到的仍是后端返回的错误信息。
+- **文件名需从 `Content-Disposition` 解析**。后端返回两段式头
+  `filename="resume.pdf"; filename*=UTF-8''%E7%AE%80...`，应优先取 `filename*` 并
+  `decodeURIComponent`（中文文件名依赖这一段），取不到再退回 `filename`。
+
+### 鉴权与本地存储
+
+用户端与管理端可能部署在同一域名下，此时 `localStorage` 完全共享。为避免在同一浏览器中
+交替登录导致会话串号，两端的存储键使用不同前缀：
+
+| 端     | accessToken             | refreshToken             | 主题             |
+| :----- | :---------------------- | :----------------------- | :--------------- |
+| 用户端 | `mf_user_access_token`  | `mf_user_refresh_token`  | `mf_user_theme`  |
+| 管理端 | `mf_admin_access_token` | `mf_admin_refresh_token` | `mf_admin_theme` |
+
+权限码共 59 个（用户端 31 个、管理端 28 个），集中定义在 `packages/shared/src/permission.ts`，
+两端共用。前端依据权限码决定菜单项与按钮是否显示，这属于交互层面的控制，实际的访问控制
+由后端的 `@PreAuthorize` 完成。后端新增权限码时需要同步更新该文件。
+
+### 数据类型约定
+
+后端主键为 64 位雪花 ID（如 `1843928174829104821`），超出 JavaScript 安全整数范围
+（`2^53 - 1`）。因此前端所有 ID 类型一律声明为 `string`，后端通过 Jackson 序列化为字符串输出，
+前端不参与数值运算。
+
+后端返回的字段类型存在几处与直觉不一致的地方，转换在服务端完成，前端按实际类型声明即可：
+`RoleVO.id` 是字符串而角色分配的 `roleIds` 是数字数组；`UserSummaryVO.roles` 是角色 code 数组；
+`UserProfileVO.reminderEnabled` 是 `1/0` 而更新接口接收布尔值。
+
+### 主题与设计系统
+
+样式分三层：背景层（铺满视口的径向渐变）、内容层（卡片、表格、正文）、玻璃层（侧边栏、顶栏、
+弹窗、下拉、浮动工具条）。玻璃效果只用于功能层，配方统一维护在 `styles/glass.css`，提供
+标准、强调、贴边、标签四档，并包含 `prefers-reduced-transparency`、`@supports not`、
+`prefers-reduced-motion` 三档降级。组件中不应直接书写 `backdrop-filter`。
+
+主题分 `light` 与 `dark` 两档，切换需要三处配合：`index.html` 中的内联脚本在首屏渲染前
+写入 `data-theme` 以避免闪烁、`stores/theme.ts` 负责持久化、`main.ts` 负责初始化。
+
+CSS 变量以语义命名（如 `--mf-bg-surface` 而非 `--gray-100`），组件中一律通过 `var(--mf-xxx)`
+引用，不书写字面色值。修改 token 前可通过管理端的 `/style-guide` 页面查看深浅两套主题下的效果。
+
+需要注意 `backdrop-filter` 会让元素自身成为 containing block，而 `.el-card` 带有
+`overflow: hidden`（用于裁切圆角）。两者叠加时，卡片内弹窗的遮罩会相对卡片定位并被裁切。
+因此凡是写在 `<el-card>` 内的 `<el-dialog>` 与 `<el-drawer>`，都需要添加 `append-to-body`。
+
+### 认证与账号
+
+注册需要邮箱与验证码。验证码按钮带 60 秒倒计时，与服务端冷却时间一致，避免用户在冷却期内
+重复请求被拒绝。找回密码为公开路由，无论邮箱是否注册，页面提示统一为「如果该邮箱已注册，
+验证码会送达」——服务端对未注册邮箱同样返回成功，前端不额外透露账号是否存在。
+
+登录支持用户名与邮箱两种标识。切换只改变输入框文案与校验规则，请求字段始终为 `username`，
+由服务端判断：先按用户名查询，未命中且包含 `@` 时再按邮箱查询。
+
+登录后的修改密码不经过邮箱验证码，仅校验原密码并撤销 refreshToken。头像上传在选择文件后
+立即提交并返回最新资料，无需再点击保存；头像地址存储为 `/api/app/avatars/{fileId}`，
+读取时服务端重定向到对象存储的预签名 URL，因此不会因签名过期而失效。
+
+## 部署
+
+执行 `pnpm build:user` 与 `pnpm build:admin` 生成静态产物，分别位于 `apps/user/dist`、
+`apps/admin/dist`，将两者放到服务器的对应目录即可。
+
+两个应用均为 History 路由，管理端带 `/admin/` base，生产环境需要按前缀分流并为每个入口配置
+`try_files` 兜底，否则刷新子路由会 404。
 
 ```nginx
-# 用户端托管
+# 用户端
 location / {
     root /var/www/mindforge/user;
     index index.html;
     try_files $uri $uri/ /index.html;
 }
 
-# 管理端托管（支持独立内网 IP 控制）
+# 管理端（可在此追加 IP 白名单或仅允许内网访问）
 location /admin/ {
     alias /var/www/mindforge/admin/;
     index index.html;
     try_files $uri $uri/ /admin/index.html;
 }
 
-# 后端 API 反向代理与 SSE 长连接配置
+# 后端接口。SSE 流式响应必须关闭缓冲，否则逐字输出会变成一次性返回
 location /api/ {
     proxy_pass http://mindforge-backend:8080/api/;
     proxy_http_version 1.1;
     proxy_set_header Connection '';
-    proxy_buffering off;             # 必须关闭缓冲，确保 SSE 逐字流实时推流
+    proxy_buffering off;
     proxy_cache off;
     chunked_transfer_encoding on;
 }
 ```
 
----
+管理端产物独立，可单独配置访问策略（内网 IP 白名单、VPN 或独立域名），
+不必与面向公网的用户端共用同一入口。
 
-## 六、 未来演进路线图
+## 许可证
 
-> 下面几项**已经做完**，不再是待办：
-
-- **求职投递看板 (Kanban CRM)**：8 列泳道 + 关联简历/薪资包/下次跟进/备注，已打通
-  「岗位 JD + 针对性简历 + 模拟面试复盘」；同一页还有**面试日历**视图（`?view=calendar`，多场次时间节点）。
-  跟进弹窗里把「日程提醒」清空会真的把 `job.next_action_at` 置空（走 `clearNextActionAt` 显式标志 ——
-  局部更新里 `nextActionAt: null` 只表示「不修改」），日历里的面试场次不受影响；选「暂不绑定专属简历」
-  同理走 `linkedResumeId: ''` 真正解绑。
-- **ATS 穿透评分与简历导出**：`GET /app/resumes/{id}/ats-score?jobId=` 纯本地算法（零 token、毫秒级、
-  同一输入永远同一分）；简历在线精修 + A4 PDF 导出 + AI 改写采纳。**靶向简历生成**（选简历 A + JD B，
-  AI 按 STAR 重构项目经历）也已实现。
-- **多 Offer 五维加权对比决策器**：薪资包/技术栈/平台背书/加班强度/通勤距离，权重滑块实时重算排名。
-- **AI 薪酬测算**（`/salary`）：按城市/岗位/年限/学历/技能生成年薪区间（P25/P50/P75）+ 年终月数建议，
-  带「AI 估算而非市场行情」的常驻免责说明；置信度由**服务端按规则钳制**（城市不在常见表 /
-  岗位不命中关键词 / 年限越界都只降不升），同参数 7 天内命中 Redis 缓存。
-- **管理端官方智库 + 双层 RAG**：管理员维护全平台公域官方知识库（`is_system=1`）；
-  问答 / 简历润色 / 模拟面试出题并行召回「公域 + 私域」再精排。RAG 未命中时**降级通用模型**
-  并标 `hasContext:false`，前端展示灰色胶囊「通用模型生成」而不是绿色的「知识库溯源」。
-
-**仍未做**：
-
-- [ ] **在线白板手撕代码 (Monaco Editor)**：集成 VS Code 核心在线代码编辑器，支撑算法面试实时编写、
-      语法高亮与用例沙箱评判（难点在**沙箱执行用户代码**的隔离与限资源）。
-- [ ] **全双工实时语音面试考场**：基于 Web Audio API 采集音频流，配合毫秒级 ASR/TTS 实现逼真口头对话
-      （链路最长，还要额外接语音服务）。
-- [ ] **知识库全文搜索升级**：目前语义检索（`/app/rag/search`）已可用；
-      列表页的短字段搜索仍是 `LIKE '%kw%'`（走不了索引、无中文分词），计划换 MySQL ngram 全文索引。
-- [ ] **Chrome 插件 / 匿名面经广场 / 真题题库+考点雷达**（规划详见根目录 `ROADMAP.md`，本地维护文档，不进版本库）。
+本项目基于 MIT 许可证发布。
