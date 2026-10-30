@@ -70,13 +70,17 @@ export const documentApi = {
   /** 删除文档 */
   remove: (id: string) => http.delete<void>(`/app/documents/${id}`),
 
-  /**
-   * 下载。
-   * ⚠️ 后端返回 **302 跳转**到预签名 URL，不是文件流本身 ——
-   *    所以不能走 axios（它会把 302 跟到底、拿回来的东西也没法触发浏览器下载）。
-   *    直接让浏览器导航到这个地址，由浏览器处理重定向和下载。
+  /*
+   * ⚠️ 这里原本有个 `downloadUrl: (id) => \`/api/app/documents/${id}/download\``，
+   *    已经删掉，**不要再加回来**。
+   *
+   *    那个接口要认证，而前端只能 `window.open` 让浏览器导航 —— 导航带不上
+   *    `Authorization`，结果就是用户点下载看到一页 401 JSON（还带 traceId）。
+   *    也不能用 axios 跟它的 302：OSS bucket 没配 CORS，跨域拿不到内容。
+   *
+   *    正确做法：先 `detail(id)` 拿 `downloadUrl`（预签名地址，自带签名），
+   *    再导航过去。见 `KnowledgeDetailView` 的 `onDownload()`。
    */
-  downloadUrl: (id: string) => `/api/app/documents/${id}/download`,
 }
 
 /** 分块 —— 对话里点「引用」看原文用 */

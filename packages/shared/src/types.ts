@@ -1221,6 +1221,17 @@ export interface DocumentVO {
   vectorStatus: VectorStatus | null
   errorMessage: string | null
   pageCount: number | null
+  /**
+   * 预签名下载地址（1 小时有效）。
+   *
+   * ⚠️ **只有详情接口会返回**，列表里恒为 null —— 列表一页 20 条，
+   *    每条都要查一次 sys_file 去签名，那是 N+1，而列表页用不到这个地址。
+   *    所以列表里点下载要先取一次详情。
+   *
+   * ⚠️ 可空还有另一个原因：**网页导入的文档没有文件对象**（没有 `fileId`），
+   *    本来就没有东西可下。别把 null 当成「加载失败」。
+   */
+  downloadUrl?: string | null
   createdAt: string | null
 }
 

@@ -338,9 +338,19 @@ watch(activeView, (view) => {
           </div>
 
           <p class="card__foot-line">
-            <span v-if="it.averageScore !== null" class="card__score">
-              平均 {{ it.averageScore }} 分
-            </span>
+            <!--
+              ⚠️ 这里是「答题均分」（interview_question.score 的算术平均），
+                 不是报告里的「综合得分」（技术 40 / 问题解决 20 / 沟通 20 / 工程 10 / 岗位 10）。
+                 两个数会同时出现且数值接近，标签必须写清是哪一个 ——
+                 写成「平均 X 分」会让人以为是报告那个总分。
+            -->
+            <el-tooltip
+              v-if="it.averageScore !== null"
+              content="每道题得分的平均。报告里的综合分是按五个维度加权算的，两者不是一回事。"
+              placement="top"
+            >
+              <span class="card__score">答题均分 {{ it.averageScore }}</span>
+            </el-tooltip>
             <span class="card__time">{{ formatDateTime(it.createdAt) }}</span>
           </p>
 

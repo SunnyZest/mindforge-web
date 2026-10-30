@@ -257,11 +257,34 @@ async function onRetry(d: DocumentVO): Promise<void> {
 
 /**
  * 下载。
- * ⚠️ 后端是 302 跳转到预签名 URL，不是文件流 —— 所以不能让 axios 去请求，
- *    直接让浏览器导航过去，由它处理重定向和下载。
+ *
+ * ⚠️ 必须先用**带 token 的请求**取详情，拿到 `downloadUrl`（OSS 预签名地址），
+ *    再让浏览器导航过去 —— 预签名地址自带签名，导航时不需要任何请求头。
+ *
+ * ⚠️ 不能直接 `window.open('/api/app/documents/{id}/download')`：
+ *    那是浏览器直接导航，带不上 `Authorization`，后端一律返回 401，
+ *    而且会把 JSON 错误页（还带 traceId）直接甩给用户看。
+ *    也不能用 axios 去跟那个 302：OSS bucket 没配 CORS，跨域拿不到文件内容。
+ *
+ * 详情里没有 `downloadUrl` 只有一种正常情况：网页导入的文档没有文件对象。
  */
-function onDownload(d: DocumentVO): void {
-  window.open(documentApi.downloadUrl(d.documentId), '_blank', 'noopener')
+async function onDownload(d: DocumentVO): Promise<void> {
+  if (acting.value) return
+  acting.value = d.documentId
+  try {
+    // 列表里的 downloadUrl 恒为 null（后端只在详情签名，避免 N+1），所以先取详情
+    const detail = d.downloadUrl ? d : await documentApi.detail(d.documentId)
+    const url = detail.downloadUrl
+    if (!url) {
+      ElMessage.warning('这份文档没有可下载的原文件')
+      return
+    }
+    window.open(url, '_blank', 'noopener')
+  } catch (e) {
+    fail(e, '下载失败，请稍后重试')
+  } finally {
+    acting.value = null
+  }
 }
 
 async function onRemove(d: DocumentVO): Promise<void> {
@@ -470,7 +493,12 @@ onMounted(load)
             >
               重试
             </el-button>
-            <el-button size="small" text :icon="Download" @click="onDownload(asDoc(row))"
+            <el-button
+              size="small"
+              text
+              :icon="Download"
+              :loading="acting === asDoc(row).documentId"
+              @click="onDownload(asDoc(row))"
               >下载</el-button
             >
             <el-button
