@@ -21,7 +21,7 @@ import {
   Trophy,
   User,
 } from '@element-plus/icons-vue'
-import { computed, onMounted, reactive, ref, type Component } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, type Component } from 'vue'
 
 import type { AiEngineStatus, Permission } from '@mindforge/shared'
 
@@ -512,13 +512,65 @@ const visibleTools = computed(() => TOOLS.filter((t) => !t.permission || auth.ca
 
 /* ========== 问候语 ========== */
 
-const greeting = computed(() => {
-  const h = new Date().getHours()
-  if (h < 6) return '夜深了'
-  if (h < 12) return '早上好'
-  if (h < 14) return '中午好'
-  if (h < 18) return '下午好'
-  return '晚上好'
+/**
+ * 当前小时。
+ *
+ * ⚠️ 必须是 `ref` + 定时器，不能写成 `computed(() => new Date().getHours())`：
+ *    那个 computed 里没有任何响应式依赖，只会在首次渲染算一次。
+ *    页面一直开着跨过时段（或跨天）就永远停在打开那一刻的问候语，
+ *    用户看到的「早上好」可能已经挂了八小时。
+ */
+const nowHour = ref(new Date().getHours())
+
+let clockTimer: number | undefined
+
+function syncHour(): void {
+  nowHour.value = new Date().getHours()
+}
+
+onMounted(() => {
+  // 一分钟一次就够：问候语按小时变，不需要秒级精度，开销可忽略
+  clockTimer = window.setInterval(syncHour, 60_000)
+  // 标签页在后台时定时器会被浏览器节流，切回来立刻校正一次
+  document.addEventListener('visibilitychange', syncHour)
+})
+
+onUnmounted(() => {
+  if (clockTimer !== undefined) window.clearInterval(clockTimer)
+  document.removeEventListener('visibilitychange', syncHour)
+})
+
+/**
+ * 问候时段。`until` 是上界（不含），相邻两条之间构成一个区间。
+ *
+ * 23 点归到「夜深了」而不是「晚上好」—— 18~22 点才是正常的晚上，
+ * 过了 23 点还在投简历，是熬夜了。
+ */
+const GREETING_SLOTS = [
+  { until: 5, text: '夜深了' },
+  { until: 9, text: '早上好' },
+  { until: 11, text: '上午好' },
+  { until: 13, text: '中午好' },
+  { until: 18, text: '下午好' },
+  { until: 23, text: '晚上好' },
+  { until: 24, text: '夜深了' },
+] as const
+
+const greeting = computed(
+  () => GREETING_SLOTS.find((slot) => nowHour.value < slot.until)?.text ?? '你好',
+)
+
+/**
+ * 深夜关怀。只在 23 点后与 5 点前出现，白天返回空串、整行不渲染。
+ *
+ * 这个点还在刷岗位的人，缺的不是「继续加油」，是一句「先睡吧」。
+ * 文案不劝、不催，也不假装知道对方在焦虑 —— 只说时间，再给一句许可。
+ */
+const lateCare = computed(() => {
+  const h = nowHour.value
+  if (h >= 5 && h < 23) return ''
+  const when = h === 23 ? '快 12 点了' : h === 0 ? '刚过零点' : `凌晨 ${h} 点`
+  return `${when}，早点休息，明天再看也不迟`
 })
 </script>
 
@@ -541,6 +593,9 @@ const greeting = computed(() => {
         <h1 class="ws__hello">
           {{ greeting }}，<span class="ws__name">{{ auth.displayName || '求职探索者' }}</span>
         </h1>
+
+        <!-- 深夜关怀：白天 lateCare 是空串，整行不渲染，不会占位也不会留白 -->
+        <p v-if="lateCare" class="ws__care">{{ lateCare }}</p>
 
         <p class="ws__sub">简历、职位、面试、知识库 —— 把求职全流程收进一条 AI 闭环</p>
 
@@ -947,6 +1002,16 @@ const greeting = computed(() => {
 /* 名字用主色 —— 超大字里唯一的彩色落点，视线自然先落在这里 */
 .ws__name {
   color: var(--mf-primary);
+}
+
+/* 深夜关怀。和导语同档（16px / 次要色）而不是做成一枚小字徽标 ——
+   凌晨时这两行是连贯的两句话：先说时间，再介绍产品。
+   压小字号会把它变成脚注，反而显得敷衍。 */
+.ws__care {
+  margin: 0 0 8px;
+  font-size: var(--mf-font-sub);
+  line-height: 1.6;
+  color: var(--mf-text-secondary);
 }
 
 .ws__sub {
