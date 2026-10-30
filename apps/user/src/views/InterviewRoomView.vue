@@ -233,24 +233,46 @@ watch(id, () => {
   answerText.value = ''
 })
 
-// ---------- 面试五维核心能力雷达图 ----------
+// ---------- 面试能力雷达图 ----------
 const radarChartRef = ref<HTMLDivElement | null>(null)
 let radarInstance: echarts.ECharts | null = null
 let radarResizeObserver: ResizeObserver | null = null
 
+/**
+ * 雷达图的维度 —— 只收**后端真实给出**的分数。
+ *
+ * ⚠️ 这里曾经把「工程规范」算成 `(技术 + 问题解决) / 2`、把「岗位契合」直接塞
+ *    `overallScore`，还给了 `?? 75 / ?? 80` 这种兜底值。结果是：图上五个角看起来
+ *    都在被评估，实际上只有三个是模型给的，另外两个是前端编的，缺值时更是整张图
+ *    都在编。用户会拿这张图判断自己哪块弱，编出来的维度会直接误导他。
+ *
+ *    现在的规矩：后端给几个就画几个；不够三个角画不出雷达，就不画图、说清楚为什么。
+ */
+const radarDims = computed(() => {
+  const r = report.value
+  if (!r) return [] as { name: string; value: number }[]
+  const dims: { name: string; value: number }[] = []
+  if (r.technicalScore != null) dims.push({ name: '技术深度', value: r.technicalScore })
+  if (r.communicationScore != null) dims.push({ name: '沟通表达', value: r.communicationScore })
+  if (r.problemSolvingScore != null) dims.push({ name: '问题解决', value: r.problemSolvingScore })
+  if (r.engineeringScore != null) dims.push({ name: '工程规范', value: r.engineeringScore })
+  if (r.jobFitScore != null) dims.push({ name: '岗位契合', value: r.jobFitScore })
+  return dims
+})
+
+/** 少于三个角就不是雷达图了（一个点是点、两个点是线段），这时候不画 */
+const canRenderRadar = computed(() => radarDims.value.length >= 3)
+
 function renderRadarChart(): void {
-  if (!radarChartRef.value || !report.value) return
+  if (!radarChartRef.value || !canRenderRadar.value) return
   if (!radarInstance) {
     radarInstance = echarts.init(radarChartRef.value)
+    // 容器是 v-if 出来的，可能晚于 onMounted 才存在 —— 在这里挂观察器才能保证覆盖到
+    radarResizeObserver?.observe(radarChartRef.value)
   }
 
   const isDark = theme.isDark
-  const r = report.value
-  const tech = r.technicalScore ?? 75
-  const comm = r.communicationScore ?? 80
-  const ps = r.problemSolvingScore ?? 75
-  const overall = r.overallScore ?? 78
-  const eng = Math.round((tech + ps) / 2)
+  const dims = radarDims.value
 
   const option: echarts.EChartsCoreOption = {
     tooltip: {
@@ -258,13 +280,7 @@ function renderRadarChart(): void {
       trigger: 'item',
     },
     radar: {
-      indicator: [
-        { name: '技术深度', max: 100 },
-        { name: '沟通表达', max: 100 },
-        { name: '问题解决', max: 100 },
-        { name: '工程规范', max: 100 },
-        { name: '岗位契合', max: 100 },
-      ],
+      indicator: dims.map((d) => ({ name: d.name, max: 100 })),
       center: ['50%', '52%'],
       radius: '68%',
       splitNumber: 4,
@@ -298,7 +314,7 @@ function renderRadarChart(): void {
         type: 'radar',
         data: [
           {
-            value: [tech, comm, ps, eng, overall],
+            value: dims.map((d) => d.value),
             name: '得分表现',
             symbol: 'circle',
             symbolSize: 6,
@@ -324,8 +340,22 @@ function renderRadarChart(): void {
   radarInstance.setOption(option, true)
 }
 
-watch([report, stage], () => {
-  void nextTick(() => renderRadarChart())
+/**
+ * 销毁图表实例。
+ *
+ * ⚠️ 维度不足时容器会被 `v-if` 从 DOM 移除，实例必须一起销毁 ——
+ *    否则下次挂载会拿到一个指向已脱离文档的 canvas，图表不显示也不报错。
+ */
+function disposeRadar(): void {
+  radarInstance?.dispose()
+  radarInstance = null
+}
+
+watch([report, stage, canRenderRadar], () => {
+  void nextTick(() => {
+    if (canRenderRadar.value) renderRadarChart()
+    else disposeRadar()
+  })
 })
 
 watch(
@@ -336,18 +366,19 @@ watch(
 )
 
 onMounted(() => {
-  void load().then(() => {
-    void nextTick(() => renderRadarChart())
-  })
+  // 观察器先建好：雷达图容器是 v-if 出来的，可能要等报告加载完才存在
   radarResizeObserver = new ResizeObserver(() => {
     radarInstance?.resize()
   })
-  if (radarChartRef.value) radarResizeObserver.observe(radarChartRef.value)
+  void load().then(() => {
+    void nextTick(() => renderRadarChart())
+  })
 })
 
 onUnmounted(() => {
   radarResizeObserver?.disconnect()
-  radarInstance?.dispose()
+  radarResizeObserver = null
+  disposeRadar()
 })
 </script>
 
@@ -591,21 +622,31 @@ onUnmounted(() => {
                   <span class="scores__value">{{ report.overallScore ?? '-' }}</span>
                   <span class="scores__label">综合得分</span>
                 </div>
+                <!--
+                  分项分数跟随 radarDims 渲染 —— 雷达图有几个维度，这里就有几列。
+                  写死三列会和雷达图对不上：后端补上工程 / 岗位之后，
+                  图上是五个角、旁边却只有三个数，用户会以为漏了。
+                -->
                 <div class="scores__sub">
-                  <div class="scores__item">
-                    <span class="scores__n">{{ report.technicalScore ?? '-' }}</span>
-                    <span class="scores__t">技术深度</span>
-                  </div>
-                  <div class="scores__item">
-                    <span class="scores__n">{{ report.communicationScore ?? '-' }}</span>
-                    <span class="scores__t">逻辑表达</span>
-                  </div>
-                  <div class="scores__item">
-                    <span class="scores__n">{{ report.problemSolvingScore ?? '-' }}</span>
-                    <span class="scores__t">问题解决</span>
+                  <div v-for="d in radarDims" :key="d.name" class="scores__item">
+                    <span class="scores__n">{{ d.value }}</span>
+                    <span class="scores__t">{{ d.name }}</span>
                   </div>
                 </div>
               </div>
+
+              <!--
+                综合分口径说明。权重是产品设定（技术 40 / 问题解决 20 / 沟通 20 /
+                工程 10 / 岗位 10），没有任何真实结果可用来校准 —— 所以不能让用户
+                以为它有。
+
+                ⚠️ 文案里刻意不写「五个维度」也不列百分比：
+                   · 历史报告只有三个维度，写「五个」在那份报告上就是错的；
+                   · 后端一调权重，列出的百分比就过期，两份数字必然漂移。
+              -->
+              <p class="scores__note">
+                综合分由分项得分按固定权重加权得出。权重是产品设定，用来对比自己的多场练习，不代表招聘方的评价标准。
+              </p>
 
               <div
                 v-if="report.reportText"
@@ -615,9 +656,13 @@ onUnmounted(() => {
               <p class="report__time">评估生成于 {{ formatDateTime(report.createdAt) }}</p>
             </div>
 
-            <!-- ECharts 五维能力雷达图 -->
+            <!-- 能力雷达图：维度全部来自报告里真实存在的分数，不推算 -->
             <div class="report-overview-right">
-              <div ref="radarChartRef" class="radar-box" />
+              <div v-if="canRenderRadar" ref="radarChartRef" class="radar-box" />
+              <div v-else class="radar-box radar-box--empty">
+                <p>这份报告的维度评分不足三项，画不出能力分布图。</p>
+                <p class="radar-box__hint">左侧的分项得分仍然有效。</p>
+              </div>
             </div>
           </div>
         </section>
@@ -1028,6 +1073,31 @@ onUnmounted(() => {
   height: 250px;
 }
 
+/* 维度不足、画不出图时的占位。居中一行说明，不装成一张空图 */
+.radar-box--empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  align-items: center;
+  justify-content: center;
+  padding: var(--mf-space-4);
+  font-size: var(--mf-font-sm);
+  color: var(--mf-text-tertiary);
+  text-align: center;
+  border: 1px dashed var(--mf-border-soft);
+  border-radius: var(--mf-radius-md);
+}
+
+.radar-box--empty p {
+  margin: 0;
+}
+
+.radar-box__hint {
+  font-size: var(--mf-font-xs);
+  color: var(--mf-text-tertiary);
+  opacity: 0.8;
+}
+
 .scores {
   display: flex;
   flex-wrap: wrap;
@@ -1068,6 +1138,14 @@ onUnmounted(() => {
 .scores__n {
   font-size: var(--mf-font-lg);
   font-weight: var(--mf-weight-medium);
+}
+
+/* 综合分口径说明。压成 tertiary 小字 —— 它是要交代清楚的话，不该抢分数的视线 */
+.scores__note {
+  margin: var(--mf-space-3) 0 0;
+  font-size: var(--mf-font-xs);
+  line-height: 1.7;
+  color: var(--mf-text-tertiary);
 }
 
 .scores__t {

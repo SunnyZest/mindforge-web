@@ -1090,6 +1090,20 @@ export interface InterviewReportVO {
   technicalScore: number | null
   communicationScore: number | null
   problemSolvingScore: number | null
+  /**
+   * 工程规范得分（0~100）。
+   *
+   * ⚠️ 可空：后端补这两个字段之前的历史报告没有值。雷达图只画**真实存在**的维度，
+   *    缺的就不出现 —— 不要拿别的分数推算一个顶上，那是在编数字。
+   */
+  engineeringScore?: number | null
+  /**
+   * 岗位契合得分（0~100）。
+   *
+   * ⚠️ 可空，同上。也不要拿 `overallScore` 顶替：总分是三个维度的加权，
+   *    把它画成「岗位契合」等于凭空多出一个从未被评估过的维度。
+   */
+  jobFitScore?: number | null
   strengths: string[]
   weaknesses: string[]
   suggestions: string[]
