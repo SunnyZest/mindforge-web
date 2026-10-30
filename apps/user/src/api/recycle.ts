@@ -27,6 +27,16 @@ export const recycleApi = {
   restore: (id: string) =>
     http.post<RecycleRestoreResultVO>(`/app/recycle-bin/${id}/restore`),
 
-  /** 彻底删除（不可逆）。只删仍处于逻辑删除状态的原记录，已被恢复的不受影响 */
-  purge: (id: string) => http.delete<void>(`/app/recycle-bin/${id}`),
+  /**
+   * 彻底删除（不可逆）。只删仍处于逻辑删除状态的原记录，已被恢复的不受影响。
+   *
+   * ⚠️ 后端**强制要求二次确认凭据**（`X-Confirm-Token`）：不传返回
+   *    `CONFIRM_REQUIRED`(40304)，凭据错误或过期返回 40305。
+   *    别直接调这个方法 —— 走 {@link useSecondaryConfirm}，它会先弹框收密码、
+   *    换成一次性凭据再发请求。
+   */
+  purge: (id: string, confirmToken: string) =>
+    http.delete<void>(`/app/recycle-bin/${id}`, {
+      headers: { 'X-Confirm-Token': confirmToken },
+    }),
 }

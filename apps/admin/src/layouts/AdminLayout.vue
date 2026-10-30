@@ -19,6 +19,7 @@ import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vu
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 
 import { alertApi } from '@/api/alert'
+import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
@@ -109,6 +110,10 @@ const avatarText = computed(() =>
  *    这里显式分发：加菜单项时记得也加一个分支。
  */
 async function onCommand(command: string): Promise<void> {
+  if (command === 'password') {
+    pwdVisible.value = true
+    return
+  }
   if (command === 'logout') {
     await auth.logout()
     await router.replace({ name: 'login' })
@@ -143,6 +148,9 @@ function onAlertClick(): void {
 
 // ---------- 高危告警未读数与定时轮询 ----------
 const unreadAlerts = ref(0)
+
+/** 修改密码弹窗 —— 从右上角头像菜单打开 */
+const pwdVisible = ref(false)
 let alertTimer: ReturnType<typeof setInterval> | null = null
 
 async function fetchUnreadAlerts(): Promise<void> {
@@ -249,7 +257,8 @@ watch(
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="password">修改密码</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -260,6 +269,9 @@ watch(
         <router-view />
       </el-main>
     </el-container>
+
+    <!-- 放在 el-container 外面：弹窗自带 append-to-body，这里只为语义清楚 -->
+    <ChangePasswordDialog v-model="pwdVisible" />
   </el-container>
 </template>
 

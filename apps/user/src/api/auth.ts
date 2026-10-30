@@ -1,5 +1,6 @@
 import type {
   ChangePasswordDTO,
+  ConfirmTokenVO,
   LoginDTO,
   LoginVO,
   RegisterDTO,
@@ -59,6 +60,21 @@ export const authApi = {
 
   /** 修改密码。改完 refreshToken 通常会失效，调用方记得处理 */
   changePassword: (dto: ChangePasswordDTO) => http.post<void>('/app/auth/password', dto),
+
+  /**
+   * 申领高危操作的二次确认凭据。
+   *
+   * 后端对「彻底删除回收站记录」这类不可逆操作强制要求凭据
+   * （`X-Confirm-Token` 或 `X-Confirm-Password`），缺了直接返回
+   * `CONFIRM_REQUIRED`(40304) 拒绝执行 —— 光弹一个本地 confirm 是不够的。
+   * 这里用密码换一个一次性 token，再由 {@link useSecondaryConfirm} 放进请求头。
+   *
+   * `skipRefresh` 是必须的：**密码错的时候后端返回的也是 401**，
+   * 不跳过会被响应拦截器当成「会话过期」去刷新，用户看到的是「登录已过期」
+   * 而不是「密码错误」，完全误导。
+   */
+  issueConfirmToken: (password: string) =>
+    http.post<ConfirmTokenVO>('/app/auth/confirm-token', { password }, { skipRefresh: true }),
 }
 
 /** 个人资料 */

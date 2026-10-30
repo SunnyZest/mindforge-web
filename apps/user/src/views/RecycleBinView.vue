@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import { BizError, type RecycleBinVO } from '@mindforge/shared'
 
 import { recycleApi } from '@/api/recycle'
+import { useSecondaryConfirm } from '@/composables/useSecondaryConfirm'
 
 /**
  * 最近删除（回收站）。
@@ -15,6 +16,8 @@ import { recycleApi } from '@/api/recycle'
  * ★ 恢复窗口 30 天与 OSS 对象保留期对齐：文件都被清了还允许「恢复」，
  *   恢复出来只会是个空壳。
  */
+
+const { runConfirm } = useSecondaryConfirm()
 
 const loading = ref(false)
 const records = ref<RecycleBinVO[]>([])
@@ -59,19 +62,21 @@ async function restore(row: RecycleBinVO): Promise<void> {
 }
 
 async function purge(row: RecycleBinVO): Promise<void> {
-  // 不可逆，必须二次确认 —— 而且要把「名称」念出来，防止点错行
-  const ok = await ElMessageBox.confirm(
-    `「${row.title}」将被永久删除，无法恢复。确定吗？`,
-    '彻底删除',
-    { type: 'warning', confirmButtonText: '永久删除', cancelButtonText: '取消' },
-  ).catch(() => false)
-  if (!ok) return
-
   try {
-    await recycleApi.purge(row.id)
+    // 不可逆 + 后端强制要求凭据：弹框收密码 → 换一次性 token → 带头发请求。
+    // 文案里把「名称」念出来，防止点错行。
+    const res = await runConfirm({
+      message: `「${row.title}」将被永久删除，无法恢复。请输入登录密码确认。`,
+      title: '彻底删除',
+      action: (confirmToken) => recycleApi.purge(row.id, confirmToken),
+    })
+    // 用户点了取消 —— 正常操作，不当错误处理
+    if (!res.ok) return
+
     ElMessage.success('已彻底删除')
     await load()
   } catch (e) {
+    // 密码错误、凭据过期（40305）都会走到这里，BizError 带着后端的话
     ElMessage.error(e instanceof BizError ? e.message : '删除失败，请稍后重试')
   }
 }

@@ -1,4 +1,10 @@
-import type { ConfirmTokenVO, LoginDTO, LoginVO, UserInfoVO } from '@mindforge/shared'
+import type {
+  ChangePasswordDTO,
+  ConfirmTokenVO,
+  LoginDTO,
+  LoginVO,
+  UserInfoVO,
+} from '@mindforge/shared'
 
 import { http } from './index'
 
@@ -30,4 +36,13 @@ export const authApi = {
    */
   issueConfirmToken: (password: string) =>
     http.post<ConfirmTokenVO>('/admin/auth/confirm-token', { password }, { skipRefresh: true }),
+
+  /**
+   * 管理员修改自身密码。
+   *
+   * ⚠️ 成功后后端会撤销 refreshToken（连同当前会话）—— 本地 token 立刻作废，
+   *    调用方必须 `auth.reset()` 并跳回登录页，否则用户会在下一次请求时
+   *    突然被踢，还以为是网络问题。
+   */
+  changePassword: (dto: ChangePasswordDTO) => http.post<void>('/admin/auth/password', dto),
 }
